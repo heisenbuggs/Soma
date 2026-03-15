@@ -1,0 +1,644 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AA300000000000000000001 /* SomaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000001 /* SomaApp.swift */; };
+		AA300000000000000000002 /* DailyMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000002 /* DailyMetrics.swift */; };
+		AA300000000000000000003 /* SleepData.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000003 /* SleepData.swift */; };
+		AA300000000000000000004 /* HeartRateZone.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000004 /* HeartRateZone.swift */; };
+		AA300000000000000000005 /* HealthKitManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000005 /* HealthKitManager.swift */; };
+		AA300000000000000000006 /* MetricsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000006 /* MetricsStore.swift */; };
+		AA300000000000000000007 /* BaselineCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000007 /* BaselineCalculator.swift */; };
+		AA300000000000000000008 /* RecoveryCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000008 /* RecoveryCalculator.swift */; };
+		AA300000000000000000009 /* StrainCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000009 /* StrainCalculator.swift */; };
+		AA30000000000000000000A /* SleepCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000A /* SleepCalculator.swift */; };
+		AA30000000000000000000B /* StressCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000B /* StressCalculator.swift */; };
+		AA30000000000000000000C /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000C /* DashboardViewModel.swift */; };
+		AA30000000000000000000D /* TrendsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000D /* TrendsViewModel.swift */; };
+		AA30000000000000000000E /* InsightsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000E /* InsightsViewModel.swift */; };
+		AA30000000000000000000F /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000F /* MainTabView.swift */; };
+		AA300000000000000000010 /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000010 /* DashboardView.swift */; };
+		AA300000000000000000011 /* TrendsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000011 /* TrendsView.swift */; };
+		AA300000000000000000012 /* InsightsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000012 /* InsightsView.swift */; };
+		AA300000000000000000013 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000013 /* OnboardingView.swift */; };
+		AA300000000000000000014 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000014 /* SettingsView.swift */; };
+		AA300000000000000000015 /* MetricCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000015 /* MetricCardView.swift */; };
+		AA300000000000000000016 /* SparklineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000016 /* SparklineView.swift */; };
+		AA300000000000000000017 /* RingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000017 /* RingView.swift */; };
+		AA300000000000000000018 /* ColorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000018 /* ColorState.swift */; };
+		AA300000000000000000019 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000019 /* Assets.xcassets */; };
+		AA30000000000000000001A /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA10000000000000000001A /* HealthKit.framework */; };
+		AA300000000000000000020 /* BaselineCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000020 /* BaselineCalculatorTests.swift */; };
+		AA300000000000000000021 /* RecoveryCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000021 /* RecoveryCalculatorTests.swift */; };
+		AA300000000000000000022 /* StrainCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000022 /* StrainCalculatorTests.swift */; };
+		AA300000000000000000023 /* SleepCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000023 /* SleepCalculatorTests.swift */; };
+		AA300000000000000000024 /* StressCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000024 /* StressCalculatorTests.swift */; };
+		AA300000000000000000025 /* DailyCheckIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000025 /* DailyCheckIn.swift */; };
+		AA300000000000000000026 /* CheckInStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000026 /* CheckInStore.swift */; };
+		AA300000000000000000027 /* BehaviorEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000027 /* BehaviorEngine.swift */; };
+		AA300000000000000000028 /* CheckInViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000028 /* CheckInViewModel.swift */; };
+		AA300000000000000000029 /* CheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000029 /* CheckInView.swift */; };
+		AA30000000000000000002A /* BehaviorEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002A /* BehaviorEngineTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		AA100000000000000000001 /* SomaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SomaApp.swift; sourceTree = "<group>"; };
+		AA100000000000000000002 /* DailyMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyMetrics.swift; sourceTree = "<group>"; };
+		AA100000000000000000003 /* SleepData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepData.swift; sourceTree = "<group>"; };
+		AA100000000000000000004 /* HeartRateZone.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeartRateZone.swift; sourceTree = "<group>"; };
+		AA100000000000000000005 /* HealthKitManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitManager.swift; sourceTree = "<group>"; };
+		AA100000000000000000006 /* MetricsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricsStore.swift; sourceTree = "<group>"; };
+		AA100000000000000000007 /* BaselineCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaselineCalculator.swift; sourceTree = "<group>"; };
+		AA100000000000000000008 /* RecoveryCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryCalculator.swift; sourceTree = "<group>"; };
+		AA100000000000000000009 /* StrainCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrainCalculator.swift; sourceTree = "<group>"; };
+		AA10000000000000000000A /* SleepCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepCalculator.swift; sourceTree = "<group>"; };
+		AA10000000000000000000B /* StressCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StressCalculator.swift; sourceTree = "<group>"; };
+		AA10000000000000000000C /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
+		AA10000000000000000000D /* TrendsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsViewModel.swift; sourceTree = "<group>"; };
+		AA10000000000000000000E /* InsightsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsViewModel.swift; sourceTree = "<group>"; };
+		AA10000000000000000000F /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
+		AA100000000000000000010 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
+		AA100000000000000000011 /* TrendsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrendsView.swift; sourceTree = "<group>"; };
+		AA100000000000000000012 /* InsightsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightsView.swift; sourceTree = "<group>"; };
+		AA100000000000000000013 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		AA100000000000000000014 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		AA100000000000000000015 /* MetricCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricCardView.swift; sourceTree = "<group>"; };
+		AA100000000000000000016 /* SparklineView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SparklineView.swift; sourceTree = "<group>"; };
+		AA100000000000000000017 /* RingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingView.swift; sourceTree = "<group>"; };
+		AA100000000000000000018 /* ColorState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ColorState.swift; sourceTree = "<group>"; };
+		AA100000000000000000019 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		AA10000000000000000001A /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
+		AA10000000000000000001B /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		AA10000000000000000001C /* Soma.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Soma.entitlements; sourceTree = "<group>"; };
+		AA10000000000000000001D /* Soma.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Soma.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA10000000000000000001E /* SomaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SomaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AA100000000000000000020 /* BaselineCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaselineCalculatorTests.swift; sourceTree = "<group>"; };
+		AA100000000000000000021 /* RecoveryCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryCalculatorTests.swift; sourceTree = "<group>"; };
+		AA100000000000000000022 /* StrainCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrainCalculatorTests.swift; sourceTree = "<group>"; };
+		AA100000000000000000023 /* SleepCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepCalculatorTests.swift; sourceTree = "<group>"; };
+		AA100000000000000000024 /* StressCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StressCalculatorTests.swift; sourceTree = "<group>"; };
+		AA100000000000000000025 /* DailyCheckIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyCheckIn.swift; sourceTree = "<group>"; };
+		AA100000000000000000026 /* CheckInStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInStore.swift; sourceTree = "<group>"; };
+		AA100000000000000000027 /* BehaviorEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BehaviorEngine.swift; sourceTree = "<group>"; };
+		AA100000000000000000028 /* CheckInViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInViewModel.swift; sourceTree = "<group>"; };
+		AA100000000000000000029 /* CheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInView.swift; sourceTree = "<group>"; };
+		AA10000000000000000002A /* BehaviorEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BehaviorEngineTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		AA200000000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA30000000000000000001A /* HealthKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA200000000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AA500000000000000000001 /* Soma */ = {
+			isa = PBXGroup;
+			children = (
+				AA100000000000000000001 /* SomaApp.swift */,
+				AA500000000000000000002 /* Models */,
+				AA500000000000000000003 /* Services */,
+				AA500000000000000000004 /* Calculators */,
+				AA500000000000000000005 /* ViewModels */,
+				AA500000000000000000006 /* Views */,
+				AA500000000000000000009 /* Resources */,
+				AA10000000000000000001B /* Info.plist */,
+				AA10000000000000000001C /* Soma.entitlements */,
+			);
+			path = Soma;
+			sourceTree = "<group>";
+		};
+		AA500000000000000000002 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				AA100000000000000000002 /* DailyMetrics.swift */,
+				AA100000000000000000003 /* SleepData.swift */,
+				AA100000000000000000004 /* HeartRateZone.swift */,
+				AA100000000000000000025 /* DailyCheckIn.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		AA500000000000000000003 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				AA100000000000000000005 /* HealthKitManager.swift */,
+				AA100000000000000000006 /* MetricsStore.swift */,
+				AA100000000000000000026 /* CheckInStore.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		AA500000000000000000004 /* Calculators */ = {
+			isa = PBXGroup;
+			children = (
+				AA100000000000000000007 /* BaselineCalculator.swift */,
+				AA100000000000000000008 /* RecoveryCalculator.swift */,
+				AA100000000000000000009 /* StrainCalculator.swift */,
+				AA10000000000000000000A /* SleepCalculator.swift */,
+				AA10000000000000000000B /* StressCalculator.swift */,
+				AA100000000000000000027 /* BehaviorEngine.swift */,
+			);
+			path = Calculators;
+			sourceTree = "<group>";
+		};
+		AA500000000000000000005 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				AA10000000000000000000C /* DashboardViewModel.swift */,
+				AA10000000000000000000D /* TrendsViewModel.swift */,
+				AA10000000000000000000E /* InsightsViewModel.swift */,
+				AA100000000000000000028 /* CheckInViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		AA500000000000000000006 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				AA10000000000000000000F /* MainTabView.swift */,
+				AA100000000000000000010 /* DashboardView.swift */,
+				AA100000000000000000011 /* TrendsView.swift */,
+				AA100000000000000000012 /* InsightsView.swift */,
+				AA100000000000000000013 /* OnboardingView.swift */,
+				AA100000000000000000014 /* SettingsView.swift */,
+				AA100000000000000000029 /* CheckInView.swift */,
+				AA500000000000000000007 /* Components */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		AA500000000000000000007 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				AA100000000000000000015 /* MetricCardView.swift */,
+				AA100000000000000000016 /* SparklineView.swift */,
+				AA100000000000000000017 /* RingView.swift */,
+				AA100000000000000000018 /* ColorState.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
+		AA500000000000000000009 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				AA100000000000000000019 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+		AA50000000000000000000A /* SomaTests */ = {
+			isa = PBXGroup;
+			children = (
+				AA100000000000000000020 /* BaselineCalculatorTests.swift */,
+				AA100000000000000000021 /* RecoveryCalculatorTests.swift */,
+				AA100000000000000000022 /* StrainCalculatorTests.swift */,
+				AA100000000000000000023 /* SleepCalculatorTests.swift */,
+				AA100000000000000000024 /* StressCalculatorTests.swift */,
+				AA10000000000000000002A /* BehaviorEngineTests.swift */,
+			);
+			path = SomaTests;
+			sourceTree = "<group>";
+		};
+		AA50000000000000000000B /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				AA10000000000000000001A /* HealthKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		AA50000000000000000000C /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				AA10000000000000000001D /* Soma.app */,
+				AA10000000000000000001E /* SomaTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		AA500000000000000000000 /* root */ = {
+			isa = PBXGroup;
+			children = (
+				AA500000000000000000001 /* Soma */,
+				AA50000000000000000000A /* SomaTests */,
+				AA50000000000000000000B /* Frameworks */,
+				AA50000000000000000000C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		AA000000000000000000001 /* Soma */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA000000000000000000004 /* Build configuration list for PBXNativeTarget "Soma" */;
+			buildPhases = (
+				AA200000000000000000003 /* Sources */,
+				AA200000000000000000001 /* Frameworks */,
+				AA200000000000000000004 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Soma;
+			productName = Soma;
+			productReference = AA10000000000000000001D /* Soma.app */;
+			productType = "com.apple.product-type.application";
+		};
+		AA000000000000000000002 /* SomaTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AA000000000000000000005 /* Build configuration list for PBXNativeTarget "SomaTests" */;
+			buildPhases = (
+				AA200000000000000000005 /* Sources */,
+				AA200000000000000000002 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AA000000000000000000006 /* PBXTargetDependency */,
+			);
+			name = SomaTests;
+			productName = SomaTests;
+			productReference = AA10000000000000000001E /* SomaTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		AA000000000000000000003 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1500;
+				LastUpgradeCheck = 1500;
+				TargetAttributes = {
+					AA000000000000000000001 = {
+						CreatedOnToolsVersion = 15.0;
+					};
+					AA000000000000000000002 = {
+						CreatedOnToolsVersion = 15.0;
+						TestTargetID = AA000000000000000000001;
+					};
+				};
+			};
+			buildConfigurationList = AA000000000000000000007 /* Build configuration list for PBXProject "Soma" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = AA500000000000000000000 /* root */;
+			productRefGroup = AA50000000000000000000C /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				AA000000000000000000001 /* Soma */,
+				AA000000000000000000002 /* SomaTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AA200000000000000000004 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA300000000000000000019 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		AA200000000000000000003 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA300000000000000000001 /* SomaApp.swift in Sources */,
+				AA300000000000000000002 /* DailyMetrics.swift in Sources */,
+				AA300000000000000000003 /* SleepData.swift in Sources */,
+				AA300000000000000000004 /* HeartRateZone.swift in Sources */,
+				AA300000000000000000005 /* HealthKitManager.swift in Sources */,
+				AA300000000000000000006 /* MetricsStore.swift in Sources */,
+				AA300000000000000000007 /* BaselineCalculator.swift in Sources */,
+				AA300000000000000000008 /* RecoveryCalculator.swift in Sources */,
+				AA300000000000000000009 /* StrainCalculator.swift in Sources */,
+				AA30000000000000000000A /* SleepCalculator.swift in Sources */,
+				AA30000000000000000000B /* StressCalculator.swift in Sources */,
+				AA30000000000000000000C /* DashboardViewModel.swift in Sources */,
+				AA30000000000000000000D /* TrendsViewModel.swift in Sources */,
+				AA30000000000000000000E /* InsightsViewModel.swift in Sources */,
+				AA30000000000000000000F /* MainTabView.swift in Sources */,
+				AA300000000000000000010 /* DashboardView.swift in Sources */,
+				AA300000000000000000011 /* TrendsView.swift in Sources */,
+				AA300000000000000000012 /* InsightsView.swift in Sources */,
+				AA300000000000000000013 /* OnboardingView.swift in Sources */,
+				AA300000000000000000014 /* SettingsView.swift in Sources */,
+				AA300000000000000000015 /* MetricCardView.swift in Sources */,
+				AA300000000000000000016 /* SparklineView.swift in Sources */,
+				AA300000000000000000017 /* RingView.swift in Sources */,
+				AA300000000000000000018 /* ColorState.swift in Sources */,
+				AA300000000000000000025 /* DailyCheckIn.swift in Sources */,
+				AA300000000000000000026 /* CheckInStore.swift in Sources */,
+				AA300000000000000000027 /* BehaviorEngine.swift in Sources */,
+				AA300000000000000000028 /* CheckInViewModel.swift in Sources */,
+				AA300000000000000000029 /* CheckInView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AA200000000000000000005 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AA300000000000000000020 /* BaselineCalculatorTests.swift in Sources */,
+				AA300000000000000000021 /* RecoveryCalculatorTests.swift in Sources */,
+				AA300000000000000000022 /* StrainCalculatorTests.swift in Sources */,
+				AA300000000000000000023 /* SleepCalculatorTests.swift in Sources */,
+				AA300000000000000000024 /* StressCalculatorTests.swift in Sources */,
+				AA30000000000000000002A /* BehaviorEngineTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AA000000000000000000006 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = AA000000000000000000001 /* Soma */;
+			targetProxy = AA000000000000000000008 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin PBXContainerItemProxy section */
+		AA000000000000000000008 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA000000000000000000003 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA000000000000000000001;
+			remoteInfo = Soma;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin XCBuildConfiguration section */
+		AA600000000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		AA600000000000000000002 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		AA600000000000000000003 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Soma/Soma.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Soma/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.soma.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		AA600000000000000000004 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = Soma/Soma.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Soma/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.soma.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		AA600000000000000000005 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.soma.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Soma.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Soma";
+			};
+			name = Debug;
+		};
+		AA600000000000000000006 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.soma.app.tests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.9;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Soma.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Soma";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		AA000000000000000000007 /* Build configuration list for PBXProject "Soma" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA600000000000000000001 /* Debug */,
+				AA600000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA000000000000000000004 /* Build configuration list for PBXNativeTarget "Soma" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA600000000000000000003 /* Debug */,
+				AA600000000000000000004 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		AA000000000000000000005 /* Build configuration list for PBXNativeTarget "SomaTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA600000000000000000005 /* Debug */,
+				AA600000000000000000006 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = AA000000000000000000003 /* Project object */;
+}

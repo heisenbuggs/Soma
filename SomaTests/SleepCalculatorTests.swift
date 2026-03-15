@@ -4,25 +4,52 @@ import XCTest
 final class SleepCalculatorTests: XCTestCase {
 
     // MARK: - Sleep Score
-    // Formula: 0.40×duration + 0.30×deep + 0.20×rem + 0.10×core
+    // Formula: 0.30×duration + 0.30×stage + 0.15×sleepingHRV + 0.15×sleepingHR + 0.10×interruptions
+    // Stage mix:  0.40×deep + 0.40×rem + 0.20×core
     // Optimal targets: deep=20%, rem=22%, core=50% of total sleep
 
-    func test_calculateScore_optimalStages_fullDuration_is100() {
-        // All stages exactly at optimal, full duration met
+    func test_calculateScore_allOptimal_is100() {
+        // All stages at optimal, full duration, ideal sleeping HRV/HR, no interruptions
         let total = 8.0 * 3600
         let sleep = SleepData(
             totalDuration: total,
-            deepSleepDuration: total * 0.20,   // exactly 20%
-            remSleepDuration:  total * 0.22,   // exactly 22%
-            coreSleepDuration: total * 0.50,   // exactly 50%
+            deepSleepDuration: total * 0.20,
+            remSleepDuration:  total * 0.22,
+            coreSleepDuration: total * 0.50,
             awakeDuration: 0,
             inBedDuration: 0,
             sleepStartTime: nil,
-            sleepEndTime: nil
+            sleepEndTime: nil,
+            interruptionCount: 0
         )
-        // duration=100, deep=100, rem=100, core=100 → final=100
-        let score = SleepCalculator.calculateScore(sleep: sleep, sleepNeed: 8)
+        // sleepingHRV/baseline = 78/60 = 1.3 → HRV score = 100
+        // sleepingHR/baseline  = 42/60 = 0.7 → HR score  = 100
+        let score = SleepCalculator.calculateScore(
+            sleep: sleep, sleepNeed: 8,
+            sleepingHRV: 78, sleepingHR: 42,
+            hrvBaseline: 60, sleepingHRBaseline: 60
+        )
         XCTAssertEqual(score, 100, accuracy: 0.01)
+    }
+
+    func test_calculateScore_nilHRVHR_defaultsToNeutral() {
+        // With nil HRV/HR, those components default to 50 (neutral)
+        let total = 8.0 * 3600
+        let sleep = SleepData(
+            totalDuration: total,
+            deepSleepDuration: total * 0.20,
+            remSleepDuration:  total * 0.22,
+            coreSleepDuration: total * 0.50,
+            awakeDuration: 0,
+            inBedDuration: 0,
+            sleepStartTime: nil,
+            sleepEndTime: nil,
+            interruptionCount: 0
+        )
+        // durationScore=100, stageScore=100, hrvScore=50, hrScore=50, interruptionScore=100
+        // 0.30*100 + 0.30*100 + 0.15*50 + 0.15*50 + 0.10*100 = 30+30+7.5+7.5+10 = 85
+        let score = SleepCalculator.calculateScore(sleep: sleep, sleepNeed: 8)
+        XCTAssertEqual(score, 85, accuracy: 0.01)
     }
 
     func test_calculateScore_noSleep_returns0() {
@@ -31,7 +58,7 @@ final class SleepCalculatorTests: XCTestCase {
     }
 
     func test_calculateScore_exampleFromSpec() {
-        // T=7.5h, D=1.4h, R=1.7h, C=4.4h, N=8h
+        // T=7.5h, D=1.4h, R=1.7h, C=4.4h, N=8h, no interruptions, nil HRV/HR
         let sleep = SleepData(
             totalDuration: 7.5 * 3600,
             deepSleepDuration: 1.4 * 3600,
@@ -40,19 +67,22 @@ final class SleepCalculatorTests: XCTestCase {
             awakeDuration: 0,
             inBedDuration: 0,
             sleepStartTime: nil,
-            sleepEndTime: nil
+            sleepEndTime: nil,
+            interruptionCount: 0
         )
         // durationScore = 7.5/8*100 = 93.75
-        // deepScore  = (1.4/7.5)/0.20*100 = 93.33  (18.67% / 20%)
-        // remScore   = min(100, (1.7/7.5)/0.22*100) = min(100, 103.0) = 100
-        // coreScore  = min(100, (4.4/7.5)/0.50*100) = min(100, 117.3) = 100
-        // final = 0.4*93.75 + 0.3*93.33 + 0.2*100 + 0.1*100 ≈ 95.5
+        // deepScore  = (1.4/7.5)/0.20*100 = 93.33
+        // remScore   = min(100, (1.7/7.5)/0.22*100) = 100
+        // coreScore  = min(100, (4.4/7.5)/0.50*100) = 100
+        // stageScore = 0.40*93.33 + 0.40*100 + 0.20*100 = 97.33
+        // hrvScore = 50, hrScore = 50, interruptionScore = 100
+        // final = 0.30*93.75 + 0.30*97.33 + 0.15*50 + 0.15*50 + 0.10*100 ≈ 82.3
         let score = SleepCalculator.calculateScore(sleep: sleep, sleepNeed: 8)
-        XCTAssertEqual(score, 95.5, accuracy: 0.5)
+        XCTAssertEqual(score, 82.3, accuracy: 0.5)
     }
 
     func test_calculateScore_halfDuration_optimalStages() {
-        // T=4h, optimal stage ratios, N=8h
+        // T=4h, optimal stage ratios, N=8h, no interruptions, nil HRV/HR
         let total = 4.0 * 3600
         let sleep = SleepData(
             totalDuration: total,
@@ -62,12 +92,13 @@ final class SleepCalculatorTests: XCTestCase {
             awakeDuration: 0,
             inBedDuration: 0,
             sleepStartTime: nil,
-            sleepEndTime: nil
+            sleepEndTime: nil,
+            interruptionCount: 0
         )
-        // durationScore=50, deep=100, rem=100, core=100
-        // final = 0.4*50 + 0.3*100 + 0.2*100 + 0.1*100 = 20+30+20+10 = 80
+        // durationScore=50, stageScore=100, hrv=50, hr=50, interruption=100
+        // 0.30*50 + 0.30*100 + 0.15*50 + 0.15*50 + 0.10*100 = 15+30+7.5+7.5+10 = 70
         let score = SleepCalculator.calculateScore(sleep: sleep, sleepNeed: 8)
-        XCTAssertEqual(score, 80, accuracy: 0.01)
+        XCTAssertEqual(score, 70, accuracy: 0.01)
     }
 
     func test_calculateScore_noDeepOrREM_allCore() {
@@ -81,17 +112,18 @@ final class SleepCalculatorTests: XCTestCase {
             awakeDuration: 0,
             inBedDuration: 0,
             sleepStartTime: nil,
-            sleepEndTime: nil
+            sleepEndTime: nil,
+            interruptionCount: 0
         )
-        // durationScore=100, deep=0, rem=0
-        // coreScore = min(100, (1.0/0.50)*100) = 100
-        // final = 0.4*100 + 0.3*0 + 0.2*0 + 0.1*100 = 40+10 = 50
+        // durationScore=100, deep=0, rem=0, coreScore=100 → stageScore=0.20*100=20
+        // hrv=50, hr=50, interruption=100
+        // 0.30*100 + 0.30*20 + 0.15*50 + 0.15*50 + 0.10*100 = 30+6+7.5+7.5+10 = 61
         let score = SleepCalculator.calculateScore(sleep: sleep, sleepNeed: 8)
-        XCTAssertEqual(score, 50, accuracy: 0.01)
+        XCTAssertEqual(score, 61, accuracy: 0.01)
     }
 
     func test_calculateScore_belowOptimalAllStages() {
-        // T=6h, D=10%, R=10%, C=30% — all below optimal, full duration missed
+        // T=6h, D=10%, R=10%, C=30% — all below optimal
         let total = 6.0 * 3600
         let sleep = SleepData(
             totalDuration: total,
@@ -101,19 +133,18 @@ final class SleepCalculatorTests: XCTestCase {
             awakeDuration: 0,
             inBedDuration: 0,
             sleepStartTime: nil,
-            sleepEndTime: nil
+            sleepEndTime: nil,
+            interruptionCount: 0
         )
+        // durationScore = 75
+        // stageScore = 0.40*50 + 0.40*45.45 + 0.20*60 = 20+18.18+12 = 50.18
+        // hrv=50, hr=50, interruption=100
+        // 0.30*75 + 0.30*50.18 + 0.15*50 + 0.15*50 + 0.10*100 = 22.5+15.05+7.5+7.5+10 ≈ 62.6
         let score = SleepCalculator.calculateScore(sleep: sleep, sleepNeed: 8)
-        // durationScore = 6/8*100 = 75
-        // deepScore  = 0.10/0.20*100 = 50
-        // remScore   = 0.10/0.22*100 ≈ 45.45
-        // coreScore  = 0.30/0.50*100 = 60
-        // final = 0.4*75 + 0.3*50 + 0.2*45.45 + 0.1*60 = 30+15+9.09+6 ≈ 60.1
-        XCTAssertEqual(score, 60.1, accuracy: 0.5)
+        XCTAssertEqual(score, 62.6, accuracy: 0.5)
     }
 
     func test_calculateScore_clamped0To100() {
-        // Extreme oversleeping with perfect stages — should cap at 100
         let total = 20.0 * 3600
         let sleep = SleepData(
             totalDuration: total,
@@ -123,11 +154,97 @@ final class SleepCalculatorTests: XCTestCase {
             awakeDuration: 0,
             inBedDuration: 0,
             sleepStartTime: nil,
-            sleepEndTime: nil
+            sleepEndTime: nil,
+            interruptionCount: 0
         )
         let score = SleepCalculator.calculateScore(sleep: sleep, sleepNeed: 8)
         XCTAssertLessThanOrEqual(score, 100)
         XCTAssertGreaterThanOrEqual(score, 0)
+    }
+
+    // MARK: - Sleeping HRV Sub-component
+
+    func test_computeSleepingHRVScore_atBaseline_is50() {
+        let score = SleepCalculator.computeSleepingHRVScore(sleepingHRV: 60, baseline: 60)
+        XCTAssertEqual(score, 50, accuracy: 0.1)
+    }
+
+    func test_computeSleepingHRVScore_aboveBaseline_isHigh() {
+        // HRV 30% above baseline → ratio=1.3 → score=100
+        let score = SleepCalculator.computeSleepingHRVScore(sleepingHRV: 78, baseline: 60)
+        XCTAssertEqual(score, 100, accuracy: 0.1)
+    }
+
+    func test_computeSleepingHRVScore_belowBaseline_isLow() {
+        // HRV 30% below baseline → ratio=0.7 → score=0
+        let score = SleepCalculator.computeSleepingHRVScore(sleepingHRV: 42, baseline: 60)
+        XCTAssertEqual(score, 0, accuracy: 0.1)
+    }
+
+    func test_computeSleepingHRVScore_nilData_returns50() {
+        let score = SleepCalculator.computeSleepingHRVScore(sleepingHRV: nil, baseline: nil)
+        XCTAssertEqual(score, 50)
+    }
+
+    // MARK: - Sleeping HR Sub-component
+
+    func test_computeSleepingHRScore_atBaseline_is50() {
+        let score = SleepCalculator.computeSleepingHRScore(sleepingHR: 60, baseline: 60)
+        XCTAssertEqual(score, 50, accuracy: 0.1)
+    }
+
+    func test_computeSleepingHRScore_belowBaseline_isHigh() {
+        // HR 30% below baseline → ratio=0.7 → score=100 (lower is better)
+        let score = SleepCalculator.computeSleepingHRScore(sleepingHR: 42, baseline: 60)
+        XCTAssertEqual(score, 100, accuracy: 0.1)
+    }
+
+    func test_computeSleepingHRScore_aboveBaseline_isLow() {
+        // HR 30% above baseline → ratio=1.3 → score=0
+        let score = SleepCalculator.computeSleepingHRScore(sleepingHR: 78, baseline: 60)
+        XCTAssertEqual(score, 0, accuracy: 0.1)
+    }
+
+    func test_computeSleepingHRScore_nilData_returns50() {
+        let score = SleepCalculator.computeSleepingHRScore(sleepingHR: nil, baseline: nil)
+        XCTAssertEqual(score, 50)
+    }
+
+    // MARK: - Interruption Sub-component
+
+    func test_computeInterruptionScore_noInterruptions_is100() {
+        XCTAssertEqual(SleepCalculator.computeInterruptionScore(count: 0), 100)
+    }
+
+    func test_computeInterruptionScore_oneInterruption_is85() {
+        XCTAssertEqual(SleepCalculator.computeInterruptionScore(count: 1), 85)
+    }
+
+    func test_computeInterruptionScore_sevenInterruptions_isZero() {
+        // 7 * 15 = 105, clamped to 0
+        XCTAssertEqual(SleepCalculator.computeInterruptionScore(count: 7), 0)
+    }
+
+    func test_calculateScore_withInterruptions_reducesScore() {
+        let total = 8.0 * 3600
+        let sleep0 = SleepData(
+            totalDuration: total, deepSleepDuration: total * 0.20,
+            remSleepDuration: total * 0.22, coreSleepDuration: total * 0.50,
+            awakeDuration: 0, inBedDuration: 0,
+            sleepStartTime: nil, sleepEndTime: nil, interruptionCount: 0
+        )
+        let sleep4 = SleepData(
+            totalDuration: total, deepSleepDuration: total * 0.20,
+            remSleepDuration: total * 0.22, coreSleepDuration: total * 0.50,
+            awakeDuration: 0, inBedDuration: 0,
+            sleepStartTime: nil, sleepEndTime: nil, interruptionCount: 4
+        )
+        let scoreClean = SleepCalculator.calculateScore(sleep: sleep0, sleepNeed: 8)
+        let scoreInterrupted = SleepCalculator.calculateScore(sleep: sleep4, sleepNeed: 8)
+        XCTAssertGreaterThan(scoreClean, scoreInterrupted)
+        // 4 interruptions → interruptionScore = max(0, 100-60) = 40
+        // Difference = 0.10*(100-40) = 6
+        XCTAssertEqual(scoreClean - scoreInterrupted, 6, accuracy: 0.1)
     }
 
     // MARK: - Sleep Need
@@ -151,7 +268,6 @@ final class SleepCalculatorTests: XCTestCase {
     }
 
     func test_calculateSleepNeed_clampedToMinMax() {
-        // Minimum
         let low = SleepCalculator.calculateSleepNeed(
             baselineSleep: 5.0,
             last7DaysNeedVsActual: [],
@@ -159,7 +275,6 @@ final class SleepCalculatorTests: XCTestCase {
         )
         XCTAssertEqual(low, 7.0, accuracy: 0.01)
 
-        // Maximum
         let high = SleepCalculator.calculateSleepNeed(
             baselineSleep: 12.0,
             last7DaysNeedVsActual: Array(repeating: (8.0, 4.0), count: 7),
@@ -169,26 +284,22 @@ final class SleepCalculatorTests: XCTestCase {
     }
 
     func test_calculateSleepNeed_debtAdded() {
-        // 7 days with 1h deficit each night
         let pairs = Array(repeating: (8.0, 7.0), count: 7)
         let need = SleepCalculator.calculateSleepNeed(
             baselineSleep: 8.0,
             last7DaysNeedVsActual: pairs,
             yesterdayStrain: 0
         )
-        // debt per night = 1.0, need = 8 + 1 = 9
         XCTAssertEqual(need, 9.0, accuracy: 0.01)
     }
 
     func test_calculateSleepNeed_debtCappedAt2PerNight() {
-        // 7 days with 5h deficit each night (capped at 2h per night)
-        let pairs = Array(repeating: (12.0, 7.0), count: 7) // 5h deficit but capped at 2h
+        let pairs = Array(repeating: (12.0, 7.0), count: 7)
         let need = SleepCalculator.calculateSleepNeed(
             baselineSleep: 8.0,
             last7DaysNeedVsActual: pairs,
             yesterdayStrain: 0
         )
-        // debt per night capped at 2, need = 8 + 2 = 10
         XCTAssertEqual(need, 10.0, accuracy: 0.01)
     }
 
@@ -203,7 +314,6 @@ final class SleepCalculatorTests: XCTestCase {
     func test_computeSleepDebt_accumulated() {
         let pairs = [(8.0, 6.0), (8.0, 7.0), (8.0, 8.0)]
         let debt = SleepCalculator.computeSleepDebt(needVsActual: pairs)
-        // 2 + 1 + 0 = 3
         XCTAssertEqual(debt, 3.0, accuracy: 0.01)
     }
 }

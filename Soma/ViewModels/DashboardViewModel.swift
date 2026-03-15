@@ -1,0 +1,203 @@
+import Foundation
+import Combine
+
+@MainActor
+final class DashboardViewModel: ObservableObject {
+
+    @Published var todayMetrics: DailyMetrics = .empty
+    @Published var sparklineData: [String: [Double]] = [:]  // "recovery", "strain", "sleep", "stress"
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    @Published var isBaselineBuilding = false
+    @Published var coachingTips: [String] = []
+    @Published var lastRefreshed: Date?
+
+    private let healthKit: HealthDataProviding
+    private let store: MetricsStore
+    private let checkInStore: CheckInStore
+    private let settings: UserSettings
+    private var refreshTask: Task<Void, Never>?
+
+    private let minRefreshInterval: TimeInterval = 5 * 60  // 5 minutes
+
+    init(healthKit: HealthDataProviding, store: MetricsStore, checkInStore: CheckInStore, settings: UserSettings) {
+        self.healthKit = healthKit
+        self.store = store
+        self.checkInStore = checkInStore
+        self.settings = settings
+    }
+
+    // MARK: - Load
+
+    func loadCached() {
+        if let cached = store.load(for: Date()) {
+            todayMetrics = cached
+            updateSparklines()
+            updateCoachingTips()
+        }
+    }
+
+    func refresh(force: Bool = false) {
+        // Debounce
+        if !force, let last = lastRefreshed,
+           Date().timeIntervalSince(last) < minRefreshInterval {
+            return
+        }
+
+        refreshTask?.cancel()
+        refreshTask = Task {
+            await fetchAllMetrics()
+        }
+    }
+
+    // MARK: - Fetch
+
+    private func fetchAllMetrics() async {
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        let today = Date()
+
+        do {
+            // Fetch all parallel data
+            async let hrv        = healthKit.fetchHRV(for: today)
+            async let rhr        = healthKit.fetchRestingHR(for: today)
+            async let hrSamples  = healthKit.fetchHeartRateSamples(for: today)
+            async let sleepFetch = healthKit.fetchSleepAnalysis(for: today)
+            async let calories   = healthKit.fetchActiveEnergy(for: today)
+            async let steps      = healthKit.fetchSteps(for: today)
+            async let vo2        = healthKit.fetchVO2Max()
+            async let respRate   = healthKit.fetchRespiratoryRate(for: today)
+            async let hrvHistory = healthKit.fetchHRVHistory(days: 30)
+            async let rhrHistory = healthKit.fetchRestingHRHistory(days: 30)
+
+            let (hrvValues, rhrValue, hrData, sleepData, activeCalories, stepCount,
+                 vo2Max, respRateVal, hrvHist, rhrHist) = try await (
+                    hrv, rhr, hrSamples, sleepFetch, calories, steps, vo2, respRate,
+                    hrvHistory, rhrHistory
+                 )
+
+            // Fetch sleeping-window signals (sequential — need sleep window first)
+            var sleepingHR:  Double? = nil
+            var sleepingHRV: Double? = nil
+            if let start = sleepData.sleepStartTime, let end = sleepData.sleepEndTime {
+                async let sHR  = healthKit.fetchSleepingHR(from: start, to: end)
+                async let sHRV = healthKit.fetchSleepingHRV(from: start, to: end)
+                (sleepingHR, sleepingHRV) = try await (sHR, sHRV)
+            }
+
+            // Baselines
+            let hrvBaseline = BaselineCalculator.computeHRVBaseline(from: hrvHist)
+            let rhrBaseline = BaselineCalculator.computeRHRBaseline(from: rhrHist)
+            let last30 = store.loadLast(30)
+            let sleepingHRHistory = BaselineCalculator.extractHistory(from: last30, \.sleepingHR)
+            let sleepingHRBaseline = BaselineCalculator.computeBaseline(from: sleepingHRHistory)
+            isBaselineBuilding = !BaselineCalculator.hasEnoughData(hrvHist)
+
+            // Yesterday
+            let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
+            let yesterdayStrain = store.load(for: yesterday)?.strainScore ?? 0
+
+            // Sleep need
+            let last7 = store.loadLast(7)
+            let needVsActual: [(Double, Double)] = last7.compactMap { m in
+                guard let a = m.sleepDurationHours, let n = m.sleepNeedHours else { return nil }
+                return (n, a)
+            }
+            let sleepNeed = SleepCalculator.calculateSleepNeed(
+                baselineSleep: settings.baselineSleepHours,
+                last7DaysNeedVsActual: needVsActual,
+                yesterdayStrain: yesterdayStrain
+            )
+
+            // Sleep score (5-component)
+            let sleepScore = SleepCalculator.calculateScore(
+                sleep: sleepData,
+                sleepNeed: sleepNeed,
+                sleepingHRV: sleepingHRV,
+                sleepingHR: sleepingHR,
+                hrvBaseline: hrvBaseline,
+                sleepingHRBaseline: sleepingHRBaseline
+            )
+
+            // Strain
+            let maxHR    = settings.maxHeartRate ?? StrainCalculator.estimatedMaxHR(age: settings.age)
+            let restingHR = rhrValue ?? 65
+            let strainScore = StrainCalculator.calculate(samples: hrData, restingHR: restingHR, maxHR: maxHR)
+
+            // Recovery (weights: 40/25/25/10)
+            let todayHRV = hrvValues.isEmpty ? nil : hrvValues.reduce(0, +) / Double(hrvValues.count)
+            let recoveryScore = RecoveryCalculator.calculate(input: RecoveryInput(
+                todayHRV: todayHRV,
+                hrvBaseline: hrvBaseline,
+                todayRestingHR: rhrValue,
+                rhrBaseline: rhrBaseline,
+                sleepScore: sleepScore,
+                yesterdayStrain: yesterdayStrain
+            ))
+
+            // Stress
+            let daytimeSamples = StressCalculator.filterDaytime(hrData, on: today)
+            let stressScore = StressCalculator.calculate(
+                daytimeHRV: todayHRV,
+                daytimeAvgHR: StressCalculator.average(daytimeSamples),
+                hrvBaseline: hrvBaseline,
+                rhrBaseline: rhrBaseline
+            )
+
+            let metrics = DailyMetrics(
+                date: today,
+                recoveryScore: recoveryScore,
+                strainScore: strainScore,
+                sleepScore: sleepScore,
+                stressScore: stressScore,
+                hrvAverage: todayHRV,
+                restingHR: rhrValue,
+                sleepDurationHours: sleepData.totalDurationHours,
+                sleepNeedHours: sleepNeed,
+                activeCalories: activeCalories,
+                stepCount: stepCount,
+                vo2Max: vo2Max,
+                respiratoryRate: respRateVal,
+                sleepingHR: sleepingHR,
+                sleepingHRV: sleepingHRV,
+                sleepInterruptions: sleepData.interruptionCount
+            )
+
+            store.save(metrics)
+            todayMetrics = metrics
+            lastRefreshed = Date()
+            updateSparklines()
+            updateCoachingTips()
+
+        } catch {
+            if !(error is CancellationError) {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    // MARK: - Sparklines
+
+    private func updateSparklines() {
+        let recent = store.loadLast(7)
+        sparklineData["recovery"] = recent.map { $0.recoveryScore }
+        sparklineData["strain"]   = recent.map { $0.strainScore }
+        sparklineData["sleep"]    = recent.map { $0.sleepScore }
+        sparklineData["stress"]   = recent.map { $0.stressScore }
+    }
+
+    // MARK: - Coaching Tips
+
+    private func updateCoachingTips() {
+        let checkIns = checkInStore.loadAll()
+        let metrics  = store.loadAll()
+        let insights = BehaviorEngine.generateInsights(checkIns: checkIns, metrics: metrics)
+        coachingTips = BehaviorEngine.coachingTips(
+            todayMetrics: todayMetrics,
+            recentCheckIns: Array(checkIns.suffix(7)),
+            insights: insights
+        )
+    }
+}

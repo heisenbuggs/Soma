@@ -1,0 +1,80 @@
+import Foundation
+import Combine
+
+@MainActor
+final class TrendsViewModel: ObservableObject {
+
+    enum TimeRange: String, CaseIterable {
+        case week = "7D"
+        case twoWeeks = "14D"
+        case month = "30D"
+
+        var days: Int {
+            switch self {
+            case .week: return 7
+            case .twoWeeks: return 14
+            case .month: return 30
+            }
+        }
+    }
+
+    @Published var selectedRange: TimeRange = .twoWeeks
+    @Published var metricHistory: [DailyMetrics] = []
+    @Published var hrvHistory: [(Date, Double)] = []
+    @Published var rhrHistory: [(Date, Double)] = []
+    @Published var hrvBaseline: Double?
+    @Published var rhrBaseline: Double?
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    @Published var selectedDataPoint: DailyMetrics?
+
+    private let healthKit: HealthDataProviding
+    private let store: MetricsStore
+
+    init(healthKit: HealthDataProviding, store: MetricsStore) {
+        self.healthKit = healthKit
+        self.store = store
+    }
+
+    func load() {
+        Task {
+            await fetchTrendData()
+        }
+    }
+
+    private func fetchTrendData() async {
+        isLoading = true
+        defer { isLoading = false }
+
+        // Load stored metrics for chart data
+        metricHistory = store.loadLast(selectedRange.days)
+
+        do {
+            let (hrv, rhr) = try await (
+                healthKit.fetchHRVHistory(days: 30),
+                healthKit.fetchRestingHRHistory(days: 30)
+            )
+
+            let filteredHRV = hrv.filter { entry in
+                let cutoff = Calendar.current.date(byAdding: .day, value: -selectedRange.days, to: Date())!
+                return entry.0 >= cutoff
+            }
+            let filteredRHR = rhr.filter { entry in
+                let cutoff = Calendar.current.date(byAdding: .day, value: -selectedRange.days, to: Date())!
+                return entry.0 >= cutoff
+            }
+
+            hrvHistory = filteredHRV
+            rhrHistory = filteredRHR
+            hrvBaseline = BaselineCalculator.computeHRVBaseline(from: hrv)
+            rhrBaseline = BaselineCalculator.computeRHRBaseline(from: rhr)
+
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
+    func rangeChanged() {
+        load()
+    }
+}
