@@ -3,7 +3,9 @@ import SwiftUI
 struct OnboardingView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage("userFirstName") private var storedFirstName: String = ""
     @State private var currentPage = 0
+    @State private var nameInput: String = ""
     @State private var isRequesting = false
     @State private var showDenied = false
 
@@ -16,7 +18,8 @@ struct OnboardingView: View {
             } else {
                 TabView(selection: $currentPage) {
                     welcomePage.tag(0)
-                    permissionsPage.tag(1)
+                    namePage.tag(1)
+                    permissionsPage.tag(2)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
                 .animation(.easeInOut, value: currentPage)
@@ -86,6 +89,71 @@ struct OnboardingView: View {
         }
     }
 
+    // MARK: - Name Page
+
+    private var namePage: some View {
+        VStack(spacing: 32) {
+            Spacer()
+
+            Image(systemName: "hand.wave.fill")
+                .font(.system(size: 64))
+                .foregroundColor(Color(hex: "00C853"))
+
+            VStack(spacing: 12) {
+                Text("Welcome")
+                    .font(.largeTitle)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                Text("What should we call you?")
+                    .font(.body)
+                    .foregroundColor(Color(hex: "8E8E93"))
+                    .multilineTextAlignment(.center)
+            }
+
+            TextField("Your name", text: $nameInput)
+                .font(.title2)
+                .multilineTextAlignment(.center)
+                .padding(.vertical, 14)
+                .background(Color.somaCard)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .padding(.horizontal, 40)
+
+            Spacer()
+
+            VStack(spacing: 12) {
+                Button {
+                    saveFirstName()
+                    withAnimation { currentPage = 2 }
+                } label: {
+                    Text("Continue")
+                        .font(.headline)
+                        .foregroundColor(.black)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
+
+                Button {
+                    withAnimation { currentPage = 2 }
+                } label: {
+                    Text("Skip")
+                        .font(.subheadline)
+                        .foregroundColor(Color(hex: "8E8E93"))
+                }
+            }
+            .padding(.horizontal, 32)
+            .padding(.bottom, 40)
+        }
+    }
+
+    private func saveFirstName() {
+        let trimmed = nameInput.trimmingCharacters(in: .whitespaces)
+        guard !trimmed.isEmpty else { return }
+        let first = trimmed.components(separatedBy: .whitespaces).first ?? trimmed
+        storedFirstName = first
+    }
+
     // MARK: - Permissions Page
 
     private var permissionsPage: some View {
@@ -148,8 +216,7 @@ struct OnboardingView: View {
                 .disabled(isRequesting)
 
                 Button {
-                    // Back
-                    withAnimation { currentPage = 0 }
+                    withAnimation { currentPage = 1 }
                 } label: {
                     Text("Back")
                         .font(.subheadline)

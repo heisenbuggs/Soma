@@ -1,5 +1,5 @@
 import Foundation
-import UserNotifications
+@preconcurrency import UserNotifications
 
 // MARK: - NotificationScheduler
 
@@ -28,10 +28,10 @@ final class NotificationScheduler {
     /// Schedules (or replaces) the daily recovery notification immediately.
     /// Called once per day after scores are freshly computed.
     func scheduleRecoveryNotification(metrics: DailyMetrics) {
-        let center = UNUserNotificationCenter.current()
-        center.getNotificationSettings { [weak self] settings in
-            guard settings.authorizationStatus == .authorized,
-                  let self else { return }
+        Task {
+            let center = UNUserNotificationCenter.current()
+            let settings = await center.notificationSettings()
+            guard settings.authorizationStatus == .authorized else { return }
 
             let content = UNMutableNotificationContent()
             content.sound = .default
@@ -42,14 +42,14 @@ final class NotificationScheduler {
             // Fire after a short delay so it appears as a morning notification
             // (delivered after sleep processing, not on a fixed schedule)
             let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 2, repeats: false)
-            let request  = UNNotificationRequest(
-                identifier: self.recoveryNotificationID,
+            let request = UNNotificationRequest(
+                identifier: recoveryNotificationID,
                 content: content,
                 trigger: trigger
             )
 
-            center.removePendingNotificationRequests(withIdentifiers: [self.recoveryNotificationID])
-            center.add(request)
+            center.removePendingNotificationRequests(withIdentifiers: [recoveryNotificationID])
+            try? await center.add(request)
         }
     }
 
@@ -62,13 +62,15 @@ final class NotificationScheduler {
 
     static func content(for metrics: DailyMetrics) -> (title: String, body: String) {
         let score = Int(metrics.recoveryScore.rounded())
+        let name  = UserDefaults.standard.string(forKey: "userFirstName") ?? ""
+        let prefix = name.isEmpty ? "" : "\(name), "
 
         switch metrics.recoveryScore {
         case 67...100:
             let sleepNote = metrics.sleepScore >= 75 ? "Sleep and HRV are strong." : ""
             return (
                 "Recovery \(score) — Great day to train",
-                ("Resting HR was low and recovery looks solid. " + sleepNote).trimmingCharacters(in: .whitespaces)
+                ("\(prefix)Resting HR was low and recovery looks solid. " + sleepNote).trimmingCharacters(in: .whitespaces)
             )
         case 34..<67:
             let hrNote: String
@@ -79,7 +81,7 @@ final class NotificationScheduler {
             }
             return (
                 "Recovery \(score) — Moderate day",
-                ("Keep today's effort balanced. " + hrNote).trimmingCharacters(in: .whitespaces)
+                ("\(prefix)Keep today's effort balanced. " + hrNote).trimmingCharacters(in: .whitespaces)
             )
         default:
             let sleepNote: String
@@ -90,7 +92,7 @@ final class NotificationScheduler {
             }
             return (
                 "Recovery \(score) — Rest day recommended",
-                ("HRV dipped overnight. Prioritise recovery. " + sleepNote).trimmingCharacters(in: .whitespaces)
+                ("\(prefix)HRV dipped overnight. Prioritise recovery. " + sleepNote).trimmingCharacters(in: .whitespaces)
             )
         }
     }

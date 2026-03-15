@@ -73,13 +73,15 @@ final class DashboardViewModel: ObservableObject {
             async let respRate   = healthKit.fetchRespiratoryRate(for: today)
             async let hrvHistory = healthKit.fetchHRVHistory(days: 30)
             async let rhrHistory = healthKit.fetchRestingHRHistory(days: 30)
-            async let workoutsFetch = healthKit.fetchWorkouts(for: today)
 
             let (hrvValues, rhrValue, hrData, sleepData, activeCalories, stepCount,
-                 vo2Max, respRateVal, hrvHist, rhrHist, fetchedWorkouts) = try await (
+                 vo2Max, respRateVal, hrvHist, rhrHist) = try await (
                     hrv, rhr, hrSamples, sleepFetch, calories, steps, vo2, respRate,
-                    hrvHistory, rhrHistory, workoutsFetch
+                    hrvHistory, rhrHistory
                  )
+
+            // Fetch workouts independently so a failure here doesn't zero out all scores
+            let fetchedWorkouts = (try? await healthKit.fetchWorkouts(for: today)) ?? []
 
             // Fetch sleeping-window signals (sequential — need sleep window first)
             var sleepingHR:  Double? = nil
@@ -102,15 +104,19 @@ final class DashboardViewModel: ObservableObject {
             let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
             let yesterdayStrain = store.load(for: yesterday)?.strainScore ?? 0
 
-            // Sleep need
-            let last7 = store.loadLast(7)
-            let needVsActual: [(Double, Double)] = last7.compactMap { m in
-                guard let a = m.sleepDurationHours, let n = m.sleepNeedHours else { return nil }
-                return (n, a)
+            // Sleep goal: use HealthKit value (user's goal set in Health app),
+            // fall back to the in-app baseline setting if not configured.
+            let sleepGoal = (try? await healthKit.fetchSleepGoal()) ?? settings.sleepGoalHours
+
+            // Sleep need: 3-day rolling debt window only — debt resets after 3 days.
+            let last3 = store.loadLast(3)
+            let recentActuals: [(Double, Double)] = last3.compactMap { m in
+                guard let a = m.sleepDurationHours else { return nil }
+                return (sleepGoal, a)
             }
             let sleepNeed = SleepCalculator.calculateSleepNeed(
-                baselineSleep: settings.baselineSleepHours,
-                last7DaysNeedVsActual: needVsActual,
+                baselineSleep: sleepGoal,
+                recentNeedVsActual: recentActuals,
                 yesterdayStrain: yesterdayStrain
             )
 
@@ -124,7 +130,7 @@ final class DashboardViewModel: ObservableObject {
                 sleepingHRBaseline: sleepingHRBaseline
             )
 
-            // Workouts → workout-aware strain
+            // Workouts → workout-aware strain + workout minutes
             let workoutIntervals = fetchedWorkouts.map { w in
                 StrainCalculator.WorkoutInterval(
                     start: w.startDate,
@@ -132,6 +138,8 @@ final class DashboardViewModel: ObservableObject {
                     activityName: w.workoutActivityType.displayName
                 )
             }
+            let workoutMinutes = fetchedWorkouts.isEmpty ? nil
+                : fetchedWorkouts.reduce(0.0) { $0 + $1.duration / 60.0 }
             let maxHR = settings.maxHeartRate ?? StrainCalculator.estimatedMaxHR(age: settings.age)
             let restingHR = rhrValue ?? 65
             let strainResult = StrainCalculator.calculateWorkoutAware(
@@ -161,6 +169,16 @@ final class DashboardViewModel: ObservableObject {
                 rhrBaseline: rhrBaseline
             )
 
+            // Ayurvedic sleep points — anchor to the evening of the prior calendar day
+            let eveningDate = Calendar.current.date(byAdding: .day, value: -1, to: today)!
+            let ayurvedicPoints: Double? = {
+                guard let start = sleepData.sleepStartTime, let end = sleepData.sleepEndTime else { return nil }
+                return AyurvedicSleepCalculator.calculate(
+                    intervals: [(start: start, end: end)],
+                    eveningDate: eveningDate
+                )
+            }()
+
             let metrics = DailyMetrics(
                 date: today,
                 recoveryScore: recoveryScore,
@@ -179,7 +197,11 @@ final class DashboardViewModel: ObservableObject {
                 sleepingHRV: sleepingHRV,
                 sleepInterruptions: sleepData.interruptionCount,
                 workoutStrain: strainResult.workoutStrain,
-                incidentalStrain: strainResult.incidentalStrain
+                incidentalStrain: strainResult.incidentalStrain,
+                workoutMinutes: workoutMinutes,
+                sleepStartTime: sleepData.sleepStartTime,
+                sleepEndTime: sleepData.sleepEndTime,
+                ayurvedicSleepPoints: ayurvedicPoints
             )
 
             store.save(metrics)
@@ -203,6 +225,12 @@ final class DashboardViewModel: ObservableObject {
                 errorMessage = error.localizedDescription
             }
         }
+    }
+
+    // MARK: - History
+
+    func loadHistory(days: Int) -> [DailyMetrics] {
+        store.loadLast(days)
     }
 
     // MARK: - Sparklines

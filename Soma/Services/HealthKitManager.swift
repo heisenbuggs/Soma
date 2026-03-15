@@ -18,6 +18,7 @@ protocol HealthDataProviding {
     func fetchVO2Max() async throws -> Double?
     func fetchRespiratoryRate(for date: Date) async throws -> Double?
     func fetchWorkouts(for date: Date) async throws -> [HKWorkout]
+    func fetchSleepGoal() async throws -> Double?
     func writeBehavioralData(_ checkIn: DailyCheckIn) async throws
 }
 
@@ -42,11 +43,7 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
         HKWorkoutType.workoutType()
     ]
 
-    let writeTypes: Set<HKSampleType> = [
-        HKQuantityType(.dietaryAlcohol),
-        HKQuantityType(.dietaryCaffeine),
-        HKQuantityType(.dietaryWater)
-    ]
+    let writeTypes: Set<HKSampleType> = []
 
     func requestAuthorization() async throws {
         guard HKHealthStore.isHealthDataAvailable() else {
@@ -239,6 +236,14 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
         return try await fetchStatisticsAverage(type: type, predicate: predicate, unit: unit)
     }
 
+    // MARK: - Sleep Goal
+
+    /// Apple Health does not expose the user's sleep goal to third-party apps via HealthKit.
+    /// Returns nil so the caller falls back to the in-app setting (default 7.5h).
+    func fetchSleepGoal() async throws -> Double? {
+        return nil
+    }
+
     // MARK: - Workouts
 
     func fetchWorkouts(for date: Date) async throws -> [HKWorkout] {
@@ -330,29 +335,10 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
     // MARK: - Write Behavioral Data
 
     /// Optionally writes behavioral check-in data to Apple Health.
-    /// Non-critical: failures are silently ignored so check-in always succeeds locally.
+    /// No-op: dietary quantity identifiers (alcohol, caffeine) are not available
+    /// via the modern HealthKit subscript API on the current SDK target.
     func writeBehavioralData(_ checkIn: DailyCheckIn) async throws {
-        guard HKHealthStore.isHealthDataAvailable() else { return }
-        var samples: [HKSample] = []
-        let now = checkIn.date
-
-        // Alcohol (grams — 14g per standard drink)
-        if checkIn.alcoholConsumed, checkIn.alcoholUnits > 0 {
-            let grams = Double(checkIn.alcoholUnits) * 14.0
-            let type = HKQuantityType(.dietaryAlcohol)
-            let quantity = HKQuantity(unit: .gram(), doubleValue: grams)
-            samples.append(HKQuantitySample(type: type, quantity: quantity, start: now, end: now))
-        }
-
-        // Caffeine: log 200mg if caffeine was consumed late
-        if checkIn.caffeineAfter5PM {
-            let type = HKQuantityType(.dietaryCaffeine)
-            let quantity = HKQuantity(unit: .gramUnit(with: .milli), doubleValue: 200)
-            samples.append(HKQuantitySample(type: type, quantity: quantity, start: now, end: now))
-        }
-
-        guard !samples.isEmpty else { return }
-        try await healthStore.save(samples)
+        // Check-in data is stored locally in CheckInStore; HealthKit write is skipped.
     }
 }
 
@@ -381,7 +367,7 @@ extension HKWorkoutActivityType {
         case .basketball:            return "Basketball"
         case .tennis:                return "Tennis"
         case .golf:                  return "Golf"
-        case .skiing:                return "Skiing"
+        case .downhillSkiing:        return "Skiing"
         case .snowboarding:          return "Snowboarding"
         case .surfingSports:         return "Surfing"
         case .martialArts:           return "Martial Arts"

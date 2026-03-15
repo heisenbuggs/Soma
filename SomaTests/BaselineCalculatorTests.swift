@@ -34,13 +34,13 @@ final class BaselineCalculatorTests: XCTestCase {
 
     // MARK: - Enough Data
 
-    func test_hasEnoughData_trueWhen7Plus() {
-        let history = makeDateValuePairs(Array(repeating: 50.0, count: 7))
+    func test_hasEnoughData_trueWhen3Plus() {
+        let history = makeDateValuePairs(Array(repeating: 50.0, count: 3))
         XCTAssertTrue(BaselineCalculator.hasEnoughData(history))
     }
 
-    func test_hasEnoughData_falseWhenLessThan7() {
-        let history = makeDateValuePairs(Array(repeating: 50.0, count: 6))
+    func test_hasEnoughData_falseWhenLessThan3() {
+        let history = makeDateValuePairs(Array(repeating: 50.0, count: 2))
         XCTAssertFalse(BaselineCalculator.hasEnoughData(history))
     }
 

@@ -2,7 +2,7 @@ import Foundation
 
 struct DailyCheckIn: Identifiable, Codable {
     let id: UUID
-    let date: Date
+    var date: Date
 
     // Alcohol
     var alcoholConsumed: Bool

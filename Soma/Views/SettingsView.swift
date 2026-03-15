@@ -1,12 +1,47 @@
 import SwiftUI
 
 final class UserSettings: ObservableObject {
+    @AppStorage("userFirstName") var firstName: String = ""
     @AppStorage("userAge") var age: Int = 30
     @AppStorage("userMaxHR") private var _maxHR: Int = 0
-    @AppStorage("baselineSleepHours") var baselineSleepHours: Double = 8.0
+    @AppStorage("baselineSleepHours") var sleepGoalHours: Double = 7.0
     @AppStorage("useMetricUnits") var useMetricUnits: Bool = true
-    @AppStorage("wakeTimeHour")   var wakeTimeHour: Int = 6
-    @AppStorage("wakeTimeMinute") var wakeTimeMinute: Int = 30
+
+    // MARK: - Per-weekday wake times
+    // weekday index: 1=Sunday, 2=Monday, ..., 7=Saturday (matches Calendar.component(.weekday))
+
+    func wakeHour(for weekday: Int) -> Int {
+        UserDefaults.standard.object(forKey: "wakeHour_\(weekday)") as? Int ?? 6
+    }
+
+    func wakeMinute(for weekday: Int) -> Int {
+        UserDefaults.standard.object(forKey: "wakeMin_\(weekday)") as? Int ?? 30
+    }
+
+    func setWakeTime(hour: Int, minute: Int, for weekday: Int) {
+        UserDefaults.standard.set(hour, forKey: "wakeHour_\(weekday)")
+        UserDefaults.standard.set(minute, forKey: "wakeMin_\(weekday)")
+        objectWillChange.send()
+    }
+
+    func wakeTimeDate(for weekday: Int) -> Date {
+        var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        comps.hour   = wakeHour(for: weekday)
+        comps.minute = wakeMinute(for: weekday)
+        comps.second = 0
+        return Calendar.current.date(from: comps) ?? Date()
+    }
+
+    func setWakeTimeDate(_ date: Date, for weekday: Int) {
+        let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
+        setWakeTime(hour: comps.hour ?? 6, minute: comps.minute ?? 30, for: weekday)
+    }
+
+    /// Today's wake time
+    var wakeTime: Date {
+        let weekday = Calendar.current.component(.weekday, from: Date())
+        return wakeTimeDate(for: weekday)
+    }
 
     var maxHeartRate: Double? {
         get { _maxHR > 0 ? Double(_maxHR) : nil }
@@ -15,22 +50,6 @@ final class UserSettings: ObservableObject {
 
     var effectiveMaxHR: Double {
         maxHeartRate ?? Double(220 - age)
-    }
-
-    /// Wake time as a Date (using today's date for the time components).
-    var wakeTime: Date {
-        get {
-            var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-            comps.hour   = wakeTimeHour
-            comps.minute = wakeTimeMinute
-            comps.second = 0
-            return Calendar.current.date(from: comps) ?? Date()
-        }
-        set {
-            let comps    = Calendar.current.dateComponents([.hour, .minute], from: newValue)
-            wakeTimeHour   = comps.hour   ?? 6
-            wakeTimeMinute = comps.minute ?? 30
-        }
     }
 }
 
@@ -46,14 +65,27 @@ struct SettingsView: View {
                 Color.somaBackground.ignoresSafeArea()
 
                 Form {
-                    Section("Personal") {
+                    Section("Profile") {
                         HStack {
-                            Label("Age", systemImage: "person.fill")
+                            Label("First Name", systemImage: "person.fill")
                                 .foregroundColor(.primary)
                             Spacer()
-                            Stepper("\(settings.age)", value: $settings.age, in: 13...99)
-                                .labelsHidden()
+                            TextField("Your name", text: $settings.firstName)
+                                .multilineTextAlignment(.trailing)
                                 .foregroundColor(Color(hex: "8E8E93"))
+                        }
+                    }
+                    .listRowBackground(Color.somaCard)
+
+                    Section("Personal") {
+                        HStack {
+                            Label("Age", systemImage: "person.crop.circle")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            Text("\(settings.age) yrs")
+                                .foregroundColor(Color(hex: "8E8E93"))
+                            Stepper("", value: $settings.age, in: 13...99)
+                                .labelsHidden()
                         }
 
                         HStack {
@@ -95,27 +127,30 @@ struct SettingsView: View {
 
                     Section("Sleep") {
                         HStack {
-                            Label("Baseline Sleep Need", systemImage: "moon.fill")
+                            Label("Sleep Goal", systemImage: "moon.fill")
                                 .foregroundColor(.primary)
                             Spacer()
-                            Stepper(
-                                String(format: "%.1fh", settings.baselineSleepHours),
-                                value: $settings.baselineSleepHours,
-                                in: 5.0...12.0,
-                                step: 0.5
-                            )
-                            .labelsHidden()
-                            .foregroundColor(.secondary)
+                            Text(String(format: "%.1fh", settings.sleepGoalHours))
+                                .foregroundColor(Color(hex: "8E8E93"))
+                            Stepper("", value: $settings.sleepGoalHours, in: 5.0...12.0, step: 0.5)
+                                .labelsHidden()
                         }
-                        HStack {
-                            Label("Wake Time", systemImage: "alarm.fill")
-                                .foregroundColor(.primary)
-                            Spacer()
-                            DatePicker("", selection: Binding(
-                                get: { settings.wakeTime },
-                                set: { settings.wakeTime = $0 }
-                            ), displayedComponents: .hourAndMinute)
-                            .labelsHidden()
+                    }
+                    .listRowBackground(Color.somaCard)
+
+                    Section("Wake Time") {
+                        ForEach(Array(zip(1...7, ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"])), id: \.0) { weekday, label in
+                            HStack {
+                                Text(label)
+                                    .foregroundColor(.primary)
+                                    .frame(width: 36, alignment: .leading)
+                                Spacer()
+                                DatePicker("", selection: Binding(
+                                    get: { settings.wakeTimeDate(for: weekday) },
+                                    set: { settings.setWakeTimeDate($0, for: weekday) }
+                                ), displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                            }
                         }
                     }
                     .listRowBackground(Color.somaCard)

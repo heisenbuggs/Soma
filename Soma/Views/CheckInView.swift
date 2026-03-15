@@ -85,7 +85,7 @@ struct CheckInView: View {
                 }
             }
         }
-        .onChange(of: viewModel.didSave) { saved in
+        .onChange(of: viewModel.didSave) { _, saved in
             if saved { dismiss() }
         }
     }

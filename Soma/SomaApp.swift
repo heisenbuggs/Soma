@@ -11,8 +11,7 @@ struct SomaApp: App {
                 if !healthKitManager.healthKitAvailable {
                     notAvailableView
                 } else if hasCompletedOnboarding {
-                    MainTabView()
-                        .environmentObject(healthKitManager)
+                    MainTabView(healthKitManager: healthKitManager)
                         .task {
                             _ = await NotificationScheduler.shared.requestPermission()
                         }

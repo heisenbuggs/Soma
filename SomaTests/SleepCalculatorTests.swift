@@ -252,55 +252,60 @@ final class SleepCalculatorTests: XCTestCase {
     func test_calculateSleepNeed_baseline_noDebt_noStrain() {
         let need = SleepCalculator.calculateSleepNeed(
             baselineSleep: 8.0,
-            last7DaysNeedVsActual: [],
+            recentNeedVsActual: [],
             yesterdayStrain: 0
         )
         XCTAssertEqual(need, 8.0, accuracy: 0.01)
     }
 
-    func test_calculateSleepNeed_maxStrainAdds1Hour() {
+    func test_calculateSleepNeed_maxStrainAddsHalfHour() {
+        // Max strain (21) adds up to 0.5h
         let need = SleepCalculator.calculateSleepNeed(
             baselineSleep: 8.0,
-            last7DaysNeedVsActual: [],
+            recentNeedVsActual: [],
             yesterdayStrain: 21
         )
-        XCTAssertEqual(need, 9.0, accuracy: 0.01)
+        XCTAssertEqual(need, 8.5, accuracy: 0.01)
     }
 
     func test_calculateSleepNeed_clampedToMinMax() {
         let low = SleepCalculator.calculateSleepNeed(
             baselineSleep: 5.0,
-            last7DaysNeedVsActual: [],
+            recentNeedVsActual: [],
             yesterdayStrain: 0
         )
         XCTAssertEqual(low, 7.0, accuracy: 0.01)
 
+        // Max clamp is 9.5h regardless of extreme inputs
         let high = SleepCalculator.calculateSleepNeed(
             baselineSleep: 12.0,
-            last7DaysNeedVsActual: Array(repeating: (8.0, 4.0), count: 7),
+            recentNeedVsActual: Array(repeating: (8.0, 4.0), count: 7),
             yesterdayStrain: 21
         )
-        XCTAssertEqual(high, 12.0, accuracy: 0.01)
+        XCTAssertEqual(high, 9.5, accuracy: 0.01)
     }
 
     func test_calculateSleepNeed_debtAdded() {
+        // 1h short each night vs baseline → debtPerNight = 1h (at per-night cap)
         let pairs = Array(repeating: (8.0, 7.0), count: 7)
         let need = SleepCalculator.calculateSleepNeed(
             baselineSleep: 8.0,
-            last7DaysNeedVsActual: pairs,
+            recentNeedVsActual: pairs,
             yesterdayStrain: 0
         )
         XCTAssertEqual(need, 9.0, accuracy: 0.01)
     }
 
-    func test_calculateSleepNeed_debtCappedAt2PerNight() {
-        let pairs = Array(repeating: (12.0, 7.0), count: 7)
+    func test_calculateSleepNeed_largeDeficit_uncapped() {
+        // 4h sleep vs 8h goal = 4h deficit per night, no per-night cap
+        let pairs = Array(repeating: (8.0, 4.0), count: 3)
         let need = SleepCalculator.calculateSleepNeed(
             baselineSleep: 8.0,
-            last7DaysNeedVsActual: pairs,
+            recentNeedVsActual: pairs,
             yesterdayStrain: 0
         )
-        XCTAssertEqual(need, 10.0, accuracy: 0.01)
+        // debtPerNight = 4h → need = 8+4 = 12 → clamped to 9.5
+        XCTAssertEqual(need, 9.5, accuracy: 0.01)
     }
 
     // MARK: - Sleep Debt

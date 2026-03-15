@@ -28,7 +28,7 @@ struct StrainCalculator {
 
     static let maxExpectedLoad: Double = 1500  // calibration constant
 
-    /// Calculates strain score 0–21 from timed HR samples.
+    /// Calculates strain score 0–100 from timed HR samples.
     /// - Parameters:
     ///   - samples: Array of (timestamp, heartRate bpm) for the day
     ///   - restingHR: Resting heart rate in bpm
@@ -56,9 +56,9 @@ struct StrainCalculator {
             acc + entry.value * entry.key.weight
         }
 
-        // Logarithmic scale
-        let strain = 21.0 * log(1.0 + load) / log(1.0 + Self.maxExpectedLoad)
-        return BaselineCalculator.clamp(strain, min: 0, max: 21)
+        // Logarithmic scale 0–100
+        let strain = 100.0 * log(1.0 + load) / log(1.0 + Self.maxExpectedLoad)
+        return BaselineCalculator.clamp(strain, min: 0, max: 100)
     }
 
     /// Calculate max HR using age-based formula.

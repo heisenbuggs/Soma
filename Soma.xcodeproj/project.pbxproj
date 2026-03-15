@@ -43,8 +43,18 @@
 		AA300000000000000000028 /* CheckInViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000028 /* CheckInViewModel.swift */; };
 		AA300000000000000000029 /* CheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000029 /* CheckInView.swift */; };
 		AA30000000000000000002A /* BehaviorEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002A /* BehaviorEngineTests.swift */; };
+		AA30000000000000000002B /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002B /* NotificationScheduler.swift */; };
+		AA30000000000000000002C /* DayDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002C /* DayDetailViewModel.swift */; };
+		AA30000000000000000002D /* DayDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002D /* DayDetailView.swift */; };
+		AA300000000000000000031 /* MetricDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000031 /* MetricDetailView.swift */; };
+		AA300000000000000000032 /* DayDetailPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000032 /* DayDetailPageView.swift */; };
+		AA300000000000000000033 /* AyurvedicSleepCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000033 /* AyurvedicSleepCalculator.swift */; };
+		AA300000000000000000034 /* AyurvedicSleepDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000034 /* AyurvedicSleepDetailView.swift */; };
+		AA300000000000000000035 /* AyurvedicSleepCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000035 /* AyurvedicSleepCalculatorTests.swift */; };
+		AA30000000000000000002E /* WorkoutStrainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002E /* WorkoutStrainTests.swift */; };
+		AA30000000000000000002F /* BedtimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002F /* BedtimeTests.swift */; };
+		AA300000000000000000030 /* NotificationSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000030 /* NotificationSchedulerTests.swift */; };
 		DEA7837D2F66CEF6009D401F /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA10000000000000000001A /* HealthKit.framework */; };
-		DEA7837E2F66CEF6009D401F /* HealthKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = AA10000000000000000001A /* HealthKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,17 +68,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		DEA7837F2F66CEF6009D401F /* Embed Frameworks */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-				DEA7837E2F66CEF6009D401F /* HealthKit.framework in Embed Frameworks */,
-			);
-			name = "Embed Frameworks";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -113,6 +112,17 @@
 		AA100000000000000000028 /* CheckInViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInViewModel.swift; sourceTree = "<group>"; };
 		AA100000000000000000029 /* CheckInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInView.swift; sourceTree = "<group>"; };
 		AA10000000000000000002A /* BehaviorEngineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BehaviorEngineTests.swift; sourceTree = "<group>"; };
+		AA10000000000000000002B /* NotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationScheduler.swift; sourceTree = "<group>"; };
+		AA10000000000000000002C /* DayDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayDetailViewModel.swift; sourceTree = "<group>"; };
+		AA10000000000000000002D /* DayDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayDetailView.swift; sourceTree = "<group>"; };
+		AA100000000000000000031 /* MetricDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricDetailView.swift; sourceTree = "<group>"; };
+		AA100000000000000000032 /* DayDetailPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayDetailPageView.swift; sourceTree = "<group>"; };
+		AA100000000000000000033 /* AyurvedicSleepCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyurvedicSleepCalculator.swift; sourceTree = "<group>"; };
+		AA100000000000000000034 /* AyurvedicSleepDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyurvedicSleepDetailView.swift; sourceTree = "<group>"; };
+		AA100000000000000000035 /* AyurvedicSleepCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyurvedicSleepCalculatorTests.swift; sourceTree = "<group>"; };
+		AA10000000000000000002E /* WorkoutStrainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutStrainTests.swift; sourceTree = "<group>"; };
+		AA10000000000000000002F /* BedtimeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BedtimeTests.swift; sourceTree = "<group>"; };
+		AA100000000000000000030 /* NotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSchedulerTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -177,6 +187,7 @@
 				AA100000000000000000005 /* HealthKitManager.swift */,
 				AA100000000000000000006 /* MetricsStore.swift */,
 				AA100000000000000000026 /* CheckInStore.swift */,
+				AA10000000000000000002B /* NotificationScheduler.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -190,6 +201,7 @@
 				AA10000000000000000000A /* SleepCalculator.swift */,
 				AA10000000000000000000B /* StressCalculator.swift */,
 				AA100000000000000000027 /* BehaviorEngine.swift */,
+				AA100000000000000000033 /* AyurvedicSleepCalculator.swift */,
 			);
 			path = Calculators;
 			sourceTree = "<group>";
@@ -201,6 +213,7 @@
 				AA10000000000000000000D /* TrendsViewModel.swift */,
 				AA10000000000000000000E /* InsightsViewModel.swift */,
 				AA100000000000000000028 /* CheckInViewModel.swift */,
+				AA10000000000000000002C /* DayDetailViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -215,6 +228,10 @@
 				AA100000000000000000013 /* OnboardingView.swift */,
 				AA100000000000000000014 /* SettingsView.swift */,
 				AA100000000000000000029 /* CheckInView.swift */,
+				AA10000000000000000002D /* DayDetailView.swift */,
+				AA100000000000000000031 /* MetricDetailView.swift */,
+				AA100000000000000000032 /* DayDetailPageView.swift */,
+				AA100000000000000000034 /* AyurvedicSleepDetailView.swift */,
 				AA500000000000000000007 /* Components */,
 			);
 			path = Views;
@@ -248,6 +265,10 @@
 				AA100000000000000000023 /* SleepCalculatorTests.swift */,
 				AA100000000000000000024 /* StressCalculatorTests.swift */,
 				AA10000000000000000002A /* BehaviorEngineTests.swift */,
+				AA10000000000000000002E /* WorkoutStrainTests.swift */,
+				AA10000000000000000002F /* BedtimeTests.swift */,
+				AA100000000000000000030 /* NotificationSchedulerTests.swift */,
+				AA100000000000000000035 /* AyurvedicSleepCalculatorTests.swift */,
 			);
 			path = SomaTests;
 			sourceTree = "<group>";
@@ -279,7 +300,6 @@
 				AA200000000000000000003 /* Sources */,
 				AA200000000000000000001 /* Frameworks */,
 				AA200000000000000000004 /* Resources */,
-				DEA7837F2F66CEF6009D401F /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -315,7 +335,7 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1500;
-				LastUpgradeCheck = 1500;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					AA000000000000000000001 = {
 						CreatedOnToolsVersion = 15.0;
@@ -390,6 +410,13 @@
 				AA300000000000000000027 /* BehaviorEngine.swift in Sources */,
 				AA300000000000000000028 /* CheckInViewModel.swift in Sources */,
 				AA300000000000000000029 /* CheckInView.swift in Sources */,
+				AA30000000000000000002B /* NotificationScheduler.swift in Sources */,
+				AA30000000000000000002C /* DayDetailViewModel.swift in Sources */,
+				AA30000000000000000002D /* DayDetailView.swift in Sources */,
+				AA300000000000000000031 /* MetricDetailView.swift in Sources */,
+				AA300000000000000000032 /* DayDetailPageView.swift in Sources */,
+				AA300000000000000000033 /* AyurvedicSleepCalculator.swift in Sources */,
+				AA300000000000000000034 /* AyurvedicSleepDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -403,6 +430,10 @@
 				AA300000000000000000023 /* SleepCalculatorTests.swift in Sources */,
 				AA300000000000000000024 /* StressCalculatorTests.swift in Sources */,
 				AA30000000000000000002A /* BehaviorEngineTests.swift in Sources */,
+				AA30000000000000000002E /* WorkoutStrainTests.swift in Sources */,
+				AA30000000000000000002F /* BedtimeTests.swift in Sources */,
+				AA300000000000000000030 /* NotificationSchedulerTests.swift in Sources */,
+				AA300000000000000000035 /* AyurvedicSleepCalculatorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -454,6 +485,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -473,6 +505,7 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
@@ -515,6 +548,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -527,6 +561,7 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				VALIDATE_PRODUCT = YES;
@@ -552,7 +587,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.soma.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.prasuk.soma;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -580,7 +615,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.soma.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.prasuk.soma;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTS_MACCATALYST = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;

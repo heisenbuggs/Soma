@@ -37,9 +37,9 @@ enum ColorState {
 
     static func strain(score: Double) -> ColorState {
         switch score {
-        case 0..<10:  return .blue(label: "Light")
-        case 10..<14: return .green(label: "Moderate")
-        case 14..<18: return .orange(label: "High")
+        case 0..<48:  return .blue(label: "Light")
+        case 48..<67: return .green(label: "Moderate")
+        case 67..<86: return .orange(label: "High")
         default:      return .red(label: "Overreaching")
         }
     }

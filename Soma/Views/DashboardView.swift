@@ -4,8 +4,11 @@ struct DashboardView: View {
     @ObservedObject var viewModel: DashboardViewModel
     let checkInStore: CheckInStore
     let healthKit: HealthDataProviding
+    @AppStorage("userFirstName") private var firstName: String = ""
     @State private var showSettings = false
     @State private var showCheckIn = false
+    @State private var activeMetric: DashboardMetric?
+    @State private var showAyurvedicDetail = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -19,42 +22,26 @@ struct DashboardView: View {
 
                 ScrollView {
                     VStack(spacing: 16) {
+                        if let error = viewModel.errorMessage {
+                            errorBanner(error)
+                        }
+
                         if viewModel.isBaselineBuilding {
                             baselineBanner
                         }
 
                         // 2x2 Metric Grid
                         LazyVGrid(columns: columns, spacing: 12) {
-                            MetricCardView(
-                                title: "Recovery",
-                                score: viewModel.todayMetrics.recoveryScore,
-                                maxScore: 100,
-                                state: viewModel.todayMetrics.recoveryState,
-                                sparklineValues: viewModel.sparklineData["recovery"] ?? []
-                            )
-                            MetricCardView(
-                                title: "Strain",
-                                score: viewModel.todayMetrics.strainScore,
-                                maxScore: 21,
-                                state: viewModel.todayMetrics.strainState,
-                                sparklineValues: viewModel.sparklineData["strain"] ?? []
-                            )
-                            MetricCardView(
-                                title: "Sleep",
-                                score: viewModel.todayMetrics.sleepScore,
-                                maxScore: 100,
-                                state: viewModel.todayMetrics.sleepState,
-                                sparklineValues: viewModel.sparklineData["sleep"] ?? []
-                            )
-                            MetricCardView(
-                                title: "Stress",
-                                score: viewModel.todayMetrics.stressScore,
-                                maxScore: 100,
-                                state: viewModel.todayMetrics.stressState,
-                                sparklineValues: viewModel.sparklineData["stress"] ?? []
-                            )
+                            metricCard(.recovery)
+                            metricCard(.strain)
+                            metricCard(.sleep)
+                            metricCard(.stress)
                         }
                         .padding(.horizontal)
+
+                        // Ayurvedic Sleep Points widget
+                        ayurvedicSleepWidget
+                            .padding(.horizontal)
 
                         // Daily Check-In prompt
                         if !checkInStore.hasCompletedToday() {
@@ -87,7 +74,7 @@ struct DashboardView: View {
                         .tint(.white)
                 }
             }
-            .navigationTitle("Soma")
+            .navigationTitle(firstName.isEmpty ? "Hi there" : "Hi, \(firstName)")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -118,6 +105,17 @@ struct DashboardView: View {
                     healthKit: healthKit
                 ))
             }
+            .sheet(item: $activeMetric) { metric in
+                MetricDetailView(metric: metric, viewModel: viewModel)
+            }
+            .sheet(isPresented: $showAyurvedicDetail) {
+                AyurvedicSleepDetailView(
+                    score: viewModel.todayMetrics.ayurvedicSleepPoints ?? 0,
+                    sleepStart: viewModel.todayMetrics.sleepStartTime,
+                    sleepEnd: viewModel.todayMetrics.sleepEndTime,
+                    eveningDate: Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+                )
+            }
         }
         .onAppear {
             viewModel.loadCached()
@@ -125,13 +123,93 @@ struct DashboardView: View {
         }
     }
 
+    // MARK: - Ayurvedic Sleep Points Widget
+
+    private var ayurvedicSleepWidget: some View {
+        let points = viewModel.todayMetrics.ayurvedicSleepPoints
+        let score  = points ?? 0
+        let accentHex = AyurvedicSleepCalculator.guidanceHex(for: score)
+        let accent = Color(hex: accentHex)
+        return Button { showAyurvedicDetail = true } label: {
+            HStack(spacing: 14) {
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "moon.stars.fill")
+                            .foregroundColor(accent)
+                            .font(.subheadline)
+                        Text("Ayurvedic Sleep Points")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                    }
+                    Text(AyurvedicSleepCalculator.guidanceText(for: score))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                if points != nil {
+                    Text(String(format: "%.1f", score))
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(accent)
+                    Text("/ 10")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                } else {
+                    Text("--")
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(Color(hex: "8E8E93"))
+            }
+            .padding(14)
+            .background(accent.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(accent.opacity(0.25), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Metric Card (tappable)
+
+    private func metricCard(_ metric: DashboardMetric) -> some View {
+        Button { activeMetric = metric } label: {
+            MetricCardView(
+                title: metric.title,
+                score: metric.score(from: viewModel.todayMetrics),
+                maxScore: 100,
+                state: metric.state(from: viewModel.todayMetrics),
+                sparklineValues: viewModel.sparklineData[metric.rawValue] ?? []
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - Subviews
+
+    private func errorBanner(_ message: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(Color(hex: "FF1744"))
+            Text(message)
+                .font(.caption)
+                .foregroundColor(Color(hex: "FF1744"))
+        }
+        .padding(10)
+        .background(Color(hex: "FF1744").opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(.horizontal)
+    }
 
     private var baselineBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "clock.badge.fill")
                 .foregroundColor(Color(hex: "FFD600"))
-            Text("Building baseline — add more days for accurate scores.")
+            Text("Building baseline — scores improve after 3 days of Apple Watch data.")
                 .font(.caption)
                 .foregroundColor(Color(hex: "FFD600"))
         }
@@ -209,7 +287,13 @@ struct DashboardView: View {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
         formatter.dateStyle = .none
-        let needStr = viewModel.todayMetrics.sleepNeedHours.map { String(format: "%.1fh need", $0) } ?? ""
+        let needStr: String = {
+            guard let h = viewModel.todayMetrics.sleepNeedHours else { return "" }
+            let totalMinutes = Int(h * 60)
+            let hrs = totalMinutes / 60; let mins = totalMinutes % 60
+            let formatted = mins == 0 ? "\(hrs)h" : "\(hrs)h \(mins)m"
+            return "\(formatted) need"
+        }()
         return HStack(spacing: 12) {
             Image(systemName: "bed.double.fill")
                 .font(.title2)
@@ -254,6 +338,11 @@ struct DashboardView: View {
                     icon: "moon.zzz.fill",
                     value: formattedSleep,
                     label: "Sleep"
+                )
+                quickStat(
+                    icon: "figure.run",
+                    value: formattedWorkoutMinutes,
+                    label: "Workout"
                 )
                 if let vo2 = viewModel.todayMetrics.vo2Max {
                     quickStat(
@@ -304,8 +393,22 @@ struct DashboardView: View {
         return "\(Int(cal))"
     }
 
+    private var formattedWorkoutMinutes: String {
+        guard let mins = viewModel.todayMetrics.workoutMinutes else { return "--" }
+        let h = Int(mins) / 60
+        let m = Int(mins) % 60
+        if h == 0 { return "\(m)m" }
+        if m == 0 { return "\(h)h" }
+        return "\(h)h \(m)m"
+    }
+
     private var formattedSleep: String {
         guard let h = viewModel.todayMetrics.sleepDurationHours else { return "--" }
-        return String(format: "%.1fh", h)
+        let totalMinutes = Int(h * 60)
+        let hrs = totalMinutes / 60
+        let mins = totalMinutes % 60
+        if hrs == 0 { return "\(mins)m" }
+        if mins == 0 { return "\(hrs)h" }
+        return "\(hrs)h \(mins)m"
     }
 }

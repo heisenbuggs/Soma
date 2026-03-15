@@ -89,25 +89,26 @@ struct SleepCalculator {
     ///   - last7DaysNeedVsActual: Array of (need, actual) for last 7 nights
     ///   - yesterdayStrain: Yesterday's strain score 0–21
     static func calculateSleepNeed(
-        baselineSleep: Double = 8.0,
-        last7DaysNeedVsActual: [(need: Double, actual: Double)],
+        baselineSleep: Double = 7.0,
+        recentNeedVsActual: [(need: Double, actual: Double)],
         yesterdayStrain: Double
     ) -> Double {
-        // Sleep debt: average nightly deficit, capped at 2h per night
+        // Debt = average nightly shortfall vs sleep goal over the last 3 days.
+        // Older debt is not carried forward — window resets beyond 3 days.
         let debtPerNight: Double
-        if last7DaysNeedVsActual.isEmpty {
+        if recentNeedVsActual.isEmpty {
             debtPerNight = 0
         } else {
-            let totalDebt = last7DaysNeedVsActual.reduce(0.0) { acc, pair in
-                acc + min(max(0, pair.need - pair.actual), 2.0)
+            let totalDebt = recentNeedVsActual.reduce(0.0) { acc, pair in
+                acc + max(0, baselineSleep - pair.actual)
             }
-            debtPerNight = totalDebt / Double(last7DaysNeedVsActual.count)
+            debtPerNight = totalDebt / Double(recentNeedVsActual.count)
         }
 
-        let strainFactor = (yesterdayStrain / 21.0) * 1.0  // up to +1h
+        let strainFactor = (yesterdayStrain / 21.0) * 0.5  // up to +30 min
 
         let need = baselineSleep + debtPerNight + strainFactor
-        return BaselineCalculator.clamp(need, min: 7.0, max: 12.0)
+        return BaselineCalculator.clamp(need, min: 7.0, max: 9.5)
     }
 
     // MARK: - Sleep Debt

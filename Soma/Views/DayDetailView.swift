@@ -64,7 +64,7 @@ struct DayDetailView: View {
                       state: viewModel.metrics.recoveryState)
             scoreCard(title: "Strain",
                       value: viewModel.metrics.strainScore,
-                      max: 21,
+                      max: 100,
                       state: viewModel.metrics.strainState)
             scoreCard(title: "Sleep",
                       value: viewModel.metrics.sleepScore,
@@ -131,7 +131,7 @@ struct DayDetailView: View {
         detailCard(title: "Strain Breakdown", icon: "flame.fill", iconColor: Color(hex: "FF9100")) {
             VStack(alignment: .leading, spacing: 10) {
                 infoRow(label: "Total Strain",
-                        value: String(format: "%.1f / 21", viewModel.metrics.strainScore))
+                        value: String(format: "%.0f / 100", viewModel.metrics.strainScore))
                 if viewModel.hasWorkoutBreakdown {
                     infoRow(label: "Workout Strain",  value: viewModel.workoutStrainText)
                     infoRow(label: "Incidental Strain", value: viewModel.incidentalStrainText)

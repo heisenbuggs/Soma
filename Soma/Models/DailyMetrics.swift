@@ -28,6 +28,12 @@ struct DailyMetrics: Identifiable, Codable {
     // Workout-aware strain breakdown
     var workoutStrain: Double?     // strain attributed to HKWorkout sessions
     var incidentalStrain: Double?  // remaining strain from non-workout HR elevation
+    var workoutMinutes: Double?    // total workout duration in minutes
+
+    // Ayurvedic sleep timing
+    var sleepStartTime: Date?
+    var sleepEndTime: Date?
+    var ayurvedicSleepPoints: Double?
 
     init(
         id: UUID = UUID(),
@@ -48,7 +54,11 @@ struct DailyMetrics: Identifiable, Codable {
         sleepingHRV: Double? = nil,
         sleepInterruptions: Int? = nil,
         workoutStrain: Double? = nil,
-        incidentalStrain: Double? = nil
+        incidentalStrain: Double? = nil,
+        workoutMinutes: Double? = nil,
+        sleepStartTime: Date? = nil,
+        sleepEndTime: Date? = nil,
+        ayurvedicSleepPoints: Double? = nil
     ) {
         self.id = id
         self.date = date
@@ -69,6 +79,10 @@ struct DailyMetrics: Identifiable, Codable {
         self.sleepInterruptions = sleepInterruptions
         self.workoutStrain = workoutStrain
         self.incidentalStrain = incidentalStrain
+        self.workoutMinutes = workoutMinutes
+        self.sleepStartTime = sleepStartTime
+        self.sleepEndTime = sleepEndTime
+        self.ayurvedicSleepPoints = ayurvedicSleepPoints
     }
 }
 

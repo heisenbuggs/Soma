@@ -47,23 +47,23 @@ final class StrainCalculatorTests: XCTestCase {
         let samples = makeConstantHRSamples(hr: 100, durationMinutes: 30, restingHR: restingHR, maxHR: maxHR)
         let score = StrainCalculator.calculate(samples: samples, restingHR: restingHR, maxHR: maxHR)
         XCTAssertGreaterThan(score, 0)
-        XCTAssertLessThan(score, 10)
+        XCTAssertLessThan(score, 48)  // Light threshold on 0–100 scale
     }
 
     func test_calculate_heavyActivity_highStrain() {
         // 90 minutes at zone 4/5 HR
         let samples = makeConstantHRSamples(hr: 170, durationMinutes: 90, restingHR: restingHR, maxHR: maxHR)
         let score = StrainCalculator.calculate(samples: samples, restingHR: restingHR, maxHR: maxHR)
-        XCTAssertGreaterThan(score, 10)
-        XCTAssertLessThanOrEqual(score, 21)
+        XCTAssertGreaterThan(score, 48)
+        XCTAssertLessThanOrEqual(score, 100)
     }
 
-    func test_calculate_alwaysClamped0To21() {
+    func test_calculate_alwaysClamped0To100() {
         // Extreme case
         let samples = makeConstantHRSamples(hr: 200, durationMinutes: 600, restingHR: restingHR, maxHR: maxHR)
         let score = StrainCalculator.calculate(samples: samples, restingHR: restingHR, maxHR: maxHR)
         XCTAssertGreaterThanOrEqual(score, 0)
-        XCTAssertLessThanOrEqual(score, 21)
+        XCTAssertLessThanOrEqual(score, 100)
     }
 
     // MARK: - Max HR estimation
