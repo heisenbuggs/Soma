@@ -40,6 +40,5 @@ struct MainTabView: View {
             }
         }
         .tint(Color(hex: "2979FF"))
-        .preferredColorScheme(.dark)
     }
 }

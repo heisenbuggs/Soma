@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import HealthKit
 
 @MainActor
 final class DashboardViewModel: ObservableObject {
@@ -10,6 +11,7 @@ final class DashboardViewModel: ObservableObject {
     @Published var errorMessage: String?
     @Published var isBaselineBuilding = false
     @Published var coachingTips: [String] = []
+    @Published var bedtimeTarget: Date?
     @Published var lastRefreshed: Date?
 
     private let healthKit: HealthDataProviding
@@ -71,11 +73,12 @@ final class DashboardViewModel: ObservableObject {
             async let respRate   = healthKit.fetchRespiratoryRate(for: today)
             async let hrvHistory = healthKit.fetchHRVHistory(days: 30)
             async let rhrHistory = healthKit.fetchRestingHRHistory(days: 30)
+            async let workoutsFetch = healthKit.fetchWorkouts(for: today)
 
             let (hrvValues, rhrValue, hrData, sleepData, activeCalories, stepCount,
-                 vo2Max, respRateVal, hrvHist, rhrHist) = try await (
+                 vo2Max, respRateVal, hrvHist, rhrHist, fetchedWorkouts) = try await (
                     hrv, rhr, hrSamples, sleepFetch, calories, steps, vo2, respRate,
-                    hrvHistory, rhrHistory
+                    hrvHistory, rhrHistory, workoutsFetch
                  )
 
             // Fetch sleeping-window signals (sequential — need sleep window first)
@@ -121,10 +124,22 @@ final class DashboardViewModel: ObservableObject {
                 sleepingHRBaseline: sleepingHRBaseline
             )
 
-            // Strain
-            let maxHR    = settings.maxHeartRate ?? StrainCalculator.estimatedMaxHR(age: settings.age)
+            // Workouts → workout-aware strain
+            let workoutIntervals = fetchedWorkouts.map { w in
+                StrainCalculator.WorkoutInterval(
+                    start: w.startDate,
+                    end: w.endDate,
+                    activityName: w.workoutActivityType.displayName
+                )
+            }
+            let maxHR = settings.maxHeartRate ?? StrainCalculator.estimatedMaxHR(age: settings.age)
             let restingHR = rhrValue ?? 65
-            let strainScore = StrainCalculator.calculate(samples: hrData, restingHR: restingHR, maxHR: maxHR)
+            let strainResult = StrainCalculator.calculateWorkoutAware(
+                workoutIntervals: workoutIntervals,
+                allSamples: hrData,
+                restingHR: restingHR,
+                maxHR: maxHR
+            )
 
             // Recovery (weights: 40/25/25/10)
             let todayHRV = hrvValues.isEmpty ? nil : hrvValues.reduce(0, +) / Double(hrvValues.count)
@@ -149,7 +164,7 @@ final class DashboardViewModel: ObservableObject {
             let metrics = DailyMetrics(
                 date: today,
                 recoveryScore: recoveryScore,
-                strainScore: strainScore,
+                strainScore: strainResult.total,
                 sleepScore: sleepScore,
                 stressScore: stressScore,
                 hrvAverage: todayHRV,
@@ -162,12 +177,24 @@ final class DashboardViewModel: ObservableObject {
                 respiratoryRate: respRateVal,
                 sleepingHR: sleepingHR,
                 sleepingHRV: sleepingHRV,
-                sleepInterruptions: sleepData.interruptionCount
+                sleepInterruptions: sleepData.interruptionCount,
+                workoutStrain: strainResult.workoutStrain,
+                incidentalStrain: strainResult.incidentalStrain
             )
 
             store.save(metrics)
             todayMetrics = metrics
             lastRefreshed = Date()
+
+            // Bedtime recommendation
+            bedtimeTarget = SleepCalculator.bedtimeTarget(
+                wakeTime: settings.wakeTime,
+                sleepNeed: sleepNeed
+            )
+
+            // Push notification
+            NotificationScheduler.shared.scheduleRecoveryNotification(metrics: metrics)
+
             updateSparklines()
             updateCoachingTips()
 

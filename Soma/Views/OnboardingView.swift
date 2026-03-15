@@ -9,7 +9,7 @@ struct OnboardingView: View {
 
     var body: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Color.somaBackground.ignoresSafeArea()
 
             if showDenied {
                 PermissionDeniedView()
@@ -43,14 +43,14 @@ struct OnboardingView: View {
                     .frame(width: 100, height: 100)
                 Image(systemName: "heart.text.square.fill")
                     .font(.system(size: 48))
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
             }
 
             VStack(spacing: 12) {
                 Text("Welcome to Soma")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                     .multilineTextAlignment(.center)
 
                 Text("Turn your Apple Watch data into daily health insights.")
@@ -100,7 +100,7 @@ struct OnboardingView: View {
                 Text("Health Access")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 Text("Soma reads the following data to compute your scores. Everything stays on your device.")
                     .font(.subheadline)
                     .foregroundColor(Color(hex: "8E8E93"))
@@ -171,11 +171,11 @@ struct OnboardingView: View {
                 .frame(width: 28)
             Text(text)
                 .font(.subheadline)
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
             Spacer()
         }
         .padding(12)
-        .background(Color(hex: "1C1C1E"))
+        .background(Color.somaCard)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 
@@ -189,7 +189,7 @@ struct OnboardingView: View {
                 Text(label)
                     .font(.subheadline)
                     .fontWeight(.medium)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 Text(desc)
                     .font(.caption)
                     .foregroundColor(Color(hex: "8E8E93"))
@@ -229,7 +229,7 @@ struct PermissionDeniedView: View {
                 Text("Access Denied")
                     .font(.largeTitle)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 Text("Soma needs access to your health data to calculate scores.")
                     .font(.subheadline)
                     .foregroundColor(Color(hex: "8E8E93"))
@@ -241,13 +241,13 @@ struct PermissionDeniedView: View {
                 Text("To enable access:")
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 Text("1. Open Settings app\n2. Tap Privacy & Security → Health\n3. Tap Soma\n4. Enable all data types")
                     .font(.subheadline)
                     .foregroundColor(Color(hex: "8E8E93"))
             }
             .padding(16)
-            .background(Color(hex: "1C1C1E"))
+            .background(Color.somaCard)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .padding(.horizontal, 32)
 

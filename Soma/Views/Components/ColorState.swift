@@ -62,6 +62,17 @@ enum ColorState {
     }
 }
 
+// MARK: - Semantic Adaptive Colors
+
+extension Color {
+    /// App background — white in light mode, black in dark mode.
+    static var somaBackground: Color { Color(.systemBackground) }
+    /// Card / grouped content background — light grey / dark grey.
+    static var somaCard: Color { Color(.secondarySystemBackground) }
+    /// Elevated card surface.
+    static var somaCardElevated: Color { Color(.tertiarySystemBackground) }
+}
+
 extension Color {
     init(hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)

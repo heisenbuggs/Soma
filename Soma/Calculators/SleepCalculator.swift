@@ -116,4 +116,16 @@ struct SleepCalculator {
     static func computeSleepDebt(needVsActual: [(need: Double, actual: Double)]) -> Double {
         needVsActual.reduce(0.0) { acc, pair in acc + max(0, pair.need - pair.actual) }
     }
+
+    // MARK: - Bedtime Recommendation
+
+    /// Returns the recommended bedtime to meet a given sleep need on a specific wake time.
+    /// - Parameters:
+    ///   - wakeTime: The target wake time for tomorrow.
+    ///   - sleepNeed: Sleep need in hours.
+    ///   - latencyMinutes: Estimated time to fall asleep once in bed (default 12 min).
+    static func bedtimeTarget(wakeTime: Date, sleepNeed: Double, latencyMinutes: Int = 12) -> Date {
+        let totalSeconds = (sleepNeed * 3600.0) + Double(latencyMinutes * 60)
+        return wakeTime.addingTimeInterval(-totalSeconds)
+    }
 }

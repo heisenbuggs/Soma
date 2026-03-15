@@ -4,11 +4,12 @@ import Charts
 struct TrendsView: View {
     @ObservedObject var viewModel: TrendsViewModel
     @State private var selectedPoint: DailyMetrics?
+    @State private var chartSelectedDate: Date?
 
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.black.ignoresSafeArea()
+                Color.somaBackground.ignoresSafeArea()
 
                 ScrollView {
                     VStack(spacing: 20) {
@@ -42,6 +43,9 @@ struct TrendsView: View {
             .navigationBarTitleDisplayMode(.large)
         }
         .onAppear { viewModel.load() }
+        .sheet(item: $viewModel.selectedMetrics) { metrics in
+            DayDetailView(metrics: metrics, checkInStore: CheckInStore())
+        }
     }
 
     // MARK: - HRV Chart
@@ -152,7 +156,7 @@ struct TrendsView: View {
     // MARK: - Recovery Chart
 
     private var recoveryChart: some View {
-        chartSection(title: "Recovery Trend", unit: "/100") {
+        chartSection(title: "Recovery Trend", unit: "/100 — tap to inspect") {
             Chart(viewModel.metricHistory) { metrics in
                 AreaMark(
                     x: .value("Date", metrics.date, unit: .day),
@@ -172,11 +176,22 @@ struct TrendsView: View {
                 )
                 .foregroundStyle(recoveryAreaColor(metrics.recoveryScore))
                 .interpolationMethod(.catmullRom)
+
+                // Selection rule mark
+                if let sel = chartSelectedDate {
+                    RuleMark(x: .value("Selected", sel, unit: .day))
+                        .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                        .foregroundStyle(Color.secondary.opacity(0.5))
+                }
             }
             .frame(height: 180)
             .chartYScale(domain: 0...100)
             .chartXAxis { chartXAxis() }
             .chartYAxis { AxisMarks(position: .leading) }
+            .chartXSelection(value: $chartSelectedDate)
+            .onChange(of: chartSelectedDate) { date in
+                viewModel.selectDate(date)
+            }
         }
     }
 
@@ -204,7 +219,7 @@ struct TrendsView: View {
             HStack {
                 Text(title)
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 Spacer()
                 Text(unit)
                     .font(.caption)
@@ -213,7 +228,7 @@ struct TrendsView: View {
             content()
         }
         .padding(14)
-        .background(Color(hex: "1C1C1E"))
+        .background(Color.somaCard)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .padding(.horizontal)
     }

@@ -13,18 +13,21 @@ struct SomaApp: App {
                 } else if hasCompletedOnboarding {
                     MainTabView()
                         .environmentObject(healthKitManager)
+                        .task {
+                            _ = await NotificationScheduler.shared.requestPermission()
+                        }
                 } else {
                     OnboardingView()
                         .environmentObject(healthKitManager)
                 }
             }
-            .preferredColorScheme(.dark)
+            // Respects system appearance (light / dark)
         }
     }
 
     private var notAvailableView: some View {
         ZStack {
-            Color.black.ignoresSafeArea()
+            Color.somaBackground.ignoresSafeArea()
             VStack(spacing: 16) {
                 Image(systemName: "heart.slash.fill")
                     .font(.system(size: 56))
@@ -32,10 +35,10 @@ struct SomaApp: App {
                 Text("HealthKit Not Available")
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 Text("This app requires an iPhone with Apple Health.")
                     .font(.subheadline)
-                    .foregroundColor(Color(hex: "8E8E93"))
+                    .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }

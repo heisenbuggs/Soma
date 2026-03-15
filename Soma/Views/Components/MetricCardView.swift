@@ -38,7 +38,7 @@ struct MetricCardView: View {
                         Text(scoreText)
                             .font(.title2)
                             .fontWeight(.bold)
-                            .foregroundColor(.white)
+                            .foregroundColor(.primary)
                         Text("/\(Int(maxScore))")
                             .font(.caption2)
                             .foregroundColor(Color(hex: "8E8E93"))
@@ -54,7 +54,7 @@ struct MetricCardView: View {
                 .frame(height: 32)
         }
         .padding(14)
-        .background(Color(hex: "1C1C1E"))
+        .background(Color.somaCard)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 

@@ -356,6 +356,41 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
     }
 }
 
+// MARK: - Workout Activity Display Names
+
+extension HKWorkoutActivityType {
+    var displayName: String {
+        switch self {
+        case .running:               return "Running"
+        case .cycling:               return "Cycling"
+        case .swimming:              return "Swimming"
+        case .walking:               return "Walking"
+        case .hiking:                return "Hiking"
+        case .highIntensityIntervalTraining: return "HIIT"
+        case .traditionalStrengthTraining:   return "Strength Training"
+        case .functionalStrengthTraining:    return "Functional Strength"
+        case .yoga:                  return "Yoga"
+        case .rowing:                return "Rowing"
+        case .elliptical:            return "Elliptical"
+        case .stairClimbing:         return "Stair Climbing"
+        case .crossTraining:         return "Cross Training"
+        case .pilates:               return "Pilates"
+        case .dance:                 return "Dance"
+        case .boxing:                return "Boxing"
+        case .soccer:                return "Soccer"
+        case .basketball:            return "Basketball"
+        case .tennis:                return "Tennis"
+        case .golf:                  return "Golf"
+        case .skiing:                return "Skiing"
+        case .snowboarding:          return "Snowboarding"
+        case .surfingSports:         return "Surfing"
+        case .martialArts:           return "Martial Arts"
+        case .other:                 return "Workout"
+        default:                     return "Workout"
+        }
+    }
+}
+
 // MARK: - Errors
 
 enum HealthKitError: LocalizedError {

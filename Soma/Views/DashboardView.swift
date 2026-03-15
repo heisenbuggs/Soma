@@ -15,7 +15,7 @@ struct DashboardView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.black.ignoresSafeArea()
+                Color.somaBackground.ignoresSafeArea()
 
                 ScrollView {
                     VStack(spacing: 16) {
@@ -64,6 +64,11 @@ struct DashboardView: View {
                         // How to Improve Today
                         if !viewModel.coachingTips.isEmpty {
                             improvementCard
+                        }
+
+                        // Bedtime recommendation
+                        if let bedtime = viewModel.bedtimeTarget {
+                            bedtimeCard(bedtime)
                         }
 
                         // Quick Stats
@@ -148,7 +153,7 @@ struct DashboardView: View {
                     Text("Daily Check-In")
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                     Text("Log yesterday's behaviors to unlock insights")
                         .font(.caption)
                         .foregroundColor(Color(hex: "8E8E93"))
@@ -178,7 +183,7 @@ struct DashboardView: View {
                 Text("How to Improve Today")
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 Spacer()
             }
             ForEach(Array(viewModel.coachingTips.enumerated()), id: \.offset) { _, tip in
@@ -195,8 +200,40 @@ struct DashboardView: View {
             }
         }
         .padding(14)
-        .background(Color(hex: "1C1C1E"))
+        .background(Color.somaCard)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal)
+    }
+
+    private func bedtimeCard(_ bedtime: Date) -> some View {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        formatter.dateStyle = .none
+        let needStr = viewModel.todayMetrics.sleepNeedHours.map { String(format: "%.1fh need", $0) } ?? ""
+        return HStack(spacing: 12) {
+            Image(systemName: "bed.double.fill")
+                .font(.title2)
+                .foregroundColor(Color(hex: "2979FF"))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Bedtime Target")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                Text("Aim for bed by \(formatter.string(from: bedtime))\(needStr.isEmpty ? "" : " · \(needStr)")")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+            Image(systemName: "moon.fill")
+                .foregroundColor(Color(hex: "2979FF"))
+        }
+        .padding(14)
+        .background(Color(hex: "2979FF").opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(Color(hex: "2979FF").opacity(0.25), lineWidth: 1)
+        )
         .padding(.horizontal)
     }
 
@@ -238,14 +275,14 @@ struct DashboardView: View {
             Text(value)
                 .font(.headline)
                 .fontWeight(.bold)
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
             Text(label)
                 .font(.caption2)
                 .foregroundColor(Color(hex: "8E8E93"))
         }
         .frame(minWidth: 80)
         .padding(12)
-        .background(Color(hex: "1C1C1E"))
+        .background(Color.somaCard)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
     }
 

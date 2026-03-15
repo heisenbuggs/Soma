@@ -7,7 +7,7 @@ struct CheckInView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.black.ignoresSafeArea()
+                Color.somaBackground.ignoresSafeArea()
 
                 ScrollView {
                     VStack(spacing: 20) {
@@ -99,7 +99,7 @@ struct CheckInView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("How was yesterday?")
                     .font(.headline)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 Text("Takes under 10 seconds")
                     .font(.caption)
                     .foregroundColor(Color(hex: "8E8E93"))
@@ -107,7 +107,7 @@ struct CheckInView: View {
             Spacer()
         }
         .padding(14)
-        .background(Color(hex: "1C1C1E"))
+        .background(Color.somaCard)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .padding(.horizontal)
     }
@@ -151,7 +151,7 @@ struct CheckInView: View {
                     .frame(width: 24)
                 Text("Stress Level: \(stressLabel)")
                     .font(.subheadline)
-                    .foregroundColor(.white)
+                    .foregroundColor(.primary)
                 Spacer()
             }
             HStack(spacing: 8) {
@@ -205,7 +205,7 @@ struct CheckInView: View {
             VStack(spacing: 0) {
                 content()
             }
-            .background(Color(hex: "1C1C1E"))
+            .background(Color.somaCard)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         }
         .padding(.horizontal)
@@ -219,7 +219,7 @@ struct CheckInView: View {
                 .frame(width: 28)
             Text(label)
                 .font(.subheadline)
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
             Spacer()
             Toggle("", isOn: binding)
                 .labelsHidden()

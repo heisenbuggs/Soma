@@ -32,7 +32,6 @@
 		AA300000000000000000017 /* RingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000017 /* RingView.swift */; };
 		AA300000000000000000018 /* ColorState.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000018 /* ColorState.swift */; };
 		AA300000000000000000019 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000019 /* Assets.xcassets */; };
-		AA30000000000000000001A /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA10000000000000000001A /* HealthKit.framework */; };
 		AA300000000000000000020 /* BaselineCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000020 /* BaselineCalculatorTests.swift */; };
 		AA300000000000000000021 /* RecoveryCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000021 /* RecoveryCalculatorTests.swift */; };
 		AA300000000000000000022 /* StrainCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000022 /* StrainCalculatorTests.swift */; };
@@ -44,7 +43,33 @@
 		AA300000000000000000028 /* CheckInViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000028 /* CheckInViewModel.swift */; };
 		AA300000000000000000029 /* CheckInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000029 /* CheckInView.swift */; };
 		AA30000000000000000002A /* BehaviorEngineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002A /* BehaviorEngineTests.swift */; };
+		DEA7837D2F66CEF6009D401F /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA10000000000000000001A /* HealthKit.framework */; };
+		DEA7837E2F66CEF6009D401F /* HealthKit.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = AA10000000000000000001A /* HealthKit.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AA000000000000000000008 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA000000000000000000003 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = AA000000000000000000001;
+			remoteInfo = Soma;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		DEA7837F2F66CEF6009D401F /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				DEA7837E2F66CEF6009D401F /* HealthKit.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		AA100000000000000000001 /* SomaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SomaApp.swift; sourceTree = "<group>"; };
@@ -95,7 +120,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				AA30000000000000000001A /* HealthKit.framework in Frameworks */,
+				DEA7837D2F66CEF6009D401F /* HealthKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -109,6 +134,16 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		AA500000000000000000000 = {
+			isa = PBXGroup;
+			children = (
+				AA500000000000000000001 /* Soma */,
+				AA50000000000000000000A /* SomaTests */,
+				AA50000000000000000000B /* Frameworks */,
+				AA50000000000000000000C /* Products */,
+			);
+			sourceTree = "<group>";
+		};
 		AA500000000000000000001 /* Soma */ = {
 			isa = PBXGroup;
 			children = (
@@ -234,16 +269,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		AA500000000000000000000 /* root */ = {
-			isa = PBXGroup;
-			children = (
-				AA500000000000000000001 /* Soma */,
-				AA50000000000000000000A /* SomaTests */,
-				AA50000000000000000000B /* Frameworks */,
-				AA50000000000000000000C /* Products */,
-			);
-			sourceTree = "<group>";
-		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -254,6 +279,7 @@
 				AA200000000000000000003 /* Sources */,
 				AA200000000000000000001 /* Frameworks */,
 				AA200000000000000000004 /* Resources */,
+				DEA7837F2F66CEF6009D401F /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -308,7 +334,7 @@
 				en,
 				Base,
 			);
-			mainGroup = AA500000000000000000000 /* root */;
+			mainGroup = AA500000000000000000000;
 			productRefGroup = AA50000000000000000000C /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -389,16 +415,6 @@
 			targetProxy = AA000000000000000000008 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
-
-/* Begin PBXContainerItemProxy section */
-		AA000000000000000000008 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = AA000000000000000000003 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = AA000000000000000000001;
-			remoteInfo = Soma;
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin XCBuildConfiguration section */
 		AA600000000000000000001 /* Debug */ = {
@@ -526,6 +542,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = ZK4V53Z7X2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Soma/Info.plist;
@@ -553,6 +570,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
+				DEVELOPMENT_TEAM = ZK4V53Z7X2;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = Soma/Info.plist;
@@ -610,15 +628,6 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		AA000000000000000000007 /* Build configuration list for PBXProject "Soma" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				AA600000000000000000001 /* Debug */,
-				AA600000000000000000002 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Release;
-		};
 		AA000000000000000000004 /* Build configuration list for PBXNativeTarget "Soma" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -637,8 +646,16 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		AA000000000000000000007 /* Build configuration list for PBXProject "Soma" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AA600000000000000000001 /* Debug */,
+				AA600000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
-
 	};
 	rootObject = AA000000000000000000003 /* Project object */;
 }

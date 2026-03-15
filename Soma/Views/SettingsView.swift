@@ -5,6 +5,8 @@ final class UserSettings: ObservableObject {
     @AppStorage("userMaxHR") private var _maxHR: Int = 0
     @AppStorage("baselineSleepHours") var baselineSleepHours: Double = 8.0
     @AppStorage("useMetricUnits") var useMetricUnits: Bool = true
+    @AppStorage("wakeTimeHour")   var wakeTimeHour: Int = 6
+    @AppStorage("wakeTimeMinute") var wakeTimeMinute: Int = 30
 
     var maxHeartRate: Double? {
         get { _maxHR > 0 ? Double(_maxHR) : nil }
@@ -13,6 +15,22 @@ final class UserSettings: ObservableObject {
 
     var effectiveMaxHR: Double {
         maxHeartRate ?? Double(220 - age)
+    }
+
+    /// Wake time as a Date (using today's date for the time components).
+    var wakeTime: Date {
+        get {
+            var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+            comps.hour   = wakeTimeHour
+            comps.minute = wakeTimeMinute
+            comps.second = 0
+            return Calendar.current.date(from: comps) ?? Date()
+        }
+        set {
+            let comps    = Calendar.current.dateComponents([.hour, .minute], from: newValue)
+            wakeTimeHour   = comps.hour   ?? 6
+            wakeTimeMinute = comps.minute ?? 30
+        }
     }
 }
 
@@ -25,13 +43,13 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.black.ignoresSafeArea()
+                Color.somaBackground.ignoresSafeArea()
 
                 Form {
                     Section("Personal") {
                         HStack {
                             Label("Age", systemImage: "person.fill")
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                             Spacer()
                             Stepper("\(settings.age)", value: $settings.age, in: 13...99)
                                 .labelsHidden()
@@ -40,7 +58,7 @@ struct SettingsView: View {
 
                         HStack {
                             Label("Max Heart Rate", systemImage: "heart.fill")
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                             Spacer()
                             if settings.maxHeartRate == nil {
                                 Text("Auto (\(Int(settings.effectiveMaxHR)))")
@@ -48,7 +66,7 @@ struct SettingsView: View {
                                     .font(.subheadline)
                             } else {
                                 Text("\(Int(settings.effectiveMaxHR)) bpm")
-                                    .foregroundColor(.white)
+                                    .foregroundColor(.primary)
                                     .font(.subheadline)
                             }
                         }
@@ -63,7 +81,7 @@ struct SettingsView: View {
 
                         HStack {
                             Label("Custom Max HR", systemImage: "slider.horizontal.3")
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                             Spacer()
                             TextField("e.g. 185", text: $customMaxHR)
                                 .keyboardType(.numberPad)
@@ -73,12 +91,12 @@ struct SettingsView: View {
                                 .onSubmit { applyCustomMaxHR() }
                         }
                     }
-                    .listRowBackground(Color(hex: "1C1C1E"))
+                    .listRowBackground(Color.somaCard)
 
                     Section("Sleep") {
                         HStack {
                             Label("Baseline Sleep Need", systemImage: "moon.fill")
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                             Spacer()
                             Stepper(
                                 String(format: "%.1fh", settings.baselineSleepHours),
@@ -87,19 +105,29 @@ struct SettingsView: View {
                                 step: 0.5
                             )
                             .labelsHidden()
-                            .foregroundColor(Color(hex: "8E8E93"))
+                            .foregroundColor(.secondary)
+                        }
+                        HStack {
+                            Label("Wake Time", systemImage: "alarm.fill")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            DatePicker("", selection: Binding(
+                                get: { settings.wakeTime },
+                                set: { settings.wakeTime = $0 }
+                            ), displayedComponents: .hourAndMinute)
+                            .labelsHidden()
                         }
                     }
-                    .listRowBackground(Color(hex: "1C1C1E"))
+                    .listRowBackground(Color.somaCard)
 
                     Section("Preferences") {
                         Toggle(isOn: $settings.useMetricUnits) {
                             Label("Metric Units", systemImage: "ruler.fill")
-                                .foregroundColor(.white)
+                                .foregroundColor(.primary)
                         }
                         .tint(Color(hex: "00C853"))
                     }
-                    .listRowBackground(Color(hex: "1C1C1E"))
+                    .listRowBackground(Color.somaCard)
 
                     Section("Data") {
                         Button {
@@ -109,21 +137,21 @@ struct SettingsView: View {
                                 .foregroundColor(Color(hex: "FF1744"))
                         }
                     }
-                    .listRowBackground(Color(hex: "1C1C1E"))
+                    .listRowBackground(Color.somaCard)
 
                     Section("About") {
                         HStack {
-                            Text("Version").foregroundColor(.white)
+                            Text("Version").foregroundColor(.primary)
                             Spacer()
                             Text("1.0").foregroundColor(Color(hex: "8E8E93"))
                         }
                         HStack {
-                            Text("Privacy").foregroundColor(.white)
+                            Text("Privacy").foregroundColor(.primary)
                             Spacer()
                             Text("All data stays on device").foregroundColor(Color(hex: "8E8E93")).font(.caption)
                         }
                     }
-                    .listRowBackground(Color(hex: "1C1C1E"))
+                    .listRowBackground(Color.somaCard)
                 }
                 .scrollContentBackground(.hidden)
             }

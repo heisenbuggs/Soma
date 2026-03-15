@@ -27,6 +27,7 @@ final class TrendsViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var selectedDataPoint: DailyMetrics?
+    @Published var selectedMetrics: DailyMetrics?
 
     private let healthKit: HealthDataProviding
     private let store: MetricsStore
@@ -76,5 +77,16 @@ final class TrendsViewModel: ObservableObject {
 
     func rangeChanged() {
         load()
+    }
+
+    /// Called when the user taps a chart point. Finds the nearest stored day.
+    func selectDate(_ date: Date?) {
+        guard let date else {
+            selectedMetrics = nil
+            return
+        }
+        selectedMetrics = metricHistory.min(by: {
+            abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date))
+        })
     }
 }

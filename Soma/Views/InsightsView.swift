@@ -6,7 +6,7 @@ struct InsightsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.black.ignoresSafeArea()
+                Color.somaBackground.ignoresSafeArea()
 
                 if viewModel.insights.isEmpty && viewModel.behaviorInsights.isEmpty {
                     emptyState
@@ -70,7 +70,7 @@ struct InsightsView: View {
                     Text(insight.behaviorName)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                     Text(insight.impactDescription)
                         .font(.caption)
                         .foregroundColor(Color(hex: "8E8E93"))
@@ -83,7 +83,7 @@ struct InsightsView: View {
             }
             .padding(12)
         }
-        .background(Color(hex: "1C1C1E"))
+        .background(Color.somaCard)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
@@ -105,7 +105,7 @@ struct InsightsView: View {
                     Text(insight.title)
                         .font(.subheadline)
                         .fontWeight(.semibold)
-                        .foregroundColor(.white)
+                        .foregroundColor(.primary)
                     Text(insight.description)
                         .font(.caption)
                         .foregroundColor(Color(hex: "8E8E93"))
@@ -115,7 +115,7 @@ struct InsightsView: View {
             }
             .padding(12)
         }
-        .background(Color(hex: "1C1C1E"))
+        .background(Color.somaCard)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
@@ -127,7 +127,7 @@ struct InsightsView: View {
             Text("All Looking Good")
                 .font(.title2)
                 .fontWeight(.semibold)
-                .foregroundColor(.white)
+                .foregroundColor(.primary)
             Text("No notable insights for today. Keep up the great work!")
                 .font(.subheadline)
                 .foregroundColor(Color(hex: "8E8E93"))
