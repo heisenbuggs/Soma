@@ -214,6 +214,10 @@ final class DashboardViewModel: ObservableObject {
             todayMetrics = metrics
             lastRefreshed = Date()
 
+            // New metrics invalidate the physio insight cache so the next
+            // Insights tab visit regenerates with fresh data.
+            InsightCache.shared.invalidatePhysio()
+
             // Bedtime recommendation
             bedtimeTarget = SleepCalculator.bedtimeTarget(
                 wakeTime: settings.wakeTime,

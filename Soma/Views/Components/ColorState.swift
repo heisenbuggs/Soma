@@ -2,6 +2,7 @@ import SwiftUI
 
 enum ColorState {
     case green(label: String)
+    case lightGreen(label: String)
     case yellow(label: String)
     case red(label: String)
     case blue(label: String)
@@ -10,48 +11,65 @@ enum ColorState {
 
     var color: Color {
         switch self {
-        case .green:  return Color(hex: "00C853")
-        case .yellow: return Color(hex: "FFD600")
-        case .red:    return Color(hex: "FF1744")
-        case .blue:   return Color(hex: "2979FF")
-        case .orange: return Color(hex: "FF9100")
-        case .gray:   return Color(hex: "8E8E93")
+        case .green:      return Color(hex: "00C853")
+        case .lightGreen: return Color(hex: "69F0AE")
+        case .yellow:     return Color(hex: "FFD600")
+        case .red:        return Color(hex: "FF1744")
+        case .blue:       return Color(hex: "2979FF")
+        case .orange:     return Color(hex: "FF9100")
+        case .gray:       return Color(hex: "8E8E93")
         }
     }
 
     var label: String {
         switch self {
-        case .green(let l), .yellow(let l), .red(let l),
-             .blue(let l), .orange(let l), .gray(let l):
+        case .green(let l), .lightGreen(let l), .yellow(let l),
+             .red(let l), .blue(let l), .orange(let l), .gray(let l):
             return l
         }
     }
 
+    // MARK: - Recovery
+    // 85–100 Excellent | 70–84 Good | 50–69 Moderate | 30–49 Low | 0–29 Very Low
+
     static func recovery(score: Double) -> ColorState {
         switch score {
-        case 67...100: return .green(label: "Recovered")
-        case 34..<67:  return .yellow(label: "Moderate")
-        default:       return .red(label: "Low")
+        case 85...100: return .green(label: "Excellent")
+        case 70..<85:  return .lightGreen(label: "Good")
+        case 50..<70:  return .yellow(label: "Moderate")
+        case 30..<50:  return .orange(label: "Low")
+        default:       return .red(label: "Very Low")
         }
     }
 
+    // MARK: - Strain
+    // 80–100 Very High | 60–79 High | 40–59 Moderate | 20–39 Light | 0–19 Minimal
+
     static func strain(score: Double) -> ColorState {
         switch score {
-        case 0..<48:  return .blue(label: "Light")
-        case 48..<67: return .green(label: "Moderate")
-        case 67..<86: return .orange(label: "High")
-        default:      return .red(label: "Overreaching")
+        case 80...100: return .red(label: "Very High")
+        case 60..<80:  return .orange(label: "High")
+        case 40..<60:  return .yellow(label: "Moderate")
+        case 20..<40:  return .lightGreen(label: "Light")
+        default:       return .blue(label: "Minimal")
         }
     }
+
+    // MARK: - Sleep
+    // 90–100 Excellent | 75–89 Good | 60–74 Fair | 40–59 Poor | 0–39 Very Poor
 
     static func sleep(score: Double) -> ColorState {
         switch score {
         case 90...100: return .green(label: "Excellent")
-        case 75..<90:  return .green(label: "Good")
-        case 60..<75:  return .yellow(label: "Moderate")
-        default:       return .red(label: "Poor")
+        case 75..<90:  return .lightGreen(label: "Good")
+        case 60..<75:  return .yellow(label: "Fair")
+        case 40..<60:  return .orange(label: "Poor")
+        default:       return .red(label: "Very Poor")
         }
     }
+
+    // MARK: - Stress
+    // 0–30 Low | 31–60 Moderate | 61–100 High
 
     static func stress(score: Double) -> ColorState {
         switch score {

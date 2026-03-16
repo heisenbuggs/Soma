@@ -50,6 +50,11 @@ final class NotificationScheduler {
 
             center.removePendingNotificationRequests(withIdentifiers: [recoveryNotificationID])
             try? await center.add(request)
+
+            // Persist to notification history
+            NotificationStore.shared.save(
+                NotificationRecord(title: title, body: body)
+            )
         }
     }
 

@@ -54,10 +54,10 @@ struct AyurvedicSleepDetailView: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         scoreCard
-                        historyChart
                         timelineCard
                         if !breakdown.isEmpty { breakdownCard }
                         if let tip { tipCard(tip) }
+                        historyChart
                     }
                     .padding(.top, 8)
                     .padding(.bottom, 32)
@@ -116,7 +116,7 @@ struct AyurvedicSleepDetailView: View {
 
             // Chart header
             HStack {
-                Text("Score History")
+                Text("Score Trend")
                     .font(.headline)
                     .foregroundColor(.primary)
                 Spacer()
@@ -184,7 +184,7 @@ struct AyurvedicSleepDetailView: View {
 
     private var timelineCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Last Night's Timeline")
+            Text("Sleep Timeline")
                 .font(.headline)
                 .foregroundColor(.primary)
 

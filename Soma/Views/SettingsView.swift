@@ -201,6 +201,7 @@ struct SettingsView: View {
             .alert("Reset Baselines", isPresented: $showResetAlert) {
                 Button("Reset", role: .destructive) {
                     MetricsStore().resetAll()
+                    InsightCache.shared.invalidateAll()
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {

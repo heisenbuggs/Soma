@@ -5,6 +5,10 @@ struct SomaApp: App {
     @StateObject private var healthKitManager = HealthKitManager()
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
 
+    init() {
+        BackgroundTaskManager.shared.registerTasks()
+    }
+
     var body: some Scene {
         WindowGroup {
             Group {
@@ -14,6 +18,7 @@ struct SomaApp: App {
                     MainTabView(healthKitManager: healthKitManager)
                         .task {
                             _ = await NotificationScheduler.shared.requestPermission()
+                            BackgroundTaskManager.shared.scheduleInsightRefresh()
                         }
                 } else {
                     OnboardingView()

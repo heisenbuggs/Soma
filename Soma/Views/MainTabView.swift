@@ -54,6 +54,11 @@ struct MainTabView: View {
             .tabItem {
                 Label("Insights", systemImage: "brain.head.profile")
             }
+
+            NotificationsView()
+            .tabItem {
+                Label("Notifications", systemImage: "bell.fill")
+            }
         }
         .tint(Color(hex: "2979FF"))
     }

@@ -102,16 +102,22 @@ struct InsightsView: View {
                     .frame(width: 32)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(insight.title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
+                    HStack {
+                        Text(insight.title)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text(insight.date, format: .dateTime.month(.abbreviated).day())
+                            .font(.caption2)
+                            .foregroundColor(Color(hex: "8E8E93"))
+                    }
                     Text(insight.description)
                         .font(.caption)
                         .foregroundColor(Color(hex: "8E8E93"))
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                Spacer()
+                Spacer(minLength: 0)
             }
             .padding(12)
         }

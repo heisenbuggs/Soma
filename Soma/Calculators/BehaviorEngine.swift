@@ -2,8 +2,8 @@ import Foundation
 
 // MARK: - Behavior Insight
 
-struct BehaviorInsight: Identifiable {
-    let id = UUID()
+struct BehaviorInsight: Identifiable, Codable {
+    let id: UUID
     let behaviorName: String
     let metricName: String
     let averageWith: Double
@@ -200,6 +200,7 @@ private extension BehaviorEngine {
         let isNegative = higherIsBetter ? delta < 0 : delta > 0
 
         return BehaviorInsight(
+            id: UUID(),
             behaviorName: behaviorName,
             metricName: metricName,
             averageWith: avgWith,

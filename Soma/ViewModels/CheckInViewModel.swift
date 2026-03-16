@@ -23,6 +23,8 @@ final class CheckInViewModel: ObservableObject {
         Task {
             draft.date = Date()
             checkInStore.save(draft)
+            // Behavior insights are now stale — invalidate cache so they regenerate
+            InsightCache.shared.invalidateBehavior()
             // Best-effort write behavioral signals to Apple Health
             try? await healthKit.writeBehavioralData(draft)
             isSaving = false

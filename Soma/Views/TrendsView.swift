@@ -295,8 +295,10 @@ struct TrendsView: View {
 
     private var ayurvedicSleepTooltip: String? {
         guard let pinned = pinnedDate else { return nil }
-        let nearest = ayurvedicSleepData.min { abs($0.0.timeIntervalSince(pinned)) < abs($1.0.timeIntervalSince(pinned)) }
-        return nearest.map { String(format: "%.1f / 10", $0.1) }
+        guard let entry = ayurvedicSleepData.min(by: { abs($0.0.timeIntervalSince(pinned)) < abs($1.0.timeIntervalSince(pinned)) }) else { return nil }
+        let dateStr = entry.0.formatted(.dateTime.month(.abbreviated).day())
+        let label = AyurvedicSleepCalculator.guidanceText(for: entry.1)
+        return "\(dateStr) · \(String(format: "%.1f", entry.1)) — \(label)"
     }
 
     // MARK: - Inline Day Detail Card
@@ -428,28 +430,43 @@ struct TrendsView: View {
     private var hrvTooltip: String? {
         guard let pinned = pinnedDate else { return nil }
         let nearest = viewModel.hrvHistory.min { abs($0.0.timeIntervalSince(pinned)) < abs($1.0.timeIntervalSince(pinned)) }
-        return nearest.map { String(format: "%.0f ms", $0.1) }
+        guard let entry = nearest else { return nil }
+        let dateStr = entry.0.formatted(.dateTime.month(.abbreviated).day())
+        return "\(dateStr) · \(String(format: "%.0f ms", entry.1))"
     }
 
     private var rhrTooltip: String? {
         guard let pinned = pinnedDate else { return nil }
         let nearest = viewModel.rhrHistory.min { abs($0.0.timeIntervalSince(pinned)) < abs($1.0.timeIntervalSince(pinned)) }
-        return nearest.map { String(format: "%.0f bpm", $0.1) }
+        guard let entry = nearest else { return nil }
+        let dateStr = entry.0.formatted(.dateTime.month(.abbreviated).day())
+        return "\(dateStr) · \(String(format: "%.0f bpm", entry.1))"
     }
 
     private var strainTooltip: String? {
-        pinnedMetrics.map { String(format: "%.0f", $0.strainScore) }
+        guard let m = pinnedMetrics else { return nil }
+        let score = Int(m.strainScore.rounded())
+        let label = ColorState.strain(score: m.strainScore).label
+        let dateStr = m.date.formatted(.dateTime.month(.abbreviated).day())
+        return "\(dateStr) · \(score) — \(label)"
     }
 
     private var sleepTooltip: String? {
-        guard let h = pinnedMetrics?.sleepDurationHours else { return nil }
+        guard let m = pinnedMetrics, let h = m.sleepDurationHours else { return nil }
         let totalMinutes = Int(h * 60)
         let hrs = totalMinutes / 60; let mins = totalMinutes % 60
-        return mins == 0 ? "\(hrs)h" : "\(hrs)h \(mins)m"
+        let durStr = mins == 0 ? "\(hrs)h" : "\(hrs)h \(mins)m"
+        let scoreLabel = ColorState.sleep(score: m.sleepScore).label
+        let dateStr = m.date.formatted(.dateTime.month(.abbreviated).day())
+        return "\(dateStr) · \(durStr) — \(scoreLabel)"
     }
 
     private var recoveryTooltip: String? {
-        pinnedMetrics.map { String(format: "%.0f", $0.recoveryScore) }
+        guard let m = pinnedMetrics else { return nil }
+        let score = Int(m.recoveryScore.rounded())
+        let label = ColorState.recovery(score: m.recoveryScore).label
+        let dateStr = m.date.formatted(.dateTime.month(.abbreviated).day())
+        return "\(dateStr) · \(score) — \(label)"
     }
 
     // MARK: - Helpers

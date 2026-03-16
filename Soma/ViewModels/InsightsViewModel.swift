@@ -1,14 +1,24 @@
 import Foundation
 
-struct Insight: Identifiable {
-    let id = UUID()
+struct Insight: Identifiable, Codable {
+    let id: UUID
     let icon: String
     let title: String
     let description: String
     let priority: InsightPriority
+    let date: Date
+
+    init(icon: String, title: String, description: String, priority: InsightPriority, date: Date = Date()) {
+        self.id = UUID()
+        self.icon = icon
+        self.title = title
+        self.description = description
+        self.priority = priority
+        self.date = date
+    }
 }
 
-enum InsightPriority: Int, Comparable {
+enum InsightPriority: Int, Comparable, Codable {
     case high = 0   // red
     case medium = 1 // yellow
     case low = 2    // green
@@ -40,9 +50,27 @@ final class InsightsViewModel: ObservableObject {
         self.checkInStore = checkInStore
     }
 
-    func generateInsights() {
-        generatePhysiologicalInsights()
-        generateBehaviorInsights()
+    /// Loads insights from cache if fresh, or recomputes if stale.
+    /// - Parameter forceRefresh: When true, always recomputes regardless of cache state.
+    func generateInsights(forceRefresh: Bool = false) {
+        let latestMetrics = store.load(for: Date())
+        let latestCheckIn = checkInStore.loadAll().max { $0.date < $1.date }?.date
+
+        let physioStale   = forceRefresh || InsightCache.shared.isPhysioStale(latestMetricsDate: latestMetrics?.date)
+        let behaviorStale = forceRefresh || InsightCache.shared.isBehaviorStale(latestCheckInDate: latestCheckIn)
+
+        // Load cached results first so the UI is never blank while recomputing
+        if !physioStale, let cached = InsightCache.shared.loadPhysio() {
+            insights = cached
+        } else {
+            generatePhysiologicalInsights()
+        }
+
+        if !behaviorStale, let cached = InsightCache.shared.loadBehavior() {
+            behaviorInsights = cached
+        } else {
+            generateBehaviorInsights()
+        }
     }
 
     // MARK: - Physiological Insights
@@ -173,7 +201,9 @@ final class InsightsViewModel: ObservableObject {
             ))
         }
 
-        insights = results.sorted { $0.priority < $1.priority }.prefix(5).map { $0 }
+        let sorted = results.sorted { $0.priority < $1.priority }.prefix(5).map { $0 }
+        insights = sorted
+        InsightCache.shared.savePhysio(sorted)
     }
 
     // MARK: - Behavioral Insights (Behavior Intelligence Engine)
@@ -181,6 +211,8 @@ final class InsightsViewModel: ObservableObject {
     private func generateBehaviorInsights() {
         let checkIns = checkInStore.loadAll()
         let metrics  = store.loadAll()
-        behaviorInsights = BehaviorEngine.generateInsights(checkIns: checkIns, metrics: metrics)
+        let generated = BehaviorEngine.generateInsights(checkIns: checkIns, metrics: metrics)
+        behaviorInsights = generated
+        InsightCache.shared.saveBehavior(generated)
     }
 }
