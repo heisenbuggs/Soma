@@ -32,6 +32,10 @@ final class NotificationStore {
 
     func save(_ record: NotificationRecord) {
         var all = loadAll()
+        // Replace any existing record for the same calendar day so repeated
+        // app refreshes don't accumulate duplicates in the history.
+        let recordDay = calendar.startOfDay(for: record.timestamp)
+        all.removeAll { calendar.startOfDay(for: $0.timestamp) == recordDay }
         all.append(record)
         persist(purged(all))
     }

@@ -55,6 +55,12 @@
 		AA30000000000000000002F /* BedtimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002F /* BedtimeTests.swift */; };
 		AA300000000000000000030 /* NotificationSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000030 /* NotificationSchedulerTests.swift */; };
 		DEA7837D2F66CEF6009D401F /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA10000000000000000001A /* HealthKit.framework */; };
+		AA300000000000000000036 /* BackgroundTaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000036 /* BackgroundTaskManager.swift */; };
+		AA300000000000000000037 /* InsightCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000037 /* InsightCache.swift */; };
+		AA300000000000000000038 /* NotificationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000038 /* NotificationStore.swift */; };
+		AA300000000000000000039 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000039 /* NotificationsView.swift */; };
+		AA30000000000000000003A /* DailyTrainingGuidance.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000003A /* DailyTrainingGuidance.swift */; };
+		AA30000000000000000003B /* TrainingGuidanceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000003B /* TrainingGuidanceEngine.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -123,6 +129,12 @@
 		AA10000000000000000002E /* WorkoutStrainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutStrainTests.swift; sourceTree = "<group>"; };
 		AA10000000000000000002F /* BedtimeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BedtimeTests.swift; sourceTree = "<group>"; };
 		AA100000000000000000030 /* NotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSchedulerTests.swift; sourceTree = "<group>"; };
+		AA100000000000000000036 /* BackgroundTaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskManager.swift; sourceTree = "<group>"; };
+		AA100000000000000000037 /* InsightCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightCache.swift; sourceTree = "<group>"; };
+		AA100000000000000000038 /* NotificationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationStore.swift; sourceTree = "<group>"; };
+		AA100000000000000000039 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
+		AA10000000000000000003A /* DailyTrainingGuidance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyTrainingGuidance.swift; sourceTree = "<group>"; };
+		AA10000000000000000003B /* TrainingGuidanceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingGuidanceEngine.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -177,6 +189,7 @@
 				AA100000000000000000003 /* SleepData.swift */,
 				AA100000000000000000004 /* HeartRateZone.swift */,
 				AA100000000000000000025 /* DailyCheckIn.swift */,
+				AA10000000000000000003A /* DailyTrainingGuidance.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -188,6 +201,9 @@
 				AA100000000000000000006 /* MetricsStore.swift */,
 				AA100000000000000000026 /* CheckInStore.swift */,
 				AA10000000000000000002B /* NotificationScheduler.swift */,
+				AA100000000000000000036 /* BackgroundTaskManager.swift */,
+				AA100000000000000000037 /* InsightCache.swift */,
+				AA100000000000000000038 /* NotificationStore.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -202,6 +218,7 @@
 				AA10000000000000000000B /* StressCalculator.swift */,
 				AA100000000000000000027 /* BehaviorEngine.swift */,
 				AA100000000000000000033 /* AyurvedicSleepCalculator.swift */,
+				AA10000000000000000003B /* TrainingGuidanceEngine.swift */,
 			);
 			path = Calculators;
 			sourceTree = "<group>";
@@ -232,6 +249,7 @@
 				AA100000000000000000031 /* MetricDetailView.swift */,
 				AA100000000000000000032 /* DayDetailPageView.swift */,
 				AA100000000000000000034 /* AyurvedicSleepDetailView.swift */,
+				AA100000000000000000039 /* NotificationsView.swift */,
 				AA500000000000000000007 /* Components */,
 			);
 			path = Views;
@@ -417,6 +435,12 @@
 				AA300000000000000000032 /* DayDetailPageView.swift in Sources */,
 				AA300000000000000000033 /* AyurvedicSleepCalculator.swift in Sources */,
 				AA300000000000000000034 /* AyurvedicSleepDetailView.swift in Sources */,
+				AA300000000000000000036 /* BackgroundTaskManager.swift in Sources */,
+				AA300000000000000000037 /* InsightCache.swift in Sources */,
+				AA300000000000000000038 /* NotificationStore.swift in Sources */,
+				AA300000000000000000039 /* NotificationsView.swift in Sources */,
+				AA30000000000000000003A /* DailyTrainingGuidance.swift in Sources */,
+				AA30000000000000000003B /* TrainingGuidanceEngine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -23,6 +23,12 @@ struct InsightsView: View {
     private var insightsList: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                // Daily Training Guidance
+                if let guidance = viewModel.trainingGuidance {
+                    sectionHeader("Daily Guidance")
+                    guidanceCard(guidance)
+                }
+
                 // Physiological insights
                 if !viewModel.insights.isEmpty {
                     sectionHeader("Today")
@@ -43,6 +49,7 @@ struct InsightsView: View {
             .padding(.top, 8)
             .padding(.bottom, 24)
         }
+        .scrollBounceBehavior(.basedOnSize)
     }
 
     private func sectionHeader(_ title: String) -> some View {
@@ -123,6 +130,82 @@ struct InsightsView: View {
         }
         .background(Color.somaCard)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private func guidanceCard(_ guidance: DailyTrainingGuidance) -> some View {
+        let accent = Color(hex: guidance.activityLevel.colorHex)
+        return VStack(alignment: .leading, spacing: 12) {
+            // Level + readiness
+            HStack(spacing: 10) {
+                Image(systemName: guidance.activityLevel.icon)
+                    .font(.title3)
+                    .foregroundColor(accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(guidance.activityLevel.title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(accent)
+                    Text("Strain target: \(guidance.targetStrainMin)–\(guidance.targetStrainMax)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("Readiness")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Text("\(Int(guidance.readinessScore.rounded()))")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(accent)
+                }
+            }
+
+            // Suggested workouts
+            if !guidance.suggestedWorkouts.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(guidance.suggestedWorkouts, id: \.self) { workout in
+                            Text(workout)
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundColor(accent)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(accent.opacity(0.12))
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+
+            // Explanation
+            if !guidance.explanation.isEmpty {
+                Text(guidance.explanation)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            // Fatigue flags
+            if !guidance.fatigueFlags.isEmpty {
+                HStack(spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.caption2)
+                        .foregroundColor(Color(hex: "FFD600"))
+                    Text(guidance.fatigueFlags.joined(separator: " · "))
+                        .font(.caption2)
+                        .foregroundColor(Color(hex: "FFD600"))
+                }
+            }
+        }
+        .padding(14)
+        .background(accent.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(accent.opacity(0.25), lineWidth: 1)
+        )
     }
 
     private var emptyState: some View {

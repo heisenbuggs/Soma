@@ -263,7 +263,9 @@ struct MetricDetailView: View {
         }
         .pickerStyle(.segmented)
         .padding(.horizontal)
-        .onChange(of: selectedRange) { _, _ in selectedDate = nil }
+        .onChange(of: selectedRange) { _, _ in
+            selectedDate = history.max { $0.date < $1.date }?.date
+        }
     }
 
     // MARK: - Score Chart
@@ -277,16 +279,7 @@ struct MetricDetailView: View {
                     .font(.headline)
                     .foregroundColor(.primary)
                 Spacer()
-                if let val = selectedTooltip {
-                    Text(val)
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Color.somaCardElevated)
-                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                }
+                tooltipView
             }
 
             Chart(history) { entry in
@@ -328,8 +321,26 @@ struct MetricDetailView: View {
                 }
             }
             .chartYAxis { AxisMarks(position: .leading) }
-            .chartXSelection(value: $selectedDate)
             .frame(height: 220)
+            .chartOverlay { proxy in
+                GeometryReader { geo in
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture { location in
+                            let plotFrame = geo[proxy.plotAreaFrame]
+                            let relativeX = location.x - plotFrame.origin.x
+                            guard relativeX >= 0, relativeX <= plotFrame.width else { return }
+                            if let tappedDate: Date = proxy.value(atX: relativeX) {
+                                selectedDate = history.min {
+                                    abs($0.date.timeIntervalSince(tappedDate)) < abs($1.date.timeIntervalSince(tappedDate))
+                                }?.date
+                            }
+                        }
+                }
+            }
+            .onAppear {
+                selectedDate = history.max { $0.date < $1.date }?.date
+            }
         }
         .padding(14)
         .background(Color.somaCard)
@@ -439,14 +450,26 @@ struct MetricDetailView: View {
 
     // MARK: - Helpers
 
-    private var selectedTooltip: String? {
-        guard let date = selectedDate else { return nil }
-        let nearest = history.min { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) }
-        guard let m = nearest else { return nil }
-        let score = Int(metric.score(from: m).rounded())
-        let state = metric.state(from: m)
-        let dateStr = m.date.formatted(.dateTime.month(.abbreviated).day())
-        return "\(dateStr) · \(score) — \(state.label)"
+    @ViewBuilder
+    private var tooltipView: some View {
+        if let date = selectedDate {
+            let nearest = history.min { abs($0.date.timeIntervalSince(date)) < abs($1.date.timeIntervalSince(date)) }
+            if let m = nearest {
+                let score = Int(metric.score(from: m).rounded())
+                let state = metric.state(from: m)
+                let dateStr = m.date.formatted(.dateTime.month(.abbreviated).day())
+                (
+                    Text("\(dateStr) · \(score) — ")
+                    + Text(state.label).foregroundColor(state.color)
+                )
+                .font(.caption)
+                .fontWeight(.semibold)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color.somaCardElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+            }
+        }
     }
 
     private func isSelected(_ date: Date) -> Bool {

@@ -54,17 +54,18 @@ final class StrainCalculatorTests: XCTestCase {
     // MARK: - Load values
 
     func test_calculate_zone1Activity_correctLoad() {
-        // 30 min at 100 bpm (zone1, weight 1) → load ≈ 30
+        // 30 min at 100 bpm (zone1, weight 0) → load = 0 (Zone 1 is recovery, no strain)
         let samples = makeConstantHRSamples(hr: 100, durationMinutes: 30)
         let load = StrainCalculator.calculate(samples: samples, maxHR: maxHR)
-        XCTAssertEqual(load, 30.0, accuracy: 0.5)
+        XCTAssertEqual(load, 0.0, accuracy: 0.01)
     }
 
     func test_calculate_zone5Activity_correctLoad() {
-        // 90 min at 170 bpm (91.9% of 185 → zone5, weight 5) → load ≈ 450
+        // 90 min at 170 bpm (91.9% of 185 → zone5, weight 4) → load = 90 × 4 = 360
+        // Samples are 1-minute apart so the 1-minute gap cap has no effect here.
         let samples = makeConstantHRSamples(hr: 170, durationMinutes: 90)
         let load = StrainCalculator.calculate(samples: samples, maxHR: maxHR)
-        XCTAssertEqual(load, 450.0, accuracy: 1.0)
+        XCTAssertEqual(load, 360.0, accuracy: 1.0)
     }
 
     // MARK: - Score function
@@ -96,9 +97,9 @@ final class StrainCalculatorTests: XCTestCase {
 
     // MARK: - Capacity model
 
-    func test_capacity_duringCalibration_returns350() {
+    func test_capacity_duringCalibration_returns500() {
         let history = [Double](repeating: 200, count: 5)  // only 5 days
-        XCTAssertEqual(StrainCalculator.capacity(fromLoads: history), 350)
+        XCTAssertEqual(StrainCalculator.capacity(fromLoads: history), 500)
     }
 
     func test_capacity_afterCalibration_returnsAverage() {
@@ -113,6 +114,29 @@ final class StrainCalculatorTests: XCTestCase {
     func test_isCalibrating_falseAfterSevenDays() {
         let history = [Double](repeating: 300, count: 7)
         XCTAssertFalse(StrainCalculator.isCalibrating(loadHistory: history))
+    }
+
+    // MARK: - Gap capping
+
+    func test_calculate_largeGapCappedToOneMinute() {
+        // Two samples 60 minutes apart at zone-4 HR (weight 3).
+        // Without capping: load = 60 × 3 = 180.
+        // With capping:    load = 1 × 3 = 3.
+        let base = Date(timeIntervalSince1970: 0)
+        let samples: [(Date, Double)] = [
+            (base, 155),
+            (base.addingTimeInterval(3600), 155)  // 60-min gap
+        ]
+        let load = StrainCalculator.calculate(samples: samples, maxHR: maxHR)
+        XCTAssertEqual(load, 3.0, accuracy: 0.01)
+    }
+
+    func test_calculate_passiveHRSkipped() {
+        // HR at 45% of maxHR (< 50% threshold) — should contribute zero load.
+        let hr = maxHR * 0.45
+        let samples = makeConstantHRSamples(hr: hr, durationMinutes: 30)
+        let load = StrainCalculator.calculate(samples: samples, maxHR: maxHR)
+        XCTAssertEqual(load, 0.0)
     }
 
     // MARK: - Max HR estimation

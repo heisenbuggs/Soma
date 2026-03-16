@@ -43,6 +43,12 @@ struct DashboardView: View {
                         ayurvedicSleepWidget
                             .padding(.horizontal)
 
+                        // Training Guidance card
+                        if let guidance = viewModel.trainingGuidance {
+                            trainingGuidanceCard(guidance)
+                                .padding(.horizontal)
+                        }
+
                         // Daily Check-In prompt
                         if !checkInStore.hasCompletedToday() {
                             checkInPrompt
@@ -65,6 +71,7 @@ struct DashboardView: View {
                     }
                     .padding(.top, 8)
                 }
+                .scrollBounceBehavior(.basedOnSize)
                 .refreshable {
                     viewModel.refresh(force: true)
                 }
@@ -173,6 +180,82 @@ struct DashboardView: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Training Guidance Card
+
+    private func trainingGuidanceCard(_ guidance: DailyTrainingGuidance) -> some View {
+        let accent = Color(hex: guidance.activityLevel.colorHex)
+        return VStack(alignment: .leading, spacing: 12) {
+            // Header row
+            HStack(spacing: 10) {
+                Image(systemName: guidance.activityLevel.icon)
+                    .font(.title3)
+                    .foregroundColor(accent)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Training Guidance")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Text(guidance.activityLevel.title)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(accent)
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("Readiness")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    Text("\(Int(guidance.readinessScore.rounded()))")
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(accent)
+                }
+            }
+
+            // Strain target range
+            HStack(spacing: 6) {
+                Image(systemName: "target")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Text("Target strain: \(guidance.targetStrainMin)–\(guidance.targetStrainMax)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            // Suggested workouts
+            if !guidance.suggestedWorkouts.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(guidance.suggestedWorkouts, id: \.self) { workout in
+                            Text(workout)
+                                .font(.caption2)
+                                .fontWeight(.medium)
+                                .foregroundColor(accent)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(accent.opacity(0.12))
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
+            }
+
+            // Explanation
+            if !guidance.explanation.isEmpty {
+                Text(guidance.explanation)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(14)
+        .background(accent.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(accent.opacity(0.25), lineWidth: 1)
+        )
     }
 
     // MARK: - Metric Card (tappable)

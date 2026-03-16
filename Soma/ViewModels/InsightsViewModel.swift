@@ -41,6 +41,7 @@ final class InsightsViewModel: ObservableObject {
 
     @Published var insights: [Insight] = []
     @Published var behaviorInsights: [BehaviorInsight] = []
+    @Published var trainingGuidance: DailyTrainingGuidance?
 
     private let store: MetricsStore
     private let checkInStore: CheckInStore
@@ -71,6 +72,36 @@ final class InsightsViewModel: ObservableObject {
         } else {
             generateBehaviorInsights()
         }
+
+        // Training guidance is always recomputed from stored data (fast, no HealthKit).
+        if let today = latestMetrics {
+            trainingGuidance = computeGuidance(for: today)
+        }
+    }
+
+    private func computeGuidance(for metrics: DailyMetrics) -> DailyTrainingGuidance {
+        let last30  = store.loadLast(30)
+        let history = store.loadLast(28)
+
+        let hrvHist     = BaselineCalculator.extractHistory(from: last30, \.hrvAverage)
+        let rhrHist     = BaselineCalculator.extractHistory(from: last30, \.restingHR)
+        let hrvBaseline = BaselineCalculator.computeHRVBaseline(from: hrvHist)
+        let rhrBaseline = BaselineCalculator.computeRHRBaseline(from: rhrHist)
+
+        let sleepGoalStored = UserDefaults.standard.double(forKey: "baselineSleepHours")
+        let sleepGoal = sleepGoalStored > 0 ? sleepGoalStored : 7.0
+
+        let strainLoadHistory = store.loadLast(StrainCalculator.rollingCapacityDays).compactMap { $0.strainLoad }
+        let isCalibrating = StrainCalculator.isCalibrating(loadHistory: strainLoadHistory)
+
+        return TrainingGuidanceEngine.generate(
+            metrics: metrics,
+            history: history,
+            hrvBaseline: hrvBaseline,
+            rhrBaseline: rhrBaseline,
+            sleepGoal: sleepGoal,
+            isCalibrating: isCalibrating
+        )
     }
 
     // MARK: - Physiological Insights

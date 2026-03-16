@@ -51,7 +51,7 @@ enum ColorState {
         case 60..<80:  return .orange(label: "High")
         case 40..<60:  return .yellow(label: "Moderate")
         case 20..<40:  return .lightGreen(label: "Light")
-        default:       return .blue(label: "Minimal")
+        default:       return .green(label: "Minimal")
         }
     }
 

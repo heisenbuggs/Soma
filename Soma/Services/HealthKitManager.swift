@@ -20,6 +20,7 @@ protocol HealthDataProviding {
     func fetchWorkouts(for date: Date) async throws -> [HKWorkout]
     func fetchSleepGoal() async throws -> Double?
     func writeBehavioralData(_ checkIn: DailyCheckIn) async throws
+    func fetchEarliestDataDate() async -> Date?
 }
 
 // MARK: - HealthKitManager
@@ -330,6 +331,23 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
         return groups.sorted { $0.key < $1.key }.map { (day, values) in
             (day, values.reduce(0, +) / Double(values.count))
         }
+    }
+
+    // MARK: - Earliest Data Date
+
+    /// Returns the start date of the oldest heart rate sample in HealthKit.
+    /// Used to determine how far back a historical backfill should reach.
+    func fetchEarliestDataDate() async -> Date? {
+        let type = HKQuantityType(.heartRate)
+        let sort = NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)
+        let samples = try? await withCheckedThrowingContinuation { (continuation: CheckedContinuation<[HKSample], Error>) in
+            let query = HKSampleQuery(sampleType: type, predicate: nil, limit: 1, sortDescriptors: [sort]) { _, results, error in
+                if let error = error { continuation.resume(throwing: error) }
+                else { continuation.resume(returning: results ?? []) }
+            }
+            healthStore.execute(query)
+        }
+        return samples?.first?.startDate
     }
 
     // MARK: - Write Behavioral Data

@@ -16,7 +16,7 @@ struct WidgetMetricsSnapshot: Codable {
 final class MetricsStore: ObservableObject {
     private let key        = "storedDailyMetrics"
     private let widgetKey  = "widgetMetrics"
-    private let maxDays    = 90
+    private let maxDays    = 1825  // 5 years — retain full history for trends
     private let calendar   = Calendar.current
     private let appGroupID = "group.com.soma.app"
 

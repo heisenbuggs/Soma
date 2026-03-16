@@ -55,6 +55,7 @@ struct TrendsView: View {
                     .padding(.top, 8)
                     .padding(.bottom, 24)
                 }
+                .scrollBounceBehavior(.basedOnSize)
             }
             .navigationTitle("Trends")
             .navigationBarTitleDisplayMode(.large)

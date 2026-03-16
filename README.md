@@ -31,25 +31,34 @@ Each score has a 5-tier category system displayed consistently across charts and
 
 ### Strain Score Formula
 
-Strain is calculated using a cardiovascular zone-load model:
+Strain is calculated using a cardiovascular zone-load model.
 
 **Step 1 — HR Zone Classification** (MaxHR % thresholds):
 
-| Zone | % of Max HR | Weight |
-|------|-------------|--------|
-| Z1   | < 60%       | 1.0    |
-| Z2   | 60–70%      | 2.0    |
-| Z3   | 70–80%      | 3.0    |
-| Z4   | 80–90%      | 4.0    |
-| Z5   | ≥ 90%       | 5.0    |
+| Zone | % of Max HR | Weight | Notes |
+|------|-------------|--------|-------|
+| Z1   | 50–60%      | 0      | Recovery intensity — no strain contribution |
+| Z2   | 60–70%      | 1      | Fat burn / aerobic base |
+| Z3   | 70–80%      | 2      | Aerobic |
+| Z4   | 80–90%      | 3      | Anaerobic threshold |
+| Z5   | 90–100%     | 4      | Max effort |
+
+HR below 50% of MaxHR is **passive physiology** (resting/sleeping) and is excluded entirely.
 
 **Step 2 — StrainLoad** (raw zone-weighted minutes):
 ```
 StrainLoad = Σ (minutes in zone × zone weight)
 ```
 
+**Handling HealthKit sampling gaps**: Apple Watch HR samples are sparse outside workouts (every 5–10 minutes at rest vs every 5 seconds during exercise). A 10-minute gap between two passive readings must not be interpreted as 10 minutes of cardiovascular effort. Each inter-sample interval is therefore **capped at 1 minute**:
+```
+minutes = min(rawMinutes, 1.0)
+```
+
+This means a 10-minute gap between resting readings contributes the same as a 1-minute gap — just 1 minute at whatever zone the average HR maps to.
+
 **Step 3 — Personal Capacity** (rolling 14-day average of StrainLoad):
-- During the first 7 days: capacity defaults to 350 (estimated calibration value)
+- During the first 7 days (calibration): capacity defaults to **500**
 - After 7 days: `Capacity = average(last 14 days of StrainLoad)`
 
 **Step 4 — StrainScore**:
@@ -57,7 +66,21 @@ StrainLoad = Σ (minutes in zone × zone weight)
 StrainScore = min(100, StrainLoad / Capacity × 100)
 ```
 
-**Workout-aware calculation**: The algorithm separates workout intervals from incidental activity and sums both. Heart rate samples during workout windows are weighted using the same zone model.
+**Expected output ranges:**
+
+| Activity level   | Typical StrainScore |
+|------------------|---------------------|
+| Light day        | 10–30               |
+| Moderate activity| 30–60               |
+| Hard training    | 60–85               |
+| Elite training   | 85–100              |
+
+**Workout-aware calculation**: The algorithm iterates the full HR sample timeline in order and tags each consecutive pair as workout or incidental based on whether the pair's midpoint falls within a recorded workout window. This preserves time continuity — filtering samples before calculating would break adjacent-pair intervals and inflate load.
+
+**Debug logging** (DEBUG builds only): `StrainCalculator.calculate()` prints per-zone minute counts, StrainLoad, and the resulting score to the console for algorithm verification:
+```
+[StrainCalculator] Zone minutes — Z1: 22.0 Z2: 14.0 Z3: 8.0 Z4: 5.0 Z5: 0.0 | StrainLoad: 46.0
+```
 
 ---
 
