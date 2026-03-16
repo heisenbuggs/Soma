@@ -113,7 +113,8 @@ struct DashboardView: View {
                     score: viewModel.todayMetrics.ayurvedicSleepPoints ?? 0,
                     sleepStart: viewModel.todayMetrics.sleepStartTime,
                     sleepEnd: viewModel.todayMetrics.sleepEndTime,
-                    eveningDate: Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+                    eveningDate: Calendar.current.date(byAdding: .day, value: -1, to: Date())!,
+                    history: viewModel.loadHistory(days: 365)
                 )
             }
         }

@@ -90,26 +90,29 @@ final class InsightsViewModel: ObservableObject {
             ))
         }
 
-        // Sleep vs need
-        if let actual = today.sleepDurationHours, let need = today.sleepNeedHours, actual < need - 1 {
-            let diff = String(format: "%.1f", need - actual)
-            let needStr = String(format: "%.1f", need)
-            results.append(Insight(
-                icon: "bed.double.fill",
-                title: "Sleep Deficit",
-                description: "You slept \(diff)h less than your sleep need of \(needStr)h.",
-                priority: .medium
-            ))
-        }
-
-        // Excellent sleep
-        if today.sleepScore >= 85 {
-            results.append(Insight(
-                icon: "moon.stars.fill",
-                title: "Excellent Sleep",
-                description: "Excellent sleep quality last night.",
-                priority: .low
-            ))
+        // Sleep vs goal — compare against user-configured sleep goal (not computed need)
+        let sleepGoalHours = UserDefaults.standard.double(forKey: "baselineSleepHours")
+        let sleepGoal = sleepGoalHours > 0 ? sleepGoalHours : 7.0
+        if let actual = today.sleepDurationHours {
+            if actual >= sleepGoal {
+                results.append(Insight(
+                    icon: "moon.stars.fill",
+                    title: "Sleep Goal Met",
+                    description: "You met your sleep goal.",
+                    priority: .low
+                ))
+            } else {
+                let debtMinutes = Int((sleepGoal - actual) * 60)
+                let debtHrs = debtMinutes / 60
+                let debtMins = debtMinutes % 60
+                let debtStr = debtMins == 0 ? "\(debtHrs)h" : "\(debtHrs)h \(debtMins)m"
+                results.append(Insight(
+                    icon: "bed.double.fill",
+                    title: "Sleep Deficit",
+                    description: "You slept \(debtStr) less than your sleep goal.",
+                    priority: .medium
+                ))
+            }
         }
 
         // High strain streak

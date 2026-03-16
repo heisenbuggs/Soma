@@ -6,9 +6,12 @@ struct DailyMetrics: Identifiable, Codable {
 
     // Scores
     var recoveryScore: Double      // 0–100
-    var strainScore: Double        // 0–21
+    var strainScore: Double        // 0–100
     var sleepScore: Double         // 0–100
     var stressScore: Double        // 0–100
+
+    // Raw strain load (weighted zone-minutes, used for capacity model)
+    var strainLoad: Double?
 
     // Raw values
     var hrvAverage: Double?        // ms (daytime)
@@ -53,6 +56,7 @@ struct DailyMetrics: Identifiable, Codable {
         sleepingHR: Double? = nil,
         sleepingHRV: Double? = nil,
         sleepInterruptions: Int? = nil,
+        strainLoad: Double? = nil,
         workoutStrain: Double? = nil,
         incidentalStrain: Double? = nil,
         workoutMinutes: Double? = nil,
@@ -77,6 +81,7 @@ struct DailyMetrics: Identifiable, Codable {
         self.sleepingHR = sleepingHR
         self.sleepingHRV = sleepingHRV
         self.sleepInterruptions = sleepInterruptions
+        self.strainLoad = strainLoad
         self.workoutStrain = workoutStrain
         self.incidentalStrain = incidentalStrain
         self.workoutMinutes = workoutMinutes

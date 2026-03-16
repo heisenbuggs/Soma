@@ -34,15 +34,10 @@ struct MetricCardView: View {
             HStack(alignment: .center, spacing: 12) {
                 ZStack {
                     RingView(progress: progress, color: state.color, lineWidth: 6)
-                    VStack(spacing: 0) {
-                        Text(scoreText)
-                            .font(.title2)
-                            .fontWeight(.bold)
-                            .foregroundColor(.primary)
-                        Text("/\(Int(maxScore))")
-                            .font(.caption2)
-                            .foregroundColor(Color(hex: "8E8E93"))
-                    }
+                    Text(scoreText)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
                 }
                 .frame(width: 64, height: 64)
 

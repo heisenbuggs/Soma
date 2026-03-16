@@ -13,7 +13,7 @@ No backend. No accounts. No network calls. Everything runs on-device.
 | Score    | Range | What it measures |
 |----------|-------|-----------------|
 | Recovery | 0–100 | Readiness to perform: HRV, resting HR, sleep quality, and prior strain |
-| Strain   | 0–21  | Cardiovascular load accumulated during the day (heart-rate zone model) |
+| Strain   | 0-100  | Cardiovascular load accumulated during the day (heart-rate zone model) |
 | Sleep    | 0–100 | 5-component quality score: duration, stages, sleeping HRV/HR, interruptions |
 | Stress   | 0–100 | Autonomic stress estimated from daytime HRV and heart rate |
 

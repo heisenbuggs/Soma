@@ -141,13 +141,18 @@ final class DashboardViewModel: ObservableObject {
             let workoutMinutes = fetchedWorkouts.isEmpty ? nil
                 : fetchedWorkouts.reduce(0.0) { $0 + $1.duration / 60.0 }
             let maxHR = settings.maxHeartRate ?? StrainCalculator.estimatedMaxHR(age: settings.age)
-            let restingHR = rhrValue ?? 65
             let strainResult = StrainCalculator.calculateWorkoutAware(
                 workoutIntervals: workoutIntervals,
                 allSamples: hrData,
-                restingHR: restingHR,
                 maxHR: maxHR
             )
+
+            // Capacity model: use stored strainLoad history for rolling 14-day average.
+            // Falls back to estimatedCalibrationCapacity (350) during the first 7 days.
+            let strainLoadHistory = store.loadLast(StrainCalculator.rollingCapacityDays)
+                .compactMap { $0.strainLoad }
+            let strainCapacity = StrainCalculator.capacity(fromLoads: strainLoadHistory)
+            let strainScore = StrainCalculator.score(load: strainResult.total, capacity: strainCapacity)
 
             // Recovery (weights: 40/25/25/10)
             let todayHRV = hrvValues.isEmpty ? nil : hrvValues.reduce(0, +) / Double(hrvValues.count)
@@ -182,7 +187,7 @@ final class DashboardViewModel: ObservableObject {
             let metrics = DailyMetrics(
                 date: today,
                 recoveryScore: recoveryScore,
-                strainScore: strainResult.total,
+                strainScore: strainScore,
                 sleepScore: sleepScore,
                 stressScore: stressScore,
                 hrvAverage: todayHRV,
@@ -196,6 +201,7 @@ final class DashboardViewModel: ObservableObject {
                 sleepingHR: sleepingHR,
                 sleepingHRV: sleepingHRV,
                 sleepInterruptions: sleepData.interruptionCount,
+                strainLoad: strainResult.total,
                 workoutStrain: strainResult.workoutStrain,
                 incidentalStrain: strainResult.incidentalStrain,
                 workoutMinutes: workoutMinutes,

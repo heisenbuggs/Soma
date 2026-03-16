@@ -44,6 +44,7 @@ struct TrendsView: View {
                             strainChart
                             sleepChart
                             recoveryChart
+                            ayurvedicSleepChart
 
                             // Persistent day-detail card
                             if let m = pinnedMetrics {
@@ -255,6 +256,47 @@ struct TrendsView: View {
             .chartXSelection(value: $dragDate)
             .onChange(of: dragDate) { _, d in onDragChanged(d) }
         }
+    }
+
+    // MARK: - Ayurvedic Sleep Chart
+
+    private var ayurvedicSleepData: [(Date, Double)] {
+        viewModel.metricHistory.compactMap { m in
+            guard let pts = m.ayurvedicSleepPoints else { return nil }
+            return (m.date, pts)
+        }
+    }
+
+    private var ayurvedicSleepChart: some View {
+        chartSection(title: "Ayurvedic Sleep Score", unit: "/ 10", tooltip: ayurvedicSleepTooltip) {
+            Chart {
+                ForEach(ayurvedicSleepData, id: \.0) { date, value in
+                    LineMark(x: .value("Date", date), y: .value("Score", value))
+                        .foregroundStyle(Color(hex: "00C853"))
+                        .interpolationMethod(.catmullRom)
+                    PointMark(x: .value("Date", date), y: .value("Score", value))
+                        .foregroundStyle(Color(hex: "00C853"))
+                        .symbolSize(isNearPinned(date, in: ayurvedicSleepData.map(\.0)) ? 80 : 30)
+                }
+                if let sel = pinnedDate {
+                    RuleMark(x: .value("Selected", sel))
+                        .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
+                        .foregroundStyle(Color.white.opacity(0.6))
+                }
+            }
+            .frame(height: 180)
+            .chartYScale(domain: 0...10)
+            .chartXAxis { chartXAxis() }
+            .chartYAxis { AxisMarks(position: .leading) }
+            .chartXSelection(value: $dragDate)
+            .onChange(of: dragDate) { _, d in onDragChanged(d) }
+        }
+    }
+
+    private var ayurvedicSleepTooltip: String? {
+        guard let pinned = pinnedDate else { return nil }
+        let nearest = ayurvedicSleepData.min { abs($0.0.timeIntervalSince(pinned)) < abs($1.0.timeIntervalSince(pinned)) }
+        return nearest.map { String(format: "%.1f / 10", $0.1) }
     }
 
     // MARK: - Inline Day Detail Card

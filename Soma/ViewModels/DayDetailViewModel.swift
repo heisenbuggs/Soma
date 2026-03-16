@@ -29,10 +29,22 @@ final class DayDetailViewModel: ObservableObject {
         guard let hours = metrics.sleepDurationHours else { return "No sleep data recorded" }
         let need = metrics.sleepNeedHours ?? 8.0
         let debt = max(0, need - hours)
+        let sleptStr = Self.formatHours(hours)
         if debt < 0.1 {
-            return String(format: "%.1fh slept — sleep need met", hours)
+            return "\(sleptStr) slept — sleep need met"
         }
-        return String(format: "%.1fh slept — %.1fh short of %.1fh need", hours, debt, need)
+        let debtStr = Self.formatHours(debt)
+        let needStr = Self.formatHours(need)
+        return "\(sleptStr) slept — \(debtStr) short of \(needStr) need"
+    }
+
+    private static func formatHours(_ h: Double) -> String {
+        let total = Int((h * 60).rounded())
+        let hrs = total / 60
+        let mins = total % 60
+        if hrs == 0 { return "\(mins)m" }
+        if mins == 0 { return "\(hrs)h" }
+        return "\(hrs)h \(mins)m"
     }
 
     var sleepInterruptionLine: String? {

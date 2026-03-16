@@ -1,12 +1,16 @@
 import SwiftUI
+import Charts
 
 struct AyurvedicSleepDetailView: View {
     let score: Double
     let sleepStart: Date?
     let sleepEnd: Date?
     let eveningDate: Date
+    let history: [DailyMetrics]
 
     @Environment(\.dismiss) private var dismiss
+    @State private var selectedRange: TrendsViewModel.TimeRange = .twoWeeks
+    @State private var selectedDate: Date?
 
     private var scoreColor: Color {
         Color(hex: AyurvedicSleepCalculator.guidanceHex(for: score))
@@ -24,6 +28,25 @@ struct AyurvedicSleepDetailView: View {
         )
     }
 
+    private var chartData: [(Date, Double)] {
+        let cutoff = Calendar.current.date(
+            byAdding: .day, value: -selectedRange.days, to: Date()
+        )!
+        return history
+            .filter { $0.date >= cutoff }
+            .compactMap { m in
+                guard let pts = m.ayurvedicSleepPoints else { return nil }
+                return (m.date, pts)
+            }
+            .sorted { $0.0 < $1.0 }
+    }
+
+    private var selectedValue: String? {
+        guard let date = selectedDate else { return nil }
+        let nearest = chartData.min { abs($0.0.timeIntervalSince(date)) < abs($1.0.timeIntervalSince(date)) }
+        return nearest.map { String(format: "%.1f / 10", $0.1) }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
@@ -31,6 +54,7 @@ struct AyurvedicSleepDetailView: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         scoreCard
+                        historyChart
                         timelineCard
                         if !breakdown.isEmpty { breakdownCard }
                         if let tip { tipCard(tip) }
@@ -40,7 +64,7 @@ struct AyurvedicSleepDetailView: View {
                     .padding(.horizontal)
                 }
             }
-            .navigationTitle("Ayurvedic Sleep Points")
+            .navigationTitle("Ayurvedic Sleep Score")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -77,11 +101,90 @@ struct AyurvedicSleepDetailView: View {
         )
     }
 
+    // MARK: - History Chart
+
+    private var historyChart: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Range picker
+            Picker("Range", selection: $selectedRange) {
+                ForEach(TrendsViewModel.TimeRange.allCases, id: \.self) {
+                    Text($0.rawValue).tag($0)
+                }
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: selectedRange) { _, _ in selectedDate = nil }
+
+            // Chart header
+            HStack {
+                Text("Score History")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+                if let val = selectedValue {
+                    Text(val)
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.somaCardElevated)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                }
+            }
+
+            if chartData.isEmpty {
+                Text("No history available for this range.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 40)
+            } else {
+                Chart {
+                    ForEach(chartData, id: \.0) { date, value in
+                        LineMark(x: .value("Date", date), y: .value("Score", value))
+                            .foregroundStyle(scoreColor)
+                            .interpolationMethod(.catmullRom)
+                        PointMark(x: .value("Date", date), y: .value("Score", value))
+                            .foregroundStyle(scoreColor)
+                            .symbolSize(25)
+                        AreaMark(x: .value("Date", date), y: .value("Score", value))
+                            .foregroundStyle(
+                                LinearGradient(
+                                    colors: [scoreColor.opacity(0.3), scoreColor.opacity(0)],
+                                    startPoint: .top, endPoint: .bottom
+                                )
+                            )
+                            .interpolationMethod(.catmullRom)
+                    }
+                    if let sel = selectedDate {
+                        RuleMark(x: .value("Selected", sel))
+                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                            .foregroundStyle(Color.secondary.opacity(0.5))
+                    }
+                }
+                .chartYScale(domain: 0...10)
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .day, count: axisDayStride)) { _ in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel(format: axisDayFormat)
+                    }
+                }
+                .chartYAxis { AxisMarks(position: .leading) }
+                .chartXSelection(value: $selectedDate)
+                .frame(height: 200)
+            }
+        }
+        .padding(14)
+        .background(Color.somaCard)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+    }
+
     // MARK: - Timeline Card
 
     private var timelineCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Sleep Timeline")
+            Text("Last Night's Timeline")
                 .font(.headline)
                 .foregroundColor(.primary)
 
@@ -175,6 +278,25 @@ struct AyurvedicSleepDetailView: View {
         case 1: return Color(hex: "2979FF")
         case 2: return Color(hex: "FFD600")
         default: return Color(hex: "FF9100")
+        }
+    }
+
+    private var axisDayStride: Int {
+        switch selectedRange {
+        case .week:      return 1
+        case .twoWeeks:  return 2
+        case .month:     return 5
+        case .sixMonths: return 20
+        case .year:      return 45
+        }
+    }
+
+    private var axisDayFormat: Date.FormatStyle {
+        switch selectedRange {
+        case .week, .twoWeeks, .month:
+            return .dateTime.month(.abbreviated).day()
+        case .sixMonths, .year:
+            return .dateTime.month(.abbreviated).year(.twoDigits)
         }
     }
 }

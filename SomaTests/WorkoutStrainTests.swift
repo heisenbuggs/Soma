@@ -5,7 +5,6 @@ final class WorkoutStrainTests: XCTestCase {
 
     // MARK: - Helpers
 
-    private let restingHR: Double = 60
     private let maxHR: Double = 190
 
     private func makeSamples(bpm: Double, durationMinutes: Double, startingAt base: Date = Date()) -> [(Date, Double)] {
@@ -37,7 +36,6 @@ final class WorkoutStrainTests: XCTestCase {
         let result = StrainCalculator.calculateWorkoutAware(
             workoutIntervals: [],
             allSamples: samples,
-            restingHR: restingHR,
             maxHR: maxHR
         )
         XCTAssertEqual(result.total, result.incidentalStrain, accuracy: 0.01)
@@ -61,7 +59,6 @@ final class WorkoutStrainTests: XCTestCase {
         let result = StrainCalculator.calculateWorkoutAware(
             workoutIntervals: [interval],
             allSamples: samples,
-            restingHR: restingHR,
             maxHR: maxHR
         )
         XCTAssertGreaterThan(result.workoutStrain, 0)
@@ -89,7 +86,6 @@ final class WorkoutStrainTests: XCTestCase {
         let result = StrainCalculator.calculateWorkoutAware(
             workoutIntervals: [interval],
             allSamples: allSamples,
-            restingHR: restingHR,
             maxHR: maxHR
         )
         // Workout samples at 150 bpm → higher strain contribution
@@ -104,7 +100,6 @@ final class WorkoutStrainTests: XCTestCase {
         let result = StrainCalculator.calculateWorkoutAware(
             workoutIntervals: [makeInterval(startOffset: 0, duration: 3600)],
             allSamples: [],
-            restingHR: restingHR,
             maxHR: maxHR
         )
         XCTAssertEqual(result.total, 0)
@@ -129,7 +124,7 @@ final class WorkoutStrainTests: XCTestCase {
                 start: base.addingTimeInterval(7200), end: base.addingTimeInterval(9000), activityName: "Cycling")
         ]
         let result = StrainCalculator.calculateWorkoutAware(
-            workoutIntervals: intervals, allSamples: samples, restingHR: restingHR, maxHR: maxHR
+            workoutIntervals: intervals, allSamples: samples, maxHR: maxHR
         )
         XCTAssertEqual(result.details.count, 2)
         let names = result.details.map { $0.activityName }
