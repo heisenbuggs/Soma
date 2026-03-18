@@ -14,14 +14,17 @@ final class CheckInViewModel: ObservableObject {
     init(checkInStore: CheckInStore, healthKit: HealthDataProviding) {
         self.checkInStore = checkInStore
         self.healthKit = healthKit
-        // Pre-fill with today's existing check-in if any
-        draft = checkInStore.load(for: Date()) ?? DailyCheckIn()
+        // Pre-fill with yesterday's existing check-in if any (since we ask "How was yesterday?")
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        draft = checkInStore.load(for: yesterday) ?? DailyCheckIn()
     }
 
     func save() {
         isSaving = true
         Task {
-            draft.date = Date()
+            // Store yesterday's date since we're asking "How was yesterday?"
+            // This ensures BehaviorEngine correlates behaviors with today's metrics correctly
+            draft.date = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
             checkInStore.save(draft)
             // Behavior insights are now stale — invalidate cache so they regenerate
             InsightCache.shared.invalidateBehavior()

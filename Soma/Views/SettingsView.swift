@@ -1,4 +1,5 @@
 import SwiftUI
+import WidgetKit
 
 final class UserSettings: ObservableObject {
     @AppStorage("userFirstName") var firstName: String = ""
@@ -6,6 +7,16 @@ final class UserSettings: ObservableObject {
     @AppStorage("userMaxHR") private var _maxHR: Int = 0
     @AppStorage("baselineSleepHours") var sleepGoalHours: Double = 7.0
     @AppStorage("useMetricUnits") var useMetricUnits: Bool = true
+    
+    // MARK: - Notification Settings
+    @AppStorage("notificationsEnabled") var notificationsEnabled: Bool = true
+    @AppStorage("recoveryNotificationHour") var recoveryNotificationHour: Int = 8
+    @AppStorage("recoveryNotificationMinute") var recoveryNotificationMinute: Int = 0
+    @AppStorage("bedtimeReminderEnabled") var bedtimeReminderEnabled: Bool = false
+    @AppStorage("bedtimeReminderMinutesBefore") var bedtimeReminderMinutesBefore: Int = 30
+    @AppStorage("checkinReminderEnabled") var checkinReminderEnabled: Bool = false
+    @AppStorage("checkinReminderHour") var checkinReminderHour: Int = 21
+    @AppStorage("checkinReminderMinute") var checkinReminderMinute: Int = 0
 
     // MARK: - Per-weekday wake times
     // weekday index: 1=Sunday, 2=Monday, ..., 7=Saturday (matches Calendar.component(.weekday))
@@ -46,6 +57,38 @@ final class UserSettings: ObservableObject {
     var maxHeartRate: Double? {
         get { _maxHR > 0 ? Double(_maxHR) : nil }
         set { _maxHR = Int(newValue ?? 0) }
+    }
+    
+    // MARK: - Notification Time Helpers
+    
+    var recoveryNotificationTime: Date {
+        var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        comps.hour = recoveryNotificationHour
+        comps.minute = recoveryNotificationMinute
+        comps.second = 0
+        return Calendar.current.date(from: comps) ?? Date()
+    }
+    
+    func setRecoveryNotificationTime(_ date: Date) {
+        let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
+        recoveryNotificationHour = comps.hour ?? 8
+        recoveryNotificationMinute = comps.minute ?? 0
+        objectWillChange.send()
+    }
+    
+    var checkinReminderTime: Date {
+        var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        comps.hour = checkinReminderHour
+        comps.minute = checkinReminderMinute
+        comps.second = 0
+        return Calendar.current.date(from: comps) ?? Date()
+    }
+    
+    func setCheckinReminderTime(_ date: Date) {
+        let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
+        checkinReminderHour = comps.hour ?? 21
+        checkinReminderMinute = comps.minute ?? 0
+        objectWillChange.send()
     }
 
     var effectiveMaxHR: Double {
@@ -155,6 +198,93 @@ struct SettingsView: View {
                     }
                     .listRowBackground(Color.somaCard)
 
+                    Section("Notifications") {
+                        Toggle(isOn: $settings.notificationsEnabled) {
+                            Label("Enable Notifications", systemImage: "bell.fill")
+                                .foregroundColor(.primary)
+                        }
+                        .tint(Color(hex: "00C853"))
+                        .onChange(of: settings.notificationsEnabled) { _, enabled in
+                            if enabled {
+                                requestNotificationPermission()
+                            }
+                            updateNotificationSchedules()
+                        }
+                        
+                        if settings.notificationsEnabled {
+                            HStack {
+                                Label("Daily Recovery", systemImage: "heart.fill")
+                                    .foregroundColor(.primary)
+                                Spacer()
+                                DatePicker("", selection: Binding(
+                                    get: { settings.recoveryNotificationTime },
+                                    set: { 
+                                        settings.setRecoveryNotificationTime($0)
+                                        updateNotificationSchedules()
+                                    }
+                                ), displayedComponents: .hourAndMinute)
+                                .labelsHidden()
+                            }
+                            
+                            Toggle(isOn: $settings.bedtimeReminderEnabled) {
+                                Label("Bedtime Reminder", systemImage: "moon.fill")
+                                    .foregroundColor(.primary)
+                            }
+                            .tint(Color(hex: "00C853"))
+                            .onChange(of: settings.bedtimeReminderEnabled) { _, _ in
+                                updateNotificationSchedules()
+                            }
+                            
+                            if settings.bedtimeReminderEnabled {
+                                HStack {
+                                    Text("Remind me")
+                                        .foregroundColor(.secondary)
+                                        .padding(.leading, 32)
+                                    Spacer()
+                                    Picker("Minutes before bedtime", selection: $settings.bedtimeReminderMinutesBefore) {
+                                        Text("15 min").tag(15)
+                                        Text("30 min").tag(30)
+                                        Text("45 min").tag(45)
+                                        Text("60 min").tag(60)
+                                    }
+                                    .pickerStyle(.menu)
+                                    .onChange(of: settings.bedtimeReminderMinutesBefore) { _, _ in
+                                        updateNotificationSchedules()
+                                    }
+                                    Text("before bedtime")
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            
+                            Toggle(isOn: $settings.checkinReminderEnabled) {
+                                Label("Check-in Reminder", systemImage: "checkmark.circle.fill")
+                                    .foregroundColor(.primary)
+                            }
+                            .tint(Color(hex: "00C853"))
+                            .onChange(of: settings.checkinReminderEnabled) { _, _ in
+                                updateNotificationSchedules()
+                            }
+                            
+                            if settings.checkinReminderEnabled {
+                                HStack {
+                                    Text("Daily reminder")
+                                        .foregroundColor(.secondary)
+                                        .padding(.leading, 32)
+                                    Spacer()
+                                    DatePicker("", selection: Binding(
+                                        get: { settings.checkinReminderTime },
+                                        set: { 
+                                            settings.setCheckinReminderTime($0)
+                                            updateNotificationSchedules()
+                                        }
+                                    ), displayedComponents: .hourAndMinute)
+                                    .labelsHidden()
+                                }
+                            }
+                        }
+                    }
+                    .listRowBackground(Color.somaCard)
+
                     Section("Preferences") {
                         Toggle(isOn: $settings.useMetricUnits) {
                             Label("Metric Units", systemImage: "ruler.fill")
@@ -173,6 +303,22 @@ struct SettingsView: View {
                         }
                     }
                     .listRowBackground(Color.somaCard)
+
+#if DEBUG
+                    Section("Debug") {
+                        Button("Test Widget Data") {
+                            testWidgetData()
+                        }
+                        .foregroundColor(.primary)
+                        
+                        Button("Refresh Widgets") {
+                            WidgetCenter.shared.reloadAllTimelines()
+                            print("✅ Widget timelines reloaded")
+                        }
+                        .foregroundColor(.primary)
+                    }
+                    .listRowBackground(Color.somaCard)
+#endif
 
                     Section("About") {
                         HStack {
@@ -215,4 +361,64 @@ struct SettingsView: View {
             settings.maxHeartRate = Double(value)
         }
     }
+    
+    // MARK: - Notification Helpers
+    
+    private func requestNotificationPermission() {
+        Task {
+            await NotificationScheduler.shared.requestPermission()
+        }
+    }
+    
+    private func updateNotificationSchedules() {
+        NotificationScheduler.shared.updateAllSchedules(settings: settings)
+    }
+    
+    #if DEBUG
+    private func testWidgetData() {
+        let store = MetricsStore()
+        
+        // Check if we have today's metrics
+        if let todayMetrics = store.load(for: Date()) {
+            print("✅ Widget Debug: Today's metrics found")
+            print("   Recovery: \(todayMetrics.recoveryScore)")
+            print("   Strain: \(todayMetrics.strainScore)")
+            print("   Sleep: \(todayMetrics.sleepScore)")
+            print("   Stress: \(todayMetrics.stressScore)")
+        } else {
+            print("❌ Widget Debug: No metrics found for today")
+        }
+        
+        // Check App Group access
+        if let groupDefaults = UserDefaults(suiteName: "group.com.prasjain.Soma") {
+            print("✅ Widget Debug: App Group accessible")
+            
+            // Check if widget snapshot exists
+            if let data = groupDefaults.data(forKey: "WidgetMetricsSnapshot") {
+                print("✅ Widget Debug: Widget snapshot data found (\(data.count) bytes)")
+            } else {
+                print("❌ Widget Debug: No widget snapshot data found")
+                
+                // Create test snapshot if we have metrics
+                if let todayMetrics = store.load(for: Date()) {
+                    let testSnapshot = WidgetMetricsSnapshot(
+                        recoveryScore: todayMetrics.recoveryScore,
+                        strainScore: todayMetrics.strainScore,
+                        sleepScore: todayMetrics.sleepScore,
+                        stressScore: todayMetrics.stressScore,
+                        date: todayMetrics.date
+                    )
+                    
+                    if let encoded = try? JSONEncoder().encode(testSnapshot) {
+                        groupDefaults.set(encoded, forKey: "WidgetMetricsSnapshot")
+                        print("✅ Widget Debug: Created widget snapshot")
+                        WidgetCenter.shared.reloadAllTimelines()
+                    }
+                }
+            }
+        } else {
+            print("❌ Widget Debug: Cannot access App Group - check entitlements")
+        }
+    }
+    #endif
 }

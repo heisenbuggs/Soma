@@ -9,6 +9,8 @@ final class NotificationScheduler {
     static let shared = NotificationScheduler()
 
     private let recoveryNotificationID = "com.soma.daily-recovery"
+    private let bedtimeReminderID = "com.soma.bedtime-reminder"
+    private let checkinReminderID = "com.soma.checkin-reminder"
 
     private init() {}
 
@@ -25,20 +27,19 @@ final class NotificationScheduler {
 
     // MARK: - Schedule
 
-    /// Schedules (or replaces) the daily recovery notification for 8 AM.
+    /// Schedules (or replaces) the daily recovery notification at the user's preferred time.
     ///
     /// Using a calendar trigger means:
-    /// - If metrics are computed before 8 AM (e.g. background refresh), the
-    ///   notification fires that same morning at 8 AM.
-    /// - If computed after 8 AM (e.g. afternoon app open), it fires at 8 AM
-    ///   the next morning — still useful for planning the following day.
+    /// - If metrics are computed before the notification time, it fires that same morning.
+    /// - If computed after the notification time, it fires the next morning.
     ///
     /// Called once per day after scores are freshly computed.
-    func scheduleRecoveryNotification(metrics: DailyMetrics, guidance: DailyTrainingGuidance? = nil) {
+    func scheduleRecoveryNotification(metrics: DailyMetrics, guidance: DailyTrainingGuidance? = nil, settings: UserSettings = UserSettings()) {
         Task {
             let center = UNUserNotificationCenter.current()
-            let settings = await center.notificationSettings()
-            guard settings.authorizationStatus == .authorized else { return }
+            let notificationSettings = await center.notificationSettings()
+            guard notificationSettings.authorizationStatus == .authorized,
+                  settings.notificationsEnabled else { return }
 
             let content = UNMutableNotificationContent()
             content.sound = .default
@@ -46,12 +47,10 @@ final class NotificationScheduler {
             content.title = title
             content.body  = body
 
-            // Fire at the next occurrence of 8:00 AM.
-            // UNCalendarNotificationTrigger automatically picks today if it's
-            // before 8 AM, or tomorrow if it's already past 8 AM.
+            // Fire at the user's preferred time
             var components = DateComponents()
-            components.hour   = 8
-            components.minute = 0
+            components.hour   = settings.recoveryNotificationHour
+            components.minute = settings.recoveryNotificationMinute
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
 
             let request = UNNotificationRequest(
@@ -70,9 +69,100 @@ final class NotificationScheduler {
         }
     }
 
+    /// Schedules a bedtime reminder based on user's wake time and sleep goal
+    func scheduleBedtimeReminder(settings: UserSettings = UserSettings()) {
+        Task {
+            let center = UNUserNotificationCenter.current()
+            let notificationSettings = await center.notificationSettings()
+            guard notificationSettings.authorizationStatus == .authorized,
+                  settings.bedtimeReminderEnabled else { 
+                center.removePendingNotificationRequests(withIdentifiers: [bedtimeReminderID])
+                return 
+            }
+
+            // Calculate bedtime based on tomorrow's wake time and sleep goal
+            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+            let tomorrowWeekday = Calendar.current.component(.weekday, from: tomorrow)
+            let tomorrowWakeTime = settings.wakeTimeDate(for: tomorrowWeekday)
+            
+            let sleepDuration = settings.sleepGoalHours * 3600 // in seconds
+            let reminderOffset = TimeInterval(settings.bedtimeReminderMinutesBefore * 60)
+            
+            let bedtime = tomorrowWakeTime.addingTimeInterval(-sleepDuration)
+            let reminderTime = bedtime.addingTimeInterval(-reminderOffset)
+            
+            let content = UNMutableNotificationContent()
+            content.sound = .default
+            content.title = "Bedtime Reminder"
+            
+            let minutesUntilBed = settings.bedtimeReminderMinutesBefore
+            let bedtimeFormatted = DateFormatter.localizedString(from: bedtime, dateStyle: .none, timeStyle: .short)
+            
+            if minutesUntilBed == 30 {
+                content.body = "Time to start winding down. Bedtime is at \(bedtimeFormatted) for optimal recovery."
+            } else {
+                content.body = "\(minutesUntilBed) minutes until bedtime at \(bedtimeFormatted). Time to start your wind-down routine."
+            }
+
+            let components = Calendar.current.dateComponents([.hour, .minute], from: reminderTime)
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+
+            let request = UNNotificationRequest(
+                identifier: bedtimeReminderID,
+                content: content,
+                trigger: trigger
+            )
+
+            center.removePendingNotificationRequests(withIdentifiers: [bedtimeReminderID])
+            try? await center.add(request)
+        }
+    }
+    
+    /// Schedules a daily check-in reminder at the user's preferred time
+    func scheduleCheckinReminder(settings: UserSettings = UserSettings()) {
+        Task {
+            let center = UNUserNotificationCenter.current()
+            let notificationSettings = await center.notificationSettings()
+            guard notificationSettings.authorizationStatus == .authorized,
+                  settings.checkinReminderEnabled else { 
+                center.removePendingNotificationRequests(withIdentifiers: [checkinReminderID])
+                return 
+            }
+
+            let content = UNMutableNotificationContent()
+            content.sound = .default
+            content.title = "Daily Check-In"
+            content.body = "How was yesterday? Quick check-in to improve your health insights."
+
+            var components = DateComponents()
+            components.hour = settings.checkinReminderHour
+            components.minute = settings.checkinReminderMinute
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+
+            let request = UNNotificationRequest(
+                identifier: checkinReminderID,
+                content: content,
+                trigger: trigger
+            )
+
+            center.removePendingNotificationRequests(withIdentifiers: [checkinReminderID])
+            try? await center.add(request)
+        }
+    }
+    
+    /// Updates all notification schedules based on current settings
+    func updateAllSchedules(settings: UserSettings = UserSettings()) {
+        scheduleBedtimeReminder(settings: settings)
+        scheduleCheckinReminder(settings: settings)
+    }
+
     func cancelPendingNotifications() {
         UNUserNotificationCenter.current()
-            .removePendingNotificationRequests(withIdentifiers: [recoveryNotificationID])
+            .removePendingNotificationRequests(withIdentifiers: [
+                recoveryNotificationID,
+                bedtimeReminderID,
+                checkinReminderID
+            ])
     }
 
     // MARK: - Content Generation

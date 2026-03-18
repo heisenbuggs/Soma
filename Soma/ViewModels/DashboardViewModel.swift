@@ -79,7 +79,7 @@ final class DashboardViewModel: ObservableObject {
             let guidance = computeGuidance(for: metrics)
             trainingGuidance = guidance
 
-            NotificationScheduler.shared.scheduleRecoveryNotification(metrics: metrics, guidance: guidance)
+            NotificationScheduler.shared.scheduleRecoveryNotification(metrics: metrics, guidance: guidance, settings: settings)
 
             updateSparklines()
             updateCoachingTips()
@@ -103,13 +103,15 @@ final class DashboardViewModel: ObservableObject {
         async let steps      = healthKit.fetchSteps(for: date)
         async let vo2        = healthKit.fetchVO2Max()
         async let respRate   = healthKit.fetchRespiratoryRate(for: date)
+        async let bloodOx    = healthKit.fetchBloodOxygen(for: date)
+        async let exerciseMin = healthKit.fetchExerciseMinutes(for: date)
         async let hrvHistory = healthKit.fetchHRVHistory(days: 30)
         async let rhrHistory = healthKit.fetchRestingHRHistory(days: 30)
 
         let (hrvValues, rhrValue, hrData, sleepData, activeCalories, stepCount,
-             vo2Max, respRateVal, hrvHist, rhrHist) = try await (
+             vo2Max, respRateVal, bloodOxygen, exerciseMinutes, hrvHist, rhrHist) = try await (
                 hrv, rhr, hrSamples, sleepFetch, calories, steps, vo2, respRate,
-                hrvHistory, rhrHistory
+                bloodOx, exerciseMin, hrvHistory, rhrHistory
              )
 
         // Fetch workouts independently so a failure here doesn't zero out all scores
@@ -134,7 +136,11 @@ final class DashboardViewModel: ObservableObject {
 
         // Previous day
         let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: date)!
-        let yesterdayStrain = store.load(for: previousDay)?.strainScore ?? 0
+        let yesterdayStrainScore = store.load(for: previousDay)?.strainScore ?? 0
+        
+        // Convert strain score (0-100) to 0-21 scale expected by health calculators
+        // RecoveryCalculator and SleepCalculator expect 0-21 range for proper scaling
+        let yesterdayStrain_0_21 = (yesterdayStrainScore / 100.0) * 21.0
 
         // Sleep goal: use HealthKit value (user's goal set in Health app),
         // fall back to the in-app baseline setting if not configured.
@@ -149,7 +155,7 @@ final class DashboardViewModel: ObservableObject {
         let sleepNeed = SleepCalculator.calculateSleepNeed(
             baselineSleep: sleepGoal,
             recentNeedVsActual: recentActuals,
-            yesterdayStrain: yesterdayStrain
+            yesterdayStrain: yesterdayStrain_0_21
         )
 
         // Sleep score (5-component)
@@ -194,7 +200,7 @@ final class DashboardViewModel: ObservableObject {
             todayRestingHR: rhrValue,
             rhrBaseline: rhrBaseline,
             sleepScore: sleepScore,
-            yesterdayStrain: yesterdayStrain
+            yesterdayStrain: yesterdayStrain_0_21
         ))
 
         // Stress
@@ -230,6 +236,8 @@ final class DashboardViewModel: ObservableObject {
             stepCount: stepCount,
             vo2Max: vo2Max,
             respiratoryRate: respRateVal,
+            bloodOxygen: bloodOxygen,
+            exerciseMinutes: exerciseMinutes,
             sleepingHR: sleepingHR,
             sleepingHRV: sleepingHRV,
             sleepInterruptions: sleepData.interruptionCount,

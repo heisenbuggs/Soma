@@ -435,6 +435,20 @@ struct DashboardView: View {
                         label: "VO2 Max"
                     )
                 }
+                if let bloodOx = viewModel.todayMetrics.bloodOxygen {
+                    quickStat(
+                        icon: "drop.circle.fill",
+                        value: String(format: "%.1f%%", bloodOx),
+                        label: "SpO2"
+                    )
+                }
+                if let exercise = viewModel.todayMetrics.exerciseMinutes {
+                    quickStat(
+                        icon: "figure.strengthtraining.traditional",
+                        value: String(format: "%.0f min", exercise),
+                        label: "Exercise"
+                    )
+                }
             }
             .padding(.horizontal)
         }

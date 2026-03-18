@@ -327,7 +327,8 @@ struct MetricDetailView: View {
                     Color.clear
                         .contentShape(Rectangle())
                         .onTapGesture { location in
-                            let plotFrame = geo[proxy.plotAreaFrame]
+                            guard let plotFrameAnchor = proxy.plotFrame else { return }
+                            let plotFrame = geo[plotFrameAnchor]
                             let relativeX = location.x - plotFrame.origin.x
                             guard relativeX >= 0, relativeX <= plotFrame.width else { return }
                             if let tappedDate: Date = proxy.value(atX: relativeX) {

@@ -1,5 +1,9 @@
 import SwiftUI
 
+extension Notification.Name {
+    static let openCheckIn = Notification.Name("openCheckIn")
+}
+
 struct MainTabView: View {
     private let healthKitManager: HealthKitManager
 
@@ -9,6 +13,8 @@ struct MainTabView: View {
     @StateObject private var dashboardVM:   DashboardViewModel
     @StateObject private var trendsVM:      TrendsViewModel
     @StateObject private var insightsVM:    InsightsViewModel
+    
+    @State private var showCheckInFromShortcut = false
 
     init(healthKitManager: HealthKitManager) {
         self.healthKitManager = healthKitManager
@@ -61,5 +67,24 @@ struct MainTabView: View {
             }
         }
         .tint(Color(hex: "2979FF"))
+        .onAppear {
+            // Initialize notification schedules on app launch
+            NotificationScheduler.shared.updateAllSchedules(settings: settings)
+            
+            // Listen for Siri shortcut to open check-in
+            NotificationCenter.default.addObserver(
+                forName: .openCheckIn,
+                object: nil,
+                queue: .main
+            ) { _ in
+                showCheckInFromShortcut = true
+            }
+        }
+        .sheet(isPresented: $showCheckInFromShortcut) {
+            CheckInView(viewModel: CheckInViewModel(
+                checkInStore: checkInStore,
+                healthKit: healthKitManager
+            ))
+        }
     }
 }

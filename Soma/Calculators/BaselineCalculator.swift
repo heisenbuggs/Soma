@@ -44,9 +44,17 @@ struct BaselineCalculator {
     }
 
     /// Normalize a ratio (e.g., HRV ratio) clamped to [low, high] → 0–100
+    /// Supports inverted ranges where high < low (e.g. sleeping HR where lower is better)
     static func normalizeRatio(_ value: Double, low: Double, high: Double) -> Double {
-        guard high > low else { return 0 }
-        return clamp((value - low) / (high - low) * 100, min: 0, max: 100)
+        guard low != high else { return 50 } // Default to neutral if range is invalid
+        
+        if high > low {
+            // Standard range: low maps to 0, high maps to 100
+            return clamp((value - low) / (high - low) * 100, min: 0, max: 100)
+        } else {
+            // Inverted range: low maps to 100, high maps to 0 (lower is better)
+            return clamp((low - value) / (low - high) * 100, min: 0, max: 100)
+        }
     }
 
     static func clamp(_ value: Double, min minVal: Double, max maxVal: Double) -> Double {

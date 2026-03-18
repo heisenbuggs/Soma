@@ -19,6 +19,8 @@ protocol HealthDataProviding {
     func fetchRespiratoryRate(for date: Date) async throws -> Double?
     func fetchWorkouts(for date: Date) async throws -> [HKWorkout]
     func fetchSleepGoal() async throws -> Double?
+    func fetchBloodOxygen(for date: Date) async throws -> Double?
+    func fetchExerciseMinutes(for date: Date) async throws -> Double?
     func writeBehavioralData(_ checkIn: DailyCheckIn) async throws
     func fetchEarliestDataDate() async -> Date?
 }
@@ -41,6 +43,8 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
         HKQuantityType(.activeEnergyBurned),
         HKQuantityType(.vo2Max),
         HKQuantityType(.stepCount),
+        HKQuantityType(.oxygenSaturation),
+        HKQuantityType(.appleExerciseTime),
         HKWorkoutType.workoutType()
     ]
 
@@ -348,6 +352,61 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
             healthStore.execute(query)
         }
         return samples?.first?.startDate
+    }
+
+    // MARK: - Blood Oxygen (SpO2)
+
+    /// Fetches average blood oxygen saturation for the given date.
+    /// Returns percentage (e.g., 95.5 for 95.5% oxygen saturation).
+    func fetchBloodOxygen(for date: Date) async throws -> Double? {
+        let type = HKQuantityType(.oxygenSaturation)
+        let predicate = dayPredicate(for: date)
+        
+        let samples: [HKQuantitySample] = try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, results, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: (results as? [HKQuantitySample]) ?? [])
+                }
+            }
+            healthStore.execute(query)
+        }
+        
+        guard !samples.isEmpty else { return nil }
+        
+        // Convert to percentage (HealthKit stores as fraction 0.0-1.0)
+        let percentages = samples.map { $0.quantity.doubleValue(for: .percent()) * 100.0 }
+        return percentages.reduce(0, +) / Double(percentages.count)
+    }
+
+    // MARK: - Exercise Minutes
+
+    /// Fetches Apple Exercise Time minutes for the given date.
+    /// This represents minutes of moderate-to-vigorous activity that count toward your Exercise ring.
+    func fetchExerciseMinutes(for date: Date) async throws -> Double? {
+        let type = HKQuantityType(.appleExerciseTime)
+        let predicate = dayPredicate(for: date)
+        
+        let samples: [HKQuantitySample] = try await withCheckedThrowingContinuation { continuation in
+            let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, results, error in
+                if let error = error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: (results as? [HKQuantitySample]) ?? [])
+                }
+            }
+            healthStore.execute(query)
+        }
+        
+        guard !samples.isEmpty else { return nil }
+        
+        // Sum all exercise time samples for the day
+        let totalMinutes = samples.reduce(0.0) { sum, sample in
+            sum + sample.quantity.doubleValue(for: .minute())
+        }
+        
+        return totalMinutes > 0 ? totalMinutes : nil
     }
 
     // MARK: - Write Behavioral Data

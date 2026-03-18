@@ -22,6 +22,8 @@ struct DailyMetrics: Identifiable, Codable {
     var stepCount: Double?
     var vo2Max: Double?
     var respiratoryRate: Double?
+    var bloodOxygen: Double?       // % SpO2 saturation
+    var exerciseMinutes: Double?   // minutes of moderate-vigorous activity
 
     // Sleeping-window signals (used in sleep score)
     var sleepingHR: Double?        // avg HR during sleep window (bpm)
@@ -53,6 +55,8 @@ struct DailyMetrics: Identifiable, Codable {
         stepCount: Double? = nil,
         vo2Max: Double? = nil,
         respiratoryRate: Double? = nil,
+        bloodOxygen: Double? = nil,
+        exerciseMinutes: Double? = nil,
         sleepingHR: Double? = nil,
         sleepingHRV: Double? = nil,
         sleepInterruptions: Int? = nil,
@@ -78,6 +82,8 @@ struct DailyMetrics: Identifiable, Codable {
         self.stepCount = stepCount
         self.vo2Max = vo2Max
         self.respiratoryRate = respiratoryRate
+        self.bloodOxygen = bloodOxygen
+        self.exerciseMinutes = exerciseMinutes
         self.sleepingHR = sleepingHR
         self.sleepingHRV = sleepingHRV
         self.sleepInterruptions = sleepInterruptions

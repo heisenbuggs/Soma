@@ -15,10 +15,10 @@ struct WidgetMetricsSnapshot: Codable {
 
 final class MetricsStore: ObservableObject {
     private let key        = "storedDailyMetrics"
-    private let widgetKey  = "widgetMetrics"
+    private let widgetKey  = "WidgetMetricsSnapshot"
     private let maxDays    = 1825  // 5 years — retain full history for trends
     private let calendar   = Calendar.current
-    private let appGroupID = "group.com.soma.app"
+    private let appGroupID = "group.com.prasjain.Soma"
 
     // Prefer App Group store so widgets can read the same data.
     // Fall back to standard UserDefaults if the group isn't configured yet (simulator/unit tests).

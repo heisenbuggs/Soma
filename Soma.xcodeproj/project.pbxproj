@@ -46,21 +46,24 @@
 		AA30000000000000000002B /* NotificationScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002B /* NotificationScheduler.swift */; };
 		AA30000000000000000002C /* DayDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002C /* DayDetailViewModel.swift */; };
 		AA30000000000000000002D /* DayDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002D /* DayDetailView.swift */; };
+		AA30000000000000000002E /* WorkoutStrainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002E /* WorkoutStrainTests.swift */; };
+		AA30000000000000000002F /* BedtimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002F /* BedtimeTests.swift */; };
+		AA300000000000000000030 /* NotificationSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000030 /* NotificationSchedulerTests.swift */; };
 		AA300000000000000000031 /* MetricDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000031 /* MetricDetailView.swift */; };
 		AA300000000000000000032 /* DayDetailPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000032 /* DayDetailPageView.swift */; };
 		AA300000000000000000033 /* AyurvedicSleepCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000033 /* AyurvedicSleepCalculator.swift */; };
 		AA300000000000000000034 /* AyurvedicSleepDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000034 /* AyurvedicSleepDetailView.swift */; };
 		AA300000000000000000035 /* AyurvedicSleepCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000035 /* AyurvedicSleepCalculatorTests.swift */; };
-		AA30000000000000000002E /* WorkoutStrainTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002E /* WorkoutStrainTests.swift */; };
-		AA30000000000000000002F /* BedtimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000002F /* BedtimeTests.swift */; };
-		AA300000000000000000030 /* NotificationSchedulerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000030 /* NotificationSchedulerTests.swift */; };
-		DEA7837D2F66CEF6009D401F /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA10000000000000000001A /* HealthKit.framework */; };
 		AA300000000000000000036 /* BackgroundTaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000036 /* BackgroundTaskManager.swift */; };
 		AA300000000000000000037 /* InsightCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000037 /* InsightCache.swift */; };
 		AA300000000000000000038 /* NotificationStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000038 /* NotificationStore.swift */; };
 		AA300000000000000000039 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000039 /* NotificationsView.swift */; };
 		AA30000000000000000003A /* DailyTrainingGuidance.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000003A /* DailyTrainingGuidance.swift */; };
 		AA30000000000000000003B /* TrainingGuidanceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000003B /* TrainingGuidanceEngine.swift */; };
+		DE2C6BF02F69D0FD00BC222F /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE2C6B8B2F69D02F00BC222F /* WidgetKit.framework */; };
+		DE2C6BF12F69D0FD00BC222F /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE2C6B8D2F69D02F00BC222F /* SwiftUI.framework */; };
+		DE2C6C022F69D0FE00BC222F /* SomaWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DE2C6BEF2F69D0FD00BC222F /* SomaWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		DEA7837D2F66CEF6009D401F /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = AA10000000000000000001A /* HealthKit.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -71,9 +74,27 @@
 			remoteGlobalIDString = AA000000000000000000001;
 			remoteInfo = Soma;
 		};
+		DE2C6C002F69D0FE00BC222F /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = AA000000000000000000003 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = DE2C6BEE2F69D0FD00BC222F;
+			remoteInfo = SomaWidgetsExtension;
+		};
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		DE2C6BA02F69D03000BC222F /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				DE2C6C022F69D0FE00BC222F /* SomaWidgetsExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
@@ -121,21 +142,38 @@
 		AA10000000000000000002B /* NotificationScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationScheduler.swift; sourceTree = "<group>"; };
 		AA10000000000000000002C /* DayDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayDetailViewModel.swift; sourceTree = "<group>"; };
 		AA10000000000000000002D /* DayDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayDetailView.swift; sourceTree = "<group>"; };
+		AA10000000000000000002E /* WorkoutStrainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutStrainTests.swift; sourceTree = "<group>"; };
+		AA10000000000000000002F /* BedtimeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BedtimeTests.swift; sourceTree = "<group>"; };
+		AA100000000000000000030 /* NotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSchedulerTests.swift; sourceTree = "<group>"; };
 		AA100000000000000000031 /* MetricDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricDetailView.swift; sourceTree = "<group>"; };
 		AA100000000000000000032 /* DayDetailPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayDetailPageView.swift; sourceTree = "<group>"; };
 		AA100000000000000000033 /* AyurvedicSleepCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyurvedicSleepCalculator.swift; sourceTree = "<group>"; };
 		AA100000000000000000034 /* AyurvedicSleepDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyurvedicSleepDetailView.swift; sourceTree = "<group>"; };
 		AA100000000000000000035 /* AyurvedicSleepCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyurvedicSleepCalculatorTests.swift; sourceTree = "<group>"; };
-		AA10000000000000000002E /* WorkoutStrainTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutStrainTests.swift; sourceTree = "<group>"; };
-		AA10000000000000000002F /* BedtimeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BedtimeTests.swift; sourceTree = "<group>"; };
-		AA100000000000000000030 /* NotificationSchedulerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationSchedulerTests.swift; sourceTree = "<group>"; };
 		AA100000000000000000036 /* BackgroundTaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskManager.swift; sourceTree = "<group>"; };
 		AA100000000000000000037 /* InsightCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightCache.swift; sourceTree = "<group>"; };
 		AA100000000000000000038 /* NotificationStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationStore.swift; sourceTree = "<group>"; };
 		AA100000000000000000039 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		AA10000000000000000003A /* DailyTrainingGuidance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyTrainingGuidance.swift; sourceTree = "<group>"; };
 		AA10000000000000000003B /* TrainingGuidanceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingGuidanceEngine.swift; sourceTree = "<group>"; };
+		DE2C6B8B2F69D02F00BC222F /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		DE2C6B8D2F69D02F00BC222F /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		DE2C6BEF2F69D0FD00BC222F /* SomaWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SomaWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		DE2C6C032F69D0FE00BC222F /* PBXFileSystemSynchronizedBuildFileExceptionSet */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = DE2C6BEE2F69D0FD00BC222F /* SomaWidgetsExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		DE2C6BF22F69D0FD00BC222F /* SomaWidgets */ = {isa = PBXFileSystemSynchronizedRootGroup; exceptions = (DE2C6C032F69D0FE00BC222F /* PBXFileSystemSynchronizedBuildFileExceptionSet */, ); explicitFileTypes = {}; explicitFolders = (); path = SomaWidgets; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		AA200000000000000000001 /* Frameworks */ = {
@@ -153,6 +191,15 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DE2C6BEC2F69D0FD00BC222F /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DE2C6BF12F69D0FD00BC222F /* SwiftUI.framework in Frameworks */,
+				DE2C6BF02F69D0FD00BC222F /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -161,6 +208,7 @@
 			children = (
 				AA500000000000000000001 /* Soma */,
 				AA50000000000000000000A /* SomaTests */,
+				DE2C6BF22F69D0FD00BC222F /* SomaWidgets */,
 				AA50000000000000000000B /* Frameworks */,
 				AA50000000000000000000C /* Products */,
 			);
@@ -295,6 +343,8 @@
 			isa = PBXGroup;
 			children = (
 				AA10000000000000000001A /* HealthKit.framework */,
+				DE2C6B8B2F69D02F00BC222F /* WidgetKit.framework */,
+				DE2C6B8D2F69D02F00BC222F /* SwiftUI.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -304,6 +354,7 @@
 			children = (
 				AA10000000000000000001D /* Soma.app */,
 				AA10000000000000000001E /* SomaTests.xctest */,
+				DE2C6BEF2F69D0FD00BC222F /* SomaWidgetsExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -318,10 +369,12 @@
 				AA200000000000000000003 /* Sources */,
 				AA200000000000000000001 /* Frameworks */,
 				AA200000000000000000004 /* Resources */,
+				DE2C6BA02F69D03000BC222F /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				DE2C6C012F69D0FE00BC222F /* PBXTargetDependency */,
 			);
 			name = Soma;
 			productName = Soma;
@@ -345,6 +398,28 @@
 			productReference = AA10000000000000000001E /* SomaTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
 		};
+		DE2C6BEE2F69D0FD00BC222F /* SomaWidgetsExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DE2C6C042F69D0FE00BC222F /* Build configuration list for PBXNativeTarget "SomaWidgetsExtension" */;
+			buildPhases = (
+				DE2C6BEB2F69D0FD00BC222F /* Sources */,
+				DE2C6BEC2F69D0FD00BC222F /* Frameworks */,
+				DE2C6BED2F69D0FD00BC222F /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				DE2C6BF22F69D0FD00BC222F /* SomaWidgets */,
+			);
+			name = SomaWidgetsExtension;
+			packageProductDependencies = (
+			);
+			productName = SomaWidgetsExtension;
+			productReference = DE2C6BEF2F69D0FD00BC222F /* SomaWidgetsExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -352,7 +427,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 1500;
+				LastSwiftUpdateCheck = 2630;
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					AA000000000000000000001 = {
@@ -361,6 +436,9 @@
 					AA000000000000000000002 = {
 						CreatedOnToolsVersion = 15.0;
 						TestTargetID = AA000000000000000000001;
+					};
+					DE2C6BEE2F69D0FD00BC222F = {
+						CreatedOnToolsVersion = 26.3;
 					};
 				};
 			};
@@ -379,6 +457,7 @@
 			targets = (
 				AA000000000000000000001 /* Soma */,
 				AA000000000000000000002 /* SomaTests */,
+				DE2C6BEE2F69D0FD00BC222F /* SomaWidgetsExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -389,6 +468,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				AA300000000000000000019 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		DE2C6BED2F69D0FD00BC222F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -461,6 +547,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		DE2C6BEB2F69D0FD00BC222F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -468,6 +561,11 @@
 			isa = PBXTargetDependency;
 			target = AA000000000000000000001 /* Soma */;
 			targetProxy = AA000000000000000000008 /* PBXContainerItemProxy */;
+		};
+		DE2C6C012F69D0FE00BC222F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = DE2C6BEE2F69D0FD00BC222F /* SomaWidgetsExtension */;
+			targetProxy = DE2C6C002F69D0FE00BC222F /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -684,6 +782,71 @@
 			};
 			name = Release;
 		};
+		DE2C6C052F69D0FE00BC222F /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZK4V53Z7X2;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SomaWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SomaWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.prasuk.soma.SomaWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		DE2C6C062F69D0FE00BC222F /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = ZK4V53Z7X2;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SomaWidgets/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SomaWidgets;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.prasuk.soma.SomaWidgets;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -710,6 +873,15 @@
 			buildConfigurations = (
 				AA600000000000000000001 /* Debug */,
 				AA600000000000000000002 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DE2C6C042F69D0FE00BC222F /* Build configuration list for PBXNativeTarget "SomaWidgetsExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DE2C6C052F69D0FE00BC222F /* Debug */,
+				DE2C6C062F69D0FE00BC222F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
