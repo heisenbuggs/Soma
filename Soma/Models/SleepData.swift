@@ -7,9 +7,42 @@ struct SleepData {
     var coreSleepDuration: TimeInterval
     var awakeDuration: TimeInterval
     var inBedDuration: TimeInterval
-    var sleepStartTime: Date?
-    var sleepEndTime: Date?
+    var sleepStartTime: Date?           // night sleep only (excludes daytime naps)
+    var sleepEndTime: Date?             // night sleep only (excludes daytime naps)
     var interruptionCount: Int          // number of distinct awake segments during sleep
+
+    // Daytime nap data (10 AM – 8 PM on the target date)
+    var napDurationSeconds: TimeInterval
+    var napStartTime: Date?
+    var napEndTime: Date?
+
+    init(
+        totalDuration: TimeInterval,
+        deepSleepDuration: TimeInterval,
+        remSleepDuration: TimeInterval,
+        coreSleepDuration: TimeInterval,
+        awakeDuration: TimeInterval,
+        inBedDuration: TimeInterval,
+        sleepStartTime: Date?,
+        sleepEndTime: Date?,
+        interruptionCount: Int,
+        napDurationSeconds: TimeInterval = 0,
+        napStartTime: Date? = nil,
+        napEndTime: Date? = nil
+    ) {
+        self.totalDuration = totalDuration
+        self.deepSleepDuration = deepSleepDuration
+        self.remSleepDuration = remSleepDuration
+        self.coreSleepDuration = coreSleepDuration
+        self.awakeDuration = awakeDuration
+        self.inBedDuration = inBedDuration
+        self.sleepStartTime = sleepStartTime
+        self.sleepEndTime = sleepEndTime
+        self.interruptionCount = interruptionCount
+        self.napDurationSeconds = napDurationSeconds
+        self.napStartTime = napStartTime
+        self.napEndTime = napEndTime
+    }
 
     static var empty: SleepData {
         SleepData(
@@ -21,7 +54,10 @@ struct SleepData {
             inBedDuration: 0,
             sleepStartTime: nil,
             sleepEndTime: nil,
-            interruptionCount: 0
+            interruptionCount: 0,
+            napDurationSeconds: 0,
+            napStartTime: nil,
+            napEndTime: nil
         )
     }
 

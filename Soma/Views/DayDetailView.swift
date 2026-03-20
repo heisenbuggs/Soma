@@ -2,39 +2,28 @@ import SwiftUI
 
 struct DayDetailView: View {
     @StateObject private var viewModel: DayDetailViewModel
-    @Environment(\.dismiss) private var dismiss
 
     init(metrics: DailyMetrics, checkInStore: CheckInStore) {
         _viewModel = StateObject(wrappedValue: DayDetailViewModel(metrics: metrics, checkInStore: checkInStore))
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    dateHeader
-                    scoresGrid
-                    sleepSection
-                    strainSection
-                    if viewModel.checkIn != nil {
-                        checkInSection
-                    }
-                    insightSection
+        ScrollView {
+            VStack(spacing: 20) {
+                dateHeader
+                scoresGrid
+                sleepSection
+                strainSection
+                if viewModel.checkIn != nil {
+                    checkInSection
                 }
-                .padding(.horizontal)
-                .padding(.top, 8)
-                .padding(.bottom, 32)
+                insightSection
             }
-            .background(Color.somaBackground.ignoresSafeArea())
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { dismiss() }
-                        .foregroundColor(Color(hex: "2979FF"))
-                }
-            }
+            .padding(.horizontal)
+            .padding(.top, 8)
+            .padding(.bottom, 32)
         }
+        .background(Color.somaBackground.ignoresSafeArea())
     }
 
     // MARK: - Date Header

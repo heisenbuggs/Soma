@@ -122,21 +122,42 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
                                                     options: .strictStartDate)
         let type = HKCategoryType(.sleepAnalysis)
         let samples = try await fetchSamples(type: type, predicate: predicate)
-        return parseSleepSamples(samples.compactMap { $0 as? HKCategorySample })
+        return parseSleepSamples(samples.compactMap { $0 as? HKCategorySample }, targetDate: date)
     }
 
-    private func parseSleepSamples(_ samples: [HKCategorySample]) -> SleepData {
+    private func parseSleepSamples(_ samples: [HKCategorySample], targetDate: Date) -> SleepData {
+        let cal = Calendar.current
+        let startOfDay = cal.startOfDay(for: targetDate)
+        // Daytime nap window: 10 AM – 8 PM on the target date
+        let napWindowStart = cal.date(bySettingHour: 10, minute: 0, second: 0, of: startOfDay)!
+        let napWindowEnd   = cal.date(bySettingHour: 20, minute: 0, second: 0, of: startOfDay)!
+
         var deep: TimeInterval = 0
         var rem: TimeInterval = 0
         var core: TimeInterval = 0
         var awake: TimeInterval = 0
         var inBed: TimeInterval = 0
-        var startTime: Date?
-        var endTime: Date?
+
+        // Night sleep (excludes daytime naps)
+        var nightStart: Date?
+        var nightEnd: Date?
+
+        // Nap tracking
+        var napDuration: TimeInterval = 0
+        var napStart: Date?
+        var napEnd: Date?
+
+        let sleepStages: Set<HKCategoryValueSleepAnalysis> = [.asleepDeep, .asleepREM, .asleepCore, .asleepUnspecified]
 
         for sample in samples {
             let duration = sample.endDate.timeIntervalSince(sample.startDate)
             guard let value = HKCategoryValueSleepAnalysis(rawValue: sample.value) else { continue }
+
+            // Classify as nap if the sample falls entirely within the daytime nap window
+            let isNap = sleepStages.contains(value)
+                && sample.startDate >= napWindowStart
+                && sample.endDate <= napWindowEnd
+
             switch value {
             case .asleepDeep:
                 deep += duration
@@ -151,15 +172,18 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
             @unknown default:
                 break
             }
-            if startTime == nil || sample.startDate < startTime! {
-                startTime = sample.startDate
-            }
-            if endTime == nil || sample.endDate > endTime! {
-                endTime = sample.endDate
+
+            if isNap {
+                napDuration += duration
+                if napStart == nil || sample.startDate < napStart! { napStart = sample.startDate }
+                if napEnd == nil || sample.endDate > napEnd! { napEnd = sample.endDate }
+            } else if sleepStages.contains(value) {
+                if nightStart == nil || sample.startDate < nightStart! { nightStart = sample.startDate }
+                if nightEnd == nil || sample.endDate > nightEnd! { nightEnd = sample.endDate }
             }
         }
 
-        // Count distinct awake segments (interruptions) that occur between sleep stages
+        // Count distinct awake segments (interruptions) during the night sleep window
         let awakeSamples = samples.filter {
             HKCategoryValueSleepAnalysis(rawValue: $0.value) == .awake
         }.sorted { $0.startDate < $1.startDate }
@@ -173,9 +197,12 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
             coreSleepDuration: core,
             awakeDuration: awake,
             inBedDuration: inBed,
-            sleepStartTime: startTime,
-            sleepEndTime: endTime,
-            interruptionCount: interruptionCount
+            sleepStartTime: nightStart,
+            sleepEndTime: nightEnd,
+            interruptionCount: interruptionCount,
+            napDurationSeconds: napDuration,
+            napStartTime: napStart,
+            napEndTime: napEnd
         )
     }
 
@@ -276,7 +303,13 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
                 sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
             ) { _, results, error in
                 if let error = error {
-                    continuation.resume(throwing: error)
+                    let nsErr = error as NSError
+                    // errorNoData means no samples for this predicate — treat as empty, not a failure.
+                    if nsErr.domain == HKErrorDomain && nsErr.code == HKError.Code.errorNoData.rawValue {
+                        continuation.resume(returning: [])
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                 } else {
                     continuation.resume(returning: results ?? [])
                 }
@@ -295,7 +328,13 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
                 options: .discreteAverage
             ) { _, stats, error in
                 if let error = error {
-                    continuation.resume(throwing: error)
+                    let nsErr = error as NSError
+                    // errorNoData (11) means no samples matched — return nil, not an error.
+                    if nsErr.domain == HKErrorDomain && nsErr.code == HKError.Code.errorNoData.rawValue {
+                        continuation.resume(returning: nil)
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                 } else {
                     let value = stats?.averageQuantity()?.doubleValue(for: unit)
                     continuation.resume(returning: value)
@@ -315,7 +354,13 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
                 options: .cumulativeSum
             ) { _, stats, error in
                 if let error = error {
-                    continuation.resume(throwing: error)
+                    let nsErr = error as NSError
+                    // errorNoData (11) means no samples matched — return nil, not an error.
+                    if nsErr.domain == HKErrorDomain && nsErr.code == HKError.Code.errorNoData.rawValue {
+                        continuation.resume(returning: nil)
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                 } else {
                     let value = stats?.sumQuantity()?.doubleValue(for: unit)
                     continuation.resume(returning: value)

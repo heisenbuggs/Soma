@@ -29,7 +29,6 @@ final class TrendsViewModel: ObservableObject {
     @Published var hrvBaseline: Double?
     @Published var rhrBaseline: Double?
     @Published var isLoading = false
-    @Published var errorMessage: String?
     @Published var selectedDataPoint: DailyMetrics?
     @Published var selectedMetrics: DailyMetrics?
 
@@ -51,32 +50,41 @@ final class TrendsViewModel: ObservableObject {
         isLoading = true
         defer { isLoading = false }
 
+        let fetchDays = max(selectedRange.days, 30)
+        let cutoff = Calendar.current.date(byAdding: .day, value: -selectedRange.days, to: Date())!
+
         // Load stored metrics for chart data
         metricHistory = store.loadLast(selectedRange.days)
+        let storedHistory = store.loadLast(fetchDays)
 
-        do {
-            let fetchDays = max(selectedRange.days, 30)
-            let (hrv, rhr) = try await (
-                healthKit.fetchHRVHistory(days: fetchDays),
-                healthKit.fetchRestingHRHistory(days: fetchDays)
-            )
-
-            let filteredHRV = hrv.filter { entry in
-                let cutoff = Calendar.current.date(byAdding: .day, value: -selectedRange.days, to: Date())!
-                return entry.0 >= cutoff
-            }
-            let filteredRHR = rhr.filter { entry in
-                let cutoff = Calendar.current.date(byAdding: .day, value: -selectedRange.days, to: Date())!
-                return entry.0 >= cutoff
-            }
-
+        // HRV — try HealthKit first; fall back to stored DailyMetrics if empty or unavailable.
+        let allHRV = (try? await healthKit.fetchHRVHistory(days: fetchDays)) ?? []
+        let filteredHRV = allHRV.filter { $0.0 >= cutoff }
+        if !filteredHRV.isEmpty {
             hrvHistory = filteredHRV
-            rhrHistory = filteredRHR
-            hrvBaseline = BaselineCalculator.computeHRVBaseline(from: hrv)
-            rhrBaseline = BaselineCalculator.computeRHRBaseline(from: rhr)
+            hrvBaseline = BaselineCalculator.computeHRVBaseline(from: allHRV)
+        } else {
+            let stored = storedHistory.compactMap { m -> (Date, Double)? in
+                guard let v = m.hrvAverage else { return nil }
+                return (m.date, v)
+            }
+            hrvHistory = stored.filter { $0.0 >= cutoff }
+            hrvBaseline = BaselineCalculator.computeHRVBaseline(from: stored)
+        }
 
-        } catch {
-            errorMessage = error.localizedDescription
+        // RHR — same pattern.
+        let allRHR = (try? await healthKit.fetchRestingHRHistory(days: fetchDays)) ?? []
+        let filteredRHR = allRHR.filter { $0.0 >= cutoff }
+        if !filteredRHR.isEmpty {
+            rhrHistory = filteredRHR
+            rhrBaseline = BaselineCalculator.computeRHRBaseline(from: allRHR)
+        } else {
+            let stored = storedHistory.compactMap { m -> (Date, Double)? in
+                guard let v = m.restingHR else { return nil }
+                return (m.date, v)
+            }
+            rhrHistory = stored.filter { $0.0 >= cutoff }
+            rhrBaseline = BaselineCalculator.computeRHRBaseline(from: stored)
         }
     }
 

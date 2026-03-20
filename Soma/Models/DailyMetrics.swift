@@ -40,6 +40,11 @@ struct DailyMetrics: Identifiable, Codable {
     var sleepEndTime: Date?
     var ayurvedicSleepPoints: Double?
 
+    // Daytime nap data
+    var napDurationMinutes: Double?
+    var napStartTime: Date?
+    var napEndTime: Date?
+
     init(
         id: UUID = UUID(),
         date: Date,
@@ -66,7 +71,10 @@ struct DailyMetrics: Identifiable, Codable {
         workoutMinutes: Double? = nil,
         sleepStartTime: Date? = nil,
         sleepEndTime: Date? = nil,
-        ayurvedicSleepPoints: Double? = nil
+        ayurvedicSleepPoints: Double? = nil,
+        napDurationMinutes: Double? = nil,
+        napStartTime: Date? = nil,
+        napEndTime: Date? = nil
     ) {
         self.id = id
         self.date = date
@@ -94,6 +102,9 @@ struct DailyMetrics: Identifiable, Codable {
         self.sleepStartTime = sleepStartTime
         self.sleepEndTime = sleepEndTime
         self.ayurvedicSleepPoints = ayurvedicSleepPoints
+        self.napDurationMinutes = napDurationMinutes
+        self.napStartTime = napStartTime
+        self.napEndTime = napEndTime
     }
 }
 

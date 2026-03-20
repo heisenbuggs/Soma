@@ -86,7 +86,7 @@ final class DayDetailViewModel: ObservableObject {
             }
             return "Low recovery. Light movement and extra sleep are recommended."
         }
-        if let n = metrics.sleepInterruptions, n >= 3 {
+        if let n = metrics.sleepInterruptions, n > 3 {
             return "Sleep was interrupted \(n) times. A consistent bedtime and limiting fluids before bed can help."
         }
         if let sHR = metrics.sleepingHR, let rhr = metrics.restingHR, sHR > rhr + 5 {

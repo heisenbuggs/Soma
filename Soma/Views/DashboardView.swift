@@ -5,8 +5,10 @@ struct DashboardView: View {
     let checkInStore: CheckInStore
     let healthKit: HealthDataProviding
     @AppStorage("userFirstName") private var firstName: String = ""
+    @AppStorage("cacheEnabled") private var cacheEnabled: Bool = false
     @State private var showSettings = false
     @State private var showCheckIn = false
+    @State private var showRawData = false
     @State private var activeMetric: DashboardMetric?
     @State private var showAyurvedicDetail = false
 
@@ -73,7 +75,7 @@ struct DashboardView: View {
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .refreshable {
-                    viewModel.refresh(force: true)
+                    await viewModel.refresh(force: true)?.value
                 }
 
                 if viewModel.isLoading {
@@ -95,6 +97,12 @@ struct DashboardView: View {
                             }
                         }
                         Button {
+                            showRawData = true
+                        } label: {
+                            Image(systemName: "info.circle")
+                                .foregroundColor(Color(hex: "8E8E93"))
+                        }
+                        Button {
                             showSettings = true
                         } label: {
                             Image(systemName: "gearshape.fill")
@@ -102,6 +110,9 @@ struct DashboardView: View {
                         }
                     }
                 }
+            }
+            .sheet(isPresented: $showRawData) {
+                RawDataView(metrics: viewModel.todayMetrics, lastRefreshed: viewModel.lastRefreshed)
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
@@ -121,13 +132,16 @@ struct DashboardView: View {
                     sleepStart: viewModel.todayMetrics.sleepStartTime,
                     sleepEnd: viewModel.todayMetrics.sleepEndTime,
                     eveningDate: Calendar.current.date(byAdding: .day, value: -1, to: Date())!,
-                    history: viewModel.loadHistory(days: 365)
+                    history: viewModel.loadHistory(days: 365),
+                    napDurationMinutes: viewModel.todayMetrics.napDurationMinutes,
+                    napStartTime: viewModel.todayMetrics.napStartTime,
+                    napEndTime: viewModel.todayMetrics.napEndTime
                 )
             }
         }
         .onAppear {
             viewModel.loadCached()
-            viewModel.refresh()
+            viewModel.refresh(force: true)
         }
     }
 
@@ -446,7 +460,7 @@ struct DashboardView: View {
                     quickStat(
                         icon: "figure.strengthtraining.traditional",
                         value: String(format: "%.0f min", exercise),
-                        label: "Exercise"
+                        label: "Activity"
                     )
                 }
             }
@@ -505,6 +519,108 @@ struct DashboardView: View {
         let totalMinutes = Int(h * 60)
         let hrs = totalMinutes / 60
         let mins = totalMinutes % 60
+        if hrs == 0 { return "\(mins)m" }
+        if mins == 0 { return "\(hrs)h" }
+        return "\(hrs)h \(mins)m"
+    }
+}
+
+// MARK: - Raw Data Sheet
+
+private struct RawDataView: View {
+    let metrics: DailyMetrics
+    let lastRefreshed: Date?
+    @Environment(\.dismiss) private var dismiss
+
+    private let timeFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .short
+        return f
+    }()
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.somaBackground.ignoresSafeArea()
+                List {
+                    Section("Fetch Info") {
+                        rawRow("Last Refreshed", value: lastRefreshed.map { timeFormatter.string(from: $0) } ?? "Never")
+                        rawRow("Data Date", value: timeFormatter.string(from: metrics.date))
+                    }
+                    .listRowBackground(Color.somaCard)
+
+                    Section("Heart") {
+                        rawRow("HRV (avg)", value: metrics.hrvAverage.map { String(format: "%.1f ms", $0) })
+                        rawRow("Resting HR", value: metrics.restingHR.map { String(format: "%.0f bpm", $0) })
+                        rawRow("Sleeping HR", value: metrics.sleepingHR.map { String(format: "%.0f bpm", $0) })
+                        rawRow("Sleeping HRV", value: metrics.sleepingHRV.map { String(format: "%.1f ms", $0) })
+                        rawRow("Respiratory Rate", value: metrics.respiratoryRate.map { String(format: "%.1f br/min", $0) })
+                        rawRow("Blood Oxygen (SpO2)", value: metrics.bloodOxygen.map { String(format: "%.1f%%", $0) })
+                        rawRow("VO2 Max", value: metrics.vo2Max.map { String(format: "%.1f ml/kg·min", $0) })
+                    }
+                    .listRowBackground(Color.somaCard)
+
+                    Section("Sleep") {
+                        rawRow("Duration", value: metrics.sleepDurationHours.map { formatHours($0) })
+                        rawRow("Sleep Need", value: metrics.sleepNeedHours.map { formatHours($0) })
+                        rawRow("Interruptions", value: metrics.sleepInterruptions.map { "\($0)" })
+                        rawRow("Sleep Start", value: metrics.sleepStartTime.map { timeFormatter.string(from: $0) })
+                        rawRow("Sleep End", value: metrics.sleepEndTime.map { timeFormatter.string(from: $0) })
+                        rawRow("Ayurvedic Points", value: metrics.ayurvedicSleepPoints.map { String(format: "%.1f / 10", $0) })
+                    }
+                    .listRowBackground(Color.somaCard)
+
+                    Section("Activity") {
+                        rawRow("Active Calories", value: metrics.activeCalories.map { String(format: "%.0f kcal", $0) })
+                        rawRow("Steps", value: metrics.stepCount.map { String(format: "%.0f", $0) })
+                        rawRow("Activity Minutes", value: metrics.exerciseMinutes.map { String(format: "%.0f min", $0) })
+                        rawRow("Workout Minutes", value: metrics.workoutMinutes.map { String(format: "%.0f min", $0) })
+                    }
+                    .listRowBackground(Color.somaCard)
+
+                    Section("Strain") {
+                        rawRow("Strain Load", value: metrics.strainLoad.map { String(format: "%.1f", $0) })
+                        rawRow("Workout Strain", value: metrics.workoutStrain.map { String(format: "%.1f", $0) })
+                        rawRow("Incidental Strain", value: metrics.incidentalStrain.map { String(format: "%.1f", $0) })
+                    }
+                    .listRowBackground(Color.somaCard)
+
+                    Section("Computed Scores") {
+                        rawRow("Recovery", value: String(format: "%.1f", metrics.recoveryScore))
+                        rawRow("Strain", value: String(format: "%.1f", metrics.strainScore))
+                        rawRow("Sleep Score", value: String(format: "%.1f", metrics.sleepScore))
+                        rawRow("Stress", value: String(format: "%.1f", metrics.stressScore))
+                    }
+                    .listRowBackground(Color.somaCard)
+                }
+                .scrollContentBackground(.hidden)
+            }
+            .navigationTitle("Raw Data")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundColor(Color(hex: "2979FF"))
+                }
+            }
+        }
+    }
+
+    private func rawRow(_ label: String, value: String?) -> some View {
+        HStack {
+            Text(label)
+                .foregroundColor(.primary)
+            Spacer()
+            Text(value ?? "--")
+                .foregroundColor(value != nil ? Color(hex: "8E8E93") : Color(hex: "8E8E93").opacity(0.5))
+                .font(.subheadline)
+        }
+    }
+
+    private func formatHours(_ h: Double) -> String {
+        let total = Int(h * 60)
+        let hrs = total / 60; let mins = total % 60
         if hrs == 0 { return "\(mins)m" }
         if mins == 0 { return "\(hrs)h" }
         return "\(hrs)h \(mins)m"

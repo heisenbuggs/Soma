@@ -18,6 +18,9 @@ struct SomaApp: App {
                 } else if hasCompletedOnboarding {
                     MainTabView(healthKitManager: healthKitManager)
                         .task {
+                            // Re-request authorization on every launch so new HealthKit types
+                            // added in app updates are authorized without re-running onboarding.
+                            try? await healthKitManager.requestAuthorization()
                             _ = await NotificationScheduler.shared.requestPermission()
                             BackgroundTaskManager.shared.scheduleInsightRefresh()
                         }

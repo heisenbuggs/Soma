@@ -7,6 +7,9 @@ struct AyurvedicSleepDetailView: View {
     let sleepEnd: Date?
     let eveningDate: Date
     let history: [DailyMetrics]
+    let napDurationMinutes: Double?
+    let napStartTime: Date?
+    let napEndTime: Date?
 
     @Environment(\.dismiss) private var dismiss
     @State private var selectedRange: TrendsViewModel.TimeRange = .twoWeeks
@@ -57,6 +60,7 @@ struct AyurvedicSleepDetailView: View {
                         timelineCard
                         if !breakdown.isEmpty { breakdownCard }
                         if let tip { tipCard(tip) }
+                        if let mins = napDurationMinutes { napCard(minutes: mins) }
                         historyChart
                     }
                     .padding(.top, 8)
@@ -270,14 +274,70 @@ struct AyurvedicSleepDetailView: View {
         )
     }
 
+    // MARK: - Nap Card
+
+    private func napCard(minutes: Double) -> some View {
+        let hours = Int(minutes) / 60
+        let mins  = Int(minutes) % 60
+        let durationStr = hours > 0 ? "\(hours)h \(mins)m" : "\(mins)m"
+
+        let (icon, message): (String, String) = {
+            if let start = napStartTime {
+                let hour = Calendar.current.component(.hour, from: start)
+                if hour >= 16 { // after 4 PM
+                    return ("exclamationmark.triangle.fill",
+                            "Late nap detected (\(durationStr)). This could delay your nighttime sleep timing.")
+                }
+            }
+            if minutes > 60 {
+                return ("moon.zzz",
+                        "Long daytime nap detected (\(durationStr)). This may reduce sleep pressure and delay nighttime sleep.")
+            }
+            return ("moon.zzz",
+                    "Short nap detected (\(durationStr)). This may help recovery without affecting night sleep.")
+        }()
+
+        let accentColor = minutes > 60 || (napStartTime.map { Calendar.current.component(.hour, from: $0) >= 16 } ?? false)
+            ? Color(hex: "FF9100")
+            : Color(hex: "5C6BC0")
+
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .foregroundColor(accentColor)
+                Text("Daytime Sleep")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+            }
+            Text(message)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Not included in Ayurvedic score — scored on night sleep only.")
+                .font(.caption)
+                .foregroundColor(Color(hex: "8E8E93"))
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(accentColor.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(accentColor.opacity(0.25), lineWidth: 1)
+        )
+    }
+
     // MARK: - Helpers
 
     private func windowColor(index: Int) -> Color {
+        // Dark green → light green, matching the timeline band
         switch index {
-        case 0: return Color(hex: "00C853")
-        case 1: return Color(hex: "2979FF")
-        case 2: return Color(hex: "FFD600")
-        default: return Color(hex: "FF9100")
+        case 0: return Color(hex: "27642A")           // Before midnight — dark green
+        case 1: return Color(hex: "388E3C")           // 12–3 AM — medium green
+        case 2: return Color(hex: "49B84E")           // 3–6 AM — mid-light green
+        case 3: return Color(hex: "73C877")
+        case 4: return Color(hex: "9DD9A0")  // 6–8 AM — light green
+        default: return Color(hex: "9DD9A0")
         }
     }
 
@@ -308,101 +368,105 @@ struct SleepTimelineView: View {
     let sleepEnd: Date?
     let eveningDate: Date
 
-    // Timeline spans 5 PM → 8 AM (15 hours total display window)
-    private let displayHours: Double = 15
-    private let timelineStartOffset: Double = -4 // hours before 9 PM = 5 PM
+    // Timeline: 9 PM → 8 AM only (11 hours)
+    private let displayHours: Double = 11
 
-    private var windows: [(fraction: ClosedRange<Double>, color: Color, label: String)] {
-        [
-            (0.0...4/displayHours,  Color(hex: "8E8E93").opacity(0.3), ""),           // 5–9 PM (pre-window)
-            (4/displayHours...7/displayHours,  Color(hex: "00C853"),   "2 pts"),      // 9 PM–12 AM (3 h)
-            (7/displayHours...10/displayHours, Color(hex: "2979FF"),   "1 pt"),       // 12–3 AM  (3 h)
-            (10/displayHours...13/displayHours, Color(hex: "FFD600"),  "0.5"),        // 3–6 AM   (3 h)
-            (13/displayHours...1.0,             Color(hex: "FF9100"),  "0.25"),       // 6–8 AM   (2 h)
-        ]
-    }
+    // Window boundary fractions (9PM=0, midnight=3/11, 3AM=6/11, 6AM=9/11, 8AM=1)
+    private let windowFractions: [Double] = [0, 3.0/11.0, 6.0/11.0, 9.0/11.0, 1.0]
+    private let windowColors: [Color] = [
+        Color(hex: "27642A"),  // 9 PM–midnight — dark green
+        Color(hex: "388E3C"),  // midnight–3 AM — medium green
+        Color(hex: "49B84E"),  // 3–6 AM — mid-light green
+        Color(hex: "9DD9A0"),  // 6–8 AM — light green
+    ]
+    private let timeLabels   = ["9 PM", "12 AM", "3 AM", "6 AM", "8 AM"]
+    private let weightLabels = ["2 pts/h", "1 pt/h", "0.5 pt/h", "0.25 pt/h"]
 
-    // Convert a wall-clock Date to a 0–1 fraction along the display timeline
+    // Fraction of date along the 9 PM → 8 AM axis
     private func fraction(for date: Date) -> Double {
         let cal = Calendar.current
         var comps = cal.dateComponents([.year, .month, .day], from: eveningDate)
-        comps.hour = 17; comps.minute = 0; comps.second = 0
-        let timelineStart = cal.date(from: comps)!
-        let totalSeconds = displayHours * 3600
-        let offset = date.timeIntervalSince(timelineStart)
-        return max(0, min(1, offset / totalSeconds))
+        comps.hour = 21; comps.minute = 0; comps.second = 0
+        let start = cal.date(from: comps)!
+        return max(0, min(1, date.timeIntervalSince(start) / (displayHours * 3600)))
     }
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
+            // Colored band
             GeometryReader { geo in
                 ZStack(alignment: .leading) {
-                    // Background window segments
+                    // Four window segments
                     HStack(spacing: 0) {
-                        ForEach(windows.indices, id: \.self) { i in
-                            let w = windows[i]
-                            let width = (w.fraction.upperBound - w.fraction.lowerBound) * geo.size.width
-                            Rectangle()
-                                .fill(w.color.opacity(0.25))
-                                .frame(width: width)
+                        ForEach(0..<4, id: \.self) { i in
+                            windowColors[i].opacity(0.65)
+                                .frame(width: (windowFractions[i + 1] - windowFractions[i]) * geo.size.width)
                         }
                     }
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
-                    // Window dividers
-                    ForEach([4, 7, 10, 13], id: \.self) { hour in
-                        let x = (Double(hour) / displayHours) * geo.size.width
+                    // Dividers at midnight, 3 AM, 6 AM
+                    ForEach(1..<4, id: \.self) { i in
                         Rectangle()
-                            .fill(Color.secondary.opacity(0.25))
+                            .fill(Color.black.opacity(0.18))
                             .frame(width: 1)
-                            .offset(x: x)
+                            .offset(x: windowFractions[i] * geo.size.width)
                     }
 
-                    // User sleep bar
-                    if let start = sleepStart, let end = sleepEnd {
-                        let startF = fraction(for: start)
-                        let endF   = fraction(for: end)
-                        let barX   = startF * geo.size.width
-                        let barW   = max(4, (endF - startF) * geo.size.width)
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(Color(hex: "2979FF").opacity(0.85))
-                            .frame(width: barW)
-                            .offset(x: barX)
+                    // Sleep start/end markers — purple vertical lines
+                    if let s = sleepStart, let e = sleepEnd {
+                        let sf = fraction(for: s)
+                        let ef = fraction(for: e)
+                        // Start line
+                        Rectangle()
+                            .fill(Color(hex: "9C27B0"))
+                            .frame(width: 2)
+                            .offset(x: sf * geo.size.width)
+                        // End line
+                        Rectangle()
+                            .fill(Color(hex: "9C27B0"))
+                            .frame(width: 2)
+                            .offset(x: ef * geo.size.width)
                     }
                 }
-                .frame(height: 40)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1)
+                        .strokeBorder(Color.secondary.opacity(0.15), lineWidth: 1)
                 )
             }
             .frame(height: 40)
 
-            // Time labels
-            HStack(spacing: 0) {
-                Spacer().frame(width: (4 / displayHours) * UIScreen.main.bounds.width - 32)
-                ForEach(["9 PM", "12 AM", "3 AM", "6 AM", "8 AM"], id: \.self) { label in
-                    Text(label)
+            // Time labels — leading edge of each window segment + trailing "8 AM"
+            GeometryReader { geo in
+                HStack(spacing: 0) {
+                    ForEach(0..<4, id: \.self) { i in
+                        HStack(spacing: 0) {
+                            Text(timeLabels[i])
+                                .font(.caption2)
+                                .foregroundColor(Color(hex: "8E8E93"))
+                            Spacer()
+                        }
+                        .frame(width: (windowFractions[i + 1] - windowFractions[i]) * geo.size.width)
+                    }
+                    Text(timeLabels[4])
                         .font(.caption2)
                         .foregroundColor(Color(hex: "8E8E93"))
-                    if label != "8 AM" {
-                        Spacer()
-                    }
                 }
             }
+            .frame(height: 14)
 
-            // Window weight labels
-            HStack(spacing: 0) {
-                Spacer().frame(width: (4 / displayHours) * UIScreen.main.bounds.width - 32)
-                ForEach(["2pts/h", "1pt/h", "0.5pt/h", "0.25pt/h"], id: \.self) { label in
-                    Text(label)
-                        .font(.system(size: 9))
-                        .foregroundColor(Color(hex: "8E8E93").opacity(0.7))
-                    if label != "0.25pt/h" {
-                        Spacer()
+            // Weight labels centered in each window
+            GeometryReader { geo in
+                HStack(spacing: 0) {
+                    ForEach(0..<4, id: \.self) { i in
+                        Text(weightLabels[i])
+                            .font(.system(size: 9))
+                            .foregroundColor(Color(hex: "8E8E93").opacity(0.7))
+                            .frame(width: (windowFractions[i + 1] - windowFractions[i]) * geo.size.width)
                     }
                 }
             }
+            .frame(height: 12)
         }
     }
 }

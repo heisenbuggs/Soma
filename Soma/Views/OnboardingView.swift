@@ -4,8 +4,10 @@ struct OnboardingView: View {
     @EnvironmentObject var healthKitManager: HealthKitManager
     @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
     @AppStorage("userFirstName") private var storedFirstName: String = ""
+    @AppStorage("userDateOfBirth") private var dobTimestamp: Double = 0
     @State private var currentPage = 0
     @State private var nameInput: String = ""
+    @State private var dateOfBirth: Date = Calendar.current.date(byAdding: .year, value: -25, to: Date())!
     @State private var isRequesting = false
     @State private var showDenied = false
 
@@ -92,7 +94,7 @@ struct OnboardingView: View {
     // MARK: - Name Page
 
     private var namePage: some View {
-        VStack(spacing: 32) {
+        VStack(spacing: 28) {
             Spacer()
 
             Image(systemName: "hand.wave.fill")
@@ -104,25 +106,50 @@ struct OnboardingView: View {
                     .font(.largeTitle)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
-                Text("What should we call you?")
+                Text("Tell us a bit about yourself")
                     .font(.body)
                     .foregroundColor(Color(hex: "8E8E93"))
                     .multilineTextAlignment(.center)
             }
 
-            TextField("Your name", text: $nameInput)
-                .font(.title2)
-                .multilineTextAlignment(.center)
-                .padding(.vertical, 14)
+            VStack(spacing: 14) {
+                TextField("Your name", text: $nameInput)
+                    .font(.title2)
+                    .multilineTextAlignment(.center)
+                    .padding(.vertical, 14)
+                    .background(Color.somaCard)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+
+                HStack {
+                    Text("Date of Birth")
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    DatePicker(
+                        "",
+                        selection: $dateOfBirth,
+                        in: ...Calendar.current.date(byAdding: .year, value: -13, to: Date())!,
+                        displayedComponents: .date
+                    )
+                    .labelsHidden()
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
                 .background(Color.somaCard)
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-                .padding(.horizontal, 40)
+
+                let age = Calendar.current.dateComponents([.year], from: dateOfBirth, to: Date()).year ?? 0
+                Text("Age: \(age) years")
+                    .font(.caption)
+                    .foregroundColor(Color(hex: "8E8E93"))
+            }
+            .padding(.horizontal, 40)
 
             Spacer()
 
             VStack(spacing: 12) {
                 Button {
-                    saveFirstName()
+                    saveProfile()
                     withAnimation { currentPage = 2 }
                 } label: {
                     Text("Continue")
@@ -147,11 +174,12 @@ struct OnboardingView: View {
         }
     }
 
-    private func saveFirstName() {
+    private func saveProfile() {
         let trimmed = nameInput.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        let first = trimmed.components(separatedBy: .whitespaces).first ?? trimmed
-        storedFirstName = first
+        if !trimmed.isEmpty {
+            storedFirstName = trimmed.components(separatedBy: .whitespaces).first ?? trimmed
+        }
+        dobTimestamp = dateOfBirth.timeIntervalSince1970
     }
 
     // MARK: - Permissions Page

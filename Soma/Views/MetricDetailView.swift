@@ -86,7 +86,7 @@ struct MetricInsightGenerator {
             }
         }
 
-        if let n = metrics.sleepInterruptions, n >= 3 {
+        if let n = metrics.sleepInterruptions, n > 3 {
             obs.append("Sleep was interrupted \(n) times during the night")
             acts.append("Limit fluids 2 hours before bed to reduce interruptions")
         }
@@ -204,6 +204,10 @@ struct MetricDetailView: View {
 
     @State private var selectedRange: TrendsViewModel.TimeRange = .week
     @State private var selectedDate: Date?
+    @State private var intradayHRData: [(Date, Double)] = []
+    @State private var intradayDate: Date = Date()
+    @State private var selectedStressDate: Date?
+    @State private var selectedStrainDate: Date?
     @Environment(\.dismiss) private var dismiss
 
     private var history: [DailyMetrics] {
@@ -233,6 +237,12 @@ struct MetricDetailView: View {
                     VStack(spacing: 20) {
                         rangePicker
                         scoreChart
+                        if metric == .stress {
+                            intradayStressChart
+                        }
+                        if metric == .strain {
+                            intradayStrainChart
+                        }
                         if let m = selectedMetrics {
                             insightsPanel(for: m)
                         }
@@ -248,6 +258,13 @@ struct MetricDetailView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                         .foregroundColor(Color(hex: "2979FF"))
+                }
+            }
+            .task {
+                if metric == .stress || metric == .strain {
+                    let date = history.max { $0.date < $1.date }?.date ?? Date()
+                    intradayDate = date
+                    intradayHRData = await viewModel.fetchIntradayHR(for: date)
                 }
             }
         }
@@ -341,6 +358,237 @@ struct MetricDetailView: View {
             }
             .onAppear {
                 selectedDate = history.max { $0.date < $1.date }?.date
+            }
+        }
+        .padding(14)
+        .background(Color.somaCard)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal)
+    }
+
+    // MARK: - Intraday Stress Chart
+
+    /// Buckets raw HR samples into 30-minute bins and derives a relative stress level.
+    /// Stress per bin = clamp((avgHR - rhrBaseline) / rhrBaseline, 0, 1) × 100
+    private var intradayStressBuckets: [(Date, Double)] {
+        guard !intradayHRData.isEmpty else { return [] }
+        let rhrBaseline = history.compactMap { $0.restingHR }.suffix(7).reduce(0, +)
+            / max(1, Double(history.compactMap { $0.restingHR }.suffix(7).count))
+        let baseline = rhrBaseline > 0 ? rhrBaseline : 65.0
+
+        let cal = Calendar.current
+        var buckets: [Date: [Double]] = [:]
+        for (date, hr) in intradayHRData {
+            // Round down to nearest 30-min bucket
+            var comps = cal.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+            comps.minute = (comps.minute ?? 0) < 30 ? 0 : 30
+            comps.second = 0
+            if let bucket = cal.date(from: comps) {
+                buckets[bucket, default: []].append(hr)
+            }
+        }
+        return buckets
+            .sorted { $0.key < $1.key }
+            .map { (date, hrs) in
+                let avg = hrs.reduce(0, +) / Double(hrs.count)
+                let stress = min(100, max(0, ((avg - baseline) / baseline) * 100))
+                return (date, stress)
+            }
+    }
+
+    private var intradayStressChart: some View {
+        let dayLabel = Calendar.current.isDateInToday(intradayDate) ? "Today" : intradayDate.formatted(.dateTime.month(.abbreviated).day())
+        let buckets = intradayStressBuckets
+        let accentColor = metric.accentColor
+
+        // Nearest bucket to the user's selection
+        let selectedBucket: (Date, Double)? = selectedStressDate.flatMap { sel in
+            buckets.min { abs($0.0.timeIntervalSince(sel)) < abs($1.0.timeIntervalSince(sel)) }
+        }
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("\(dayLabel)'s Stress Pattern")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+                if let (date, stress) = selectedBucket {
+                    let label = stressLabel(for: stress)
+                    Text("\(date.formatted(.dateTime.hour().minute())) · \(Int(stress.rounded()))  \(label)")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.somaCardElevated)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                }
+            }
+
+            if buckets.isEmpty {
+                Text("No heart rate data available for today.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 32)
+            } else {
+                Chart(buckets, id: \.0) { date, stress in
+                    AreaMark(
+                        x: .value("Time", date),
+                        y: .value("Stress", stress)
+                    )
+                    .foregroundStyle(
+                        LinearGradient(
+                            colors: [accentColor.opacity(0.35), accentColor.opacity(0)],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                    )
+                    LineMark(
+                        x: .value("Time", date),
+                        y: .value("Stress", stress)
+                    )
+                    .foregroundStyle(accentColor)
+                    .interpolationMethod(.catmullRom)
+                    if let sel = selectedStressDate {
+                        RuleMark(x: .value("Selected", sel))
+                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                            .foregroundStyle(Color.secondary.opacity(0.5))
+                    }
+                }
+                .chartYScale(domain: 0...100)
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .hour, count: 4)) { _ in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel(format: .dateTime.hour())
+                    }
+                }
+                .chartYAxis { AxisMarks(position: .leading) }
+                .chartXSelection(value: $selectedStressDate)
+                .frame(height: 160)
+
+                Text("Based on heart rate elevation above your resting baseline. Lower HRV + higher HR = higher stress.")
+                    .font(.caption)
+                    .foregroundColor(Color(hex: "8E8E93"))
+            }
+        }
+        .padding(14)
+        .background(Color.somaCard)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal)
+    }
+
+    private func stressLabel(for value: Double) -> String {
+        switch value {
+        case 70...: return "High"
+        case 40..<70: return "Moderate"
+        default: return "Low"
+        }
+    }
+
+    // MARK: - Intraday Strain Chart
+
+    /// Buckets raw HR samples into 30-min bins and computes zone-weighted strain load per bin.
+    /// Uses the same zone model as StrainCalculator (50% maxHR threshold, zone weights 0–4).
+    private var intradayStrainBuckets: [(Date, Double)] {
+        guard !intradayHRData.isEmpty else { return [] }
+        let maxHR = viewModel.maxHR
+        let cal = Calendar.current
+
+        // Group consecutive samples into 30-min buckets
+        var buckets: [Date: [(Date, Double)]] = [:]
+        for (date, hr) in intradayHRData {
+            var comps = cal.dateComponents([.year, .month, .day, .hour, .minute], from: date)
+            comps.minute = (comps.minute ?? 0) < 30 ? 0 : 30
+            comps.second = 0
+            if let bucket = cal.date(from: comps) {
+                buckets[bucket, default: []].append((date, hr))
+            }
+        }
+
+        return buckets
+            .sorted { $0.key < $1.key }
+            .compactMap { (bucketDate, samples) -> (Date, Double)? in
+                guard samples.count > 1 else { return nil }
+                let sorted = samples.sorted { $0.0 < $1.0 }
+                var load = 0.0
+                for i in 1..<sorted.count {
+                    let (prevTime, prevHR) = sorted[i - 1]
+                    let (currTime, currHR) = sorted[i]
+                    let rawMinutes = currTime.timeIntervalSince(prevTime) / 60.0
+                    guard rawMinutes > 0 else { continue }
+                    let minutes = min(rawMinutes, 1.0)
+                    let avgHR = (prevHR + currHR) / 2.0
+                    guard avgHR >= 0.5 * maxHR else { continue }
+                    let zone = HeartRateZone.zone(for: avgHR, maxHR: maxHR)
+                    load += minutes * zone.weight
+                }
+                return load > 0 ? (bucketDate, load) : nil
+            }
+    }
+
+    private var intradayStrainChart: some View {
+        let strainColor = DashboardMetric.strain.accentColor
+        let dayLabel = Calendar.current.isDateInToday(intradayDate) ? "Today" : intradayDate.formatted(.dateTime.month(.abbreviated).day())
+        let buckets = intradayStrainBuckets
+
+        let selectedBucket: (Date, Double)? = selectedStrainDate.flatMap { sel in
+            buckets.min { abs($0.0.timeIntervalSince(sel)) < abs($1.0.timeIntervalSince(sel)) }
+        }
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("\(dayLabel)'s Strain Pattern")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+                if let (date, load) = selectedBucket {
+                    Text("\(date.formatted(.dateTime.hour().minute())) · Load \(String(format: "%.1f", load))")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.somaCardElevated)
+                        .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                }
+            }
+
+            if buckets.isEmpty {
+                Text("No heart rate data available for today.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 32)
+            } else {
+                Chart(buckets, id: \.0) { date, load in
+                    BarMark(
+                        x: .value("Time", date, unit: .minute),
+                        y: .value("Load", load),
+                        width: .fixed(6)
+                    )
+                    .foregroundStyle(strainColor.gradient)
+                    .cornerRadius(2)
+                    if let sel = selectedStrainDate {
+                        RuleMark(x: .value("Selected", sel))
+                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                            .foregroundStyle(Color.secondary.opacity(0.5))
+                    }
+                }
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .hour, count: 4)) { _ in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel(format: .dateTime.hour())
+                    }
+                }
+                .chartYAxis { AxisMarks(position: .leading) }
+                .chartXSelection(value: $selectedStrainDate)
+                .frame(height: 160)
+
+                Text("Zone-weighted strain load per 30-min window. Only HR above 50% of your max contributes.")
+                    .font(.caption)
+                    .foregroundColor(Color(hex: "8E8E93"))
             }
         }
         .padding(14)

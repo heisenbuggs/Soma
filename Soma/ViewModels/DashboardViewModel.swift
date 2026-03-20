@@ -21,13 +21,22 @@ final class DashboardViewModel: ObservableObject {
     private let settings: UserSettings
     private var refreshTask: Task<Void, Never>?
 
-    private let minRefreshInterval: TimeInterval = 5 * 60  // 5 minutes
+    // Refresh interval: 1 hour when cache is enabled, 5 minutes when disabled.
+    private var refreshInterval: TimeInterval {
+        settings.cacheEnabled ? 60 * 60 : 5 * 60
+    }
+
+    var cacheEnabled: Bool { settings.cacheEnabled }
+    var maxHR: Double { settings.maxHeartRate ?? StrainCalculator.estimatedMaxHR(age: settings.age) }
 
     init(healthKit: HealthDataProviding, store: MetricsStore, checkInStore: CheckInStore, settings: UserSettings) {
         self.healthKit = healthKit
         self.store = store
         self.checkInStore = checkInStore
         self.settings = settings
+        // Restore lastRefreshed across app launches so the cache interval is respected.
+        let ts = UserDefaults.standard.double(forKey: "lastRefreshedTimestamp")
+        if ts > 0 { lastRefreshed = Date(timeIntervalSince1970: ts) }
     }
 
     // MARK: - Load
@@ -42,17 +51,21 @@ final class DashboardViewModel: ObservableObject {
         backfillHistoricalDataIfNeeded()
     }
 
-    func refresh(force: Bool = false) {
-        // Debounce
-        if !force, let last = lastRefreshed,
-           Date().timeIntervalSince(last) < minRefreshInterval {
-            return
+    @discardableResult
+    func refresh(force: Bool = false) -> Task<Void, Never>? {
+        // Always fetch if there is no data for today yet.
+        let noDataToday = store.load(for: Date()) == nil
+        // Respect cache interval unless forced or there is no today's data.
+        if !force, !noDataToday, let last = lastRefreshed,
+           Date().timeIntervalSince(last) < refreshInterval {
+            return nil
         }
 
         refreshTask?.cancel()
         refreshTask = Task {
             await fetchAllMetrics()
         }
+        return refreshTask
     }
 
     // MARK: - Fetch
@@ -68,6 +81,7 @@ final class DashboardViewModel: ObservableObject {
             store.save(metrics)
             todayMetrics = metrics
             lastRefreshed = Date()
+            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastRefreshedTimestamp")
 
             InsightCache.shared.invalidatePhysio()
 
@@ -192,7 +206,6 @@ final class DashboardViewModel: ObservableObject {
         let strainCapacity = StrainCalculator.capacity(fromLoads: strainLoadHistory)
         let strainScore = StrainCalculator.score(load: strainResult.total, capacity: strainCapacity)
 
-        // Recovery (weights: 40/25/25/10)
         let todayHRV = hrvValues.isEmpty ? nil : hrvValues.reduce(0, +) / Double(hrvValues.count)
         let recoveryScore = RecoveryCalculator.calculate(input: RecoveryInput(
             todayHRV: todayHRV,
@@ -247,7 +260,10 @@ final class DashboardViewModel: ObservableObject {
             workoutMinutes: workoutMinutes,
             sleepStartTime: sleepData.sleepStartTime,
             sleepEndTime: sleepData.sleepEndTime,
-            ayurvedicSleepPoints: ayurvedicPoints
+            ayurvedicSleepPoints: ayurvedicPoints,
+            napDurationMinutes: sleepData.napDurationSeconds > 0 ? sleepData.napDurationSeconds / 60.0 : nil,
+            napStartTime: sleepData.napStartTime,
+            napEndTime: sleepData.napEndTime
         )
     }
 
@@ -326,6 +342,13 @@ final class DashboardViewModel: ObservableObject {
 
         updateSparklines()
         updateCoachingTips()
+    }
+
+    // MARK: - Intraday HR
+
+    /// Returns raw heart-rate samples for a given date, used for the intraday stress chart.
+    func fetchIntradayHR(for date: Date) async -> [(Date, Double)] {
+        (try? await healthKit.fetchHeartRateSamples(for: date)) ?? []
     }
 
     // MARK: - History

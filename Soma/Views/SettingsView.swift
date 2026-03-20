@@ -3,11 +3,24 @@ import WidgetKit
 
 final class UserSettings: ObservableObject {
     @AppStorage("userFirstName") var firstName: String = ""
-    @AppStorage("userAge") var age: Int = 30
+    @AppStorage("userDateOfBirth") private var _dobTimestamp: Double = 0
     @AppStorage("userMaxHR") private var _maxHR: Int = 0
+
+    var dateOfBirth: Date? {
+        get { _dobTimestamp > 0 ? Date(timeIntervalSince1970: _dobTimestamp) : nil }
+        set { _dobTimestamp = newValue.map { $0.timeIntervalSince1970 } ?? 0; objectWillChange.send() }
+    }
+
+    var age: Int {
+        guard let dob = dateOfBirth else { return 30 }
+        return Calendar.current.dateComponents([.year], from: dob, to: Date()).year ?? 30
+    }
     @AppStorage("baselineSleepHours") var sleepGoalHours: Double = 7.0
     @AppStorage("useMetricUnits") var useMetricUnits: Bool = true
     
+    // MARK: - Cache Settings
+    @AppStorage("cacheEnabled") var cacheEnabled: Bool = false
+
     // MARK: - Notification Settings
     @AppStorage("notificationsEnabled") var notificationsEnabled: Bool = true
     @AppStorage("recoveryNotificationHour") var recoveryNotificationHour: Int = 8
@@ -121,14 +134,24 @@ struct SettingsView: View {
                     .listRowBackground(Color.somaCard)
 
                     Section("Personal") {
+                        DatePicker(
+                            selection: Binding(
+                                get: { settings.dateOfBirth ?? Calendar.current.date(byAdding: .year, value: -30, to: Date())! },
+                                set: { settings.dateOfBirth = $0 }
+                            ),
+                            in: ...Calendar.current.date(byAdding: .year, value: -13, to: Date())!,
+                            displayedComponents: .date
+                        ) {
+                            Label("Date of Birth", systemImage: "person.crop.circle")
+                                .foregroundColor(.primary)
+                        }
+
                         HStack {
-                            Label("Age", systemImage: "person.crop.circle")
+                            Label("Age", systemImage: "calendar")
                                 .foregroundColor(.primary)
                             Spacer()
                             Text("\(settings.age) yrs")
                                 .foregroundColor(Color(hex: "8E8E93"))
-                            Stepper("", value: $settings.age, in: 13...99)
-                                .labelsHidden()
                         }
 
                         HStack {
@@ -291,6 +314,22 @@ struct SettingsView: View {
                                 .foregroundColor(.primary)
                         }
                         .tint(Color(hex: "00C853"))
+
+                        Toggle(isOn: $settings.cacheEnabled) {
+                            Label("Enable Data Cache", systemImage: "cylinder.fill")
+                                .foregroundColor(.primary)
+                        }
+                        .tint(Color(hex: "00C853"))
+
+                        if settings.cacheEnabled {
+                            Text("Cached data is valid for 1 hour.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        } else {
+                            Text("Data refreshes every 5 minutes. Pull down on the dashboard to fetch immediately.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
                     }
                     .listRowBackground(Color.somaCard)
 
