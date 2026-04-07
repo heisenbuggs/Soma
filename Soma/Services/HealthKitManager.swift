@@ -112,11 +112,13 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
     // MARK: - Sleep
 
     func fetchSleepAnalysis(for date: Date) async throws -> SleepData {
-        // Sleep window: previous noon to current noon (captures overnight sleep)
+        // Sleep window: previous day 8 PM to current day 8 PM.
+        // Rule: any sleep/nap that starts before 8 PM counts as that same calendar day;
+        // anything after 8 PM counts as the next day (overnight into tomorrow).
         let cal = Calendar.current
         let startOfDay = cal.startOfDay(for: date)
-        let sleepWindowStart = cal.date(byAdding: .hour, value: -12, to: startOfDay)!
-        let sleepWindowEnd = cal.date(byAdding: .hour, value: 12, to: startOfDay)!
+        let sleepWindowStart = cal.date(byAdding: .hour, value: -4, to: startOfDay)!   // yesterday 8 PM
+        let sleepWindowEnd   = cal.date(byAdding: .hour, value: 20, to: startOfDay)!   // today 8 PM
         let predicate = HKQuery.predicateForSamples(withStart: sleepWindowStart,
                                                     end: sleepWindowEnd,
                                                     options: .strictStartDate)

@@ -22,7 +22,7 @@ struct DashboardView: View {
             ZStack {
                 Color.somaBackground.ignoresSafeArea()
 
-                ScrollView {
+                ScrollView(.vertical) {
                     VStack(spacing: 16) {
                         if let error = viewModel.errorMessage {
                             errorBanner(error)
@@ -74,6 +74,7 @@ struct DashboardView: View {
                     .padding(.top, 8)
                 }
                 .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
                 .refreshable {
                     await viewModel.refresh(force: true)?.value
                 }

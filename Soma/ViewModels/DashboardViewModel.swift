@@ -207,8 +207,11 @@ final class DashboardViewModel: ObservableObject {
         let strainScore = StrainCalculator.score(load: strainResult.total, capacity: strainCapacity)
 
         let todayHRV = hrvValues.isEmpty ? nil : hrvValues.reduce(0, +) / Double(hrvValues.count)
+        // Use sleeping HRV for recovery — it's measured overnight and stays stable after waking.
+        // Falls back to daytime HRV average only if no sleep window was detected.
+        let recoveryHRV = sleepingHRV ?? todayHRV
         let recoveryScore = RecoveryCalculator.calculate(input: RecoveryInput(
-            todayHRV: todayHRV,
+            todayHRV: recoveryHRV,
             hrvBaseline: hrvBaseline,
             todayRestingHR: rhrValue,
             rhrBaseline: rhrBaseline,

@@ -8,6 +8,8 @@ struct TrendsView: View {
     @State private var dragDate: Date?
     // Pinned state — only ever set to non-nil, persists after finger lifts
     @State private var pinnedDate: Date?
+    // Controls the full-detail sheet (opened by long press)
+    @State private var showDetailSheet = false
 
     // Nearest pinned metrics (used for day-detail sheet & tooltips)
     private var pinnedMetrics: DailyMetrics? {
@@ -33,6 +35,7 @@ struct TrendsView: View {
                         .padding(.horizontal)
                         .onChange(of: viewModel.selectedRange) {
                             pinnedDate = nil
+                            showDetailSheet = false
                             viewModel.rangeChanged()
                         }
 
@@ -61,24 +64,37 @@ struct TrendsView: View {
             .navigationBarTitleDisplayMode(.large)
         }
         .onAppear { viewModel.load() }
-        // Swipeable sheet when user taps a data point
-        .sheet(item: $viewModel.selectedMetrics) { initial in
-            DayDetailPageView(
-                allMetrics: viewModel.metricHistory,
-                initial: initial,
-                checkInStore: CheckInStore()
-            )
+        .onChange(of: viewModel.isLoading) { _, loading in
+            guard !loading, pinnedDate == nil else { return }
+            let history = viewModel.metricHistory
+            guard !history.isEmpty else { return }
+            let today = Calendar.current.startOfDay(for: Date())
+            if let m = history.first(where: { Calendar.current.isDate($0.date, inSameDayAs: today) }) {
+                pinnedDate = m.date
+            } else {
+                pinnedDate = history.max(by: { $0.date < $1.date })?.date
+            }
+        }
+        // Full-detail sheet — opened by long press on any chart
+        .sheet(isPresented: $showDetailSheet) {
+            if let m = pinnedMetrics {
+                DayDetailPageView(
+                    allMetrics: viewModel.metricHistory,
+                    initial: m,
+                    checkInStore: CheckInStore()
+                )
+            }
         }
     }
 
     // MARK: - Selection helpers
 
-    /// Call this from every chart's chartXSelection onChange
+    /// Call this from every chart's chartXSelection onChange.
+    /// Touch only pins the date for inline tooltip — sheet opens via long press.
     private func onDragChanged(_ date: Date?) {
         dragDate = date
         if let date {
             pinnedDate = date
-            viewModel.selectDate(date)
         }
     }
 
@@ -315,7 +331,7 @@ struct TrendsView: View {
                     .foregroundColor(.primary)
                 Spacer()
                 Button {
-                    viewModel.selectedMetrics = m
+                    showDetailSheet = true
                 } label: {
                     Text("Full Detail")
                         .font(.caption)
@@ -539,6 +555,11 @@ struct TrendsView: View {
         .background(Color.somaCard)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .padding(.horizontal)
+        .onLongPressGesture(minimumDuration: 0.5) {
+            if pinnedDate != nil {
+                showDetailSheet = true
+            }
+        }
     }
 
     private func strainColor(_ score: Double) -> Color {
