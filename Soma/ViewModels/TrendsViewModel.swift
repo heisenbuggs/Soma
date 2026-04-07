@@ -26,6 +26,8 @@ final class TrendsViewModel: ObservableObject {
     @Published var metricHistory: [DailyMetrics] = []
     @Published var hrvHistory: [(Date, Double)] = []
     @Published var rhrHistory: [(Date, Double)] = []
+    @Published var vo2MaxHistory: [(Date, Double)] = []
+    @Published var vo2MaxTrend: Double? = nil   // slope in ml/kg/min per 30 days (nil < 3 pts)
     @Published var hrvBaseline: Double?
     @Published var rhrBaseline: Double?
     @Published var isLoading = false
@@ -86,6 +88,39 @@ final class TrendsViewModel: ObservableObject {
             rhrHistory = stored.filter { $0.0 >= cutoff }
             rhrBaseline = BaselineCalculator.computeRHRBaseline(from: stored)
         }
+
+        // VO2 Max — use 90-day history regardless of selected range for stable trend line.
+        let vo2Days = max(selectedRange.days, 90)
+        let allVO2 = (try? await healthKit.fetchVO2MaxHistory(days: vo2Days)) ?? []
+        let filteredVO2 = allVO2.filter { $0.0 >= cutoff }
+        if !filteredVO2.isEmpty {
+            vo2MaxHistory = filteredVO2
+        } else {
+            // Fall back to stored vo2Max snapshots
+            let stored = storedHistory.compactMap { m -> (Date, Double)? in
+                guard let v = m.vo2Max else { return nil }
+                return (m.date, v)
+            }
+            vo2MaxHistory = stored.filter { $0.0 >= cutoff }
+        }
+        vo2MaxTrend = linearSlope(allVO2.isEmpty ? vo2MaxHistory : allVO2)
+            .map { $0 * 30 }   // convert per-day slope → per-30-day slope
+    }
+
+    /// Simple ordinary-least-squares slope over (day-index, value) pairs.
+    private func linearSlope(_ points: [(Date, Double)]) -> Double? {
+        guard points.count >= 3 else { return nil }
+        let n = Double(points.count)
+        let origin = points[0].0
+        let xs = points.map { $0.0.timeIntervalSince(origin) / 86_400 }
+        let ys = points.map { $0.1 }
+        let sumX  = xs.reduce(0, +)
+        let sumY  = ys.reduce(0, +)
+        let sumXY = zip(xs, ys).map { $0 * $1 }.reduce(0, +)
+        let sumX2 = xs.map { $0 * $0 }.reduce(0, +)
+        let denom = n * sumX2 - sumX * sumX
+        guard denom != 0 else { return nil }
+        return (n * sumXY - sumX * sumY) / denom
     }
 
     func rangeChanged() {

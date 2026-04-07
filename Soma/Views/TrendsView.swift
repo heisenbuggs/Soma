@@ -48,6 +48,9 @@ struct TrendsView: View {
                             sleepChart
                             recoveryChart
                             ayurvedicSleepChart
+                            if !viewModel.vo2MaxHistory.isEmpty {
+                                vo2MaxChart
+                            }
 
                             // Persistent day-detail card
                             if let m = pinnedMetrics {
@@ -107,18 +110,28 @@ struct TrendsView: View {
     // MARK: - HRV Chart
 
     private var hrvChart: some View {
-        chartSection(title: "HRV", unit: "ms", tooltip: hrvTooltip) {
+        let baseline = viewModel.hrvBaseline
+        return chartSection(title: "HRV", unit: "ms", tooltip: hrvTooltip) {
             Chart {
                 ForEach(viewModel.hrvHistory, id: \.0) { date, value in
+                    // Mark illness-risk days (HRV < 75% of baseline) in red
+                    let isLow = baseline.map { value < $0 * 0.75 } ?? false
                     LineMark(x: .value("Date", date), y: .value("HRV", value))
                         .foregroundStyle(Color(hex: "00C853"))
                         .interpolationMethod(.catmullRom)
                     PointMark(x: .value("Date", date), y: .value("HRV", value))
-                        .foregroundStyle(Color(hex: "00C853"))
-                        .symbolSize(isNearPinned(date, in: viewModel.hrvHistory.map(\.0)) ? 80 : 30)
+                        .foregroundStyle(isLow ? Color(hex: "FF1744") : Color(hex: "00C853"))
+                        .symbolSize(isNearPinned(date, in: viewModel.hrvHistory.map(\.0)) ? 80 : (isLow ? 50 : 30))
+                        .annotation(position: .top, spacing: 2) {
+                            if isLow {
+                                Image(systemName: "exclamationmark.circle.fill")
+                                    .font(.system(size: 8))
+                                    .foregroundColor(Color(hex: "FF1744"))
+                            }
+                        }
                 }
-                if let baseline = viewModel.hrvBaseline {
-                    RuleMark(y: .value("Baseline", baseline))
+                if let b = baseline {
+                    RuleMark(y: .value("Baseline", b))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
                         .foregroundStyle(Color(hex: "8E8E93"))
                         .annotation(position: .top, alignment: .trailing) {
@@ -179,6 +192,7 @@ struct TrendsView: View {
     private var strainChart: some View {
         chartSection(title: "Strain History", unit: "/100", tooltip: strainTooltip) {
             Chart(viewModel.metricHistory) { metrics in
+                let hasWorkout = (metrics.workoutMinutes ?? 0) > 0
                 BarMark(
                     x: .value("Date", metrics.date, unit: .day),
                     y: .value("Strain", metrics.strainScore)
@@ -186,6 +200,14 @@ struct TrendsView: View {
                 .foregroundStyle(strainColor(metrics.strainScore))
                 .cornerRadius(4)
                 .opacity(pinnedDate == nil || isSelected(metrics.date) ? 1.0 : 0.45)
+                // Workout days get a small white dot marker at the bar top
+                .annotation(position: .top, alignment: .center, spacing: 1) {
+                    if hasWorkout {
+                        Circle()
+                            .fill(Color.white.opacity(0.85))
+                            .frame(width: 4, height: 4)
+                    }
+                }
             }
             .frame(height: 180)
             .chartYScale(domain: 0...100)
@@ -232,8 +254,14 @@ struct TrendsView: View {
     // MARK: - Recovery Chart
 
     private var recoveryChart: some View {
-        chartSection(title: "Recovery Trend", unit: "/100", tooltip: recoveryTooltip) {
+        // Personal-best day — only annotate if we have enough data to be meaningful
+        let bestDay = viewModel.metricHistory.count >= 4
+            ? viewModel.metricHistory.max(by: { $0.recoveryScore < $1.recoveryScore })
+            : nil
+
+        return chartSection(title: "Recovery Trend", unit: "/100", tooltip: recoveryTooltip) {
             Chart(viewModel.metricHistory) { metrics in
+                let isBest = bestDay.map { Calendar.current.isDate(metrics.date, inSameDayAs: $0.date) } ?? false
                 AreaMark(
                     x: .value("Date", metrics.date, unit: .day),
                     y: .value("Recovery", metrics.recoveryScore)
@@ -252,13 +280,20 @@ struct TrendsView: View {
                 )
                 .foregroundStyle(recoveryAreaColor(metrics.recoveryScore))
                 .interpolationMethod(.catmullRom)
-                // PointMark ensures single data points are always visible
                 PointMark(
                     x: .value("Date", metrics.date, unit: .day),
                     y: .value("Recovery", metrics.recoveryScore)
                 )
-                .foregroundStyle(recoveryAreaColor(metrics.recoveryScore))
-                .symbolSize(isSelected(metrics.date) ? 80 : 30)
+                .foregroundStyle(isBest ? Color(hex: "FFD600") : recoveryAreaColor(metrics.recoveryScore))
+                .symbolSize(isBest ? 100 : (isSelected(metrics.date) ? 80 : 30))
+                // Gold star above the personal-best point
+                .annotation(position: .top, spacing: 2) {
+                    if isBest {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 9))
+                            .foregroundColor(Color(hex: "FFD600"))
+                    }
+                }
 
                 if let sel = pinnedDate {
                     RuleMark(x: .value("Selected", sel, unit: .day))
@@ -276,6 +311,72 @@ struct TrendsView: View {
     }
 
     // MARK: - Ayurvedic Sleep Chart
+
+    // MARK: - VO2 Max Chart (2.2)
+
+    private var vo2MaxChart: some View {
+        let trendLabel: String? = viewModel.vo2MaxTrend.map { slope in
+            let formatted = String(format: "%+.2f", slope)
+            return slope > 0.1 ? "Improving \(formatted)/30d"
+                 : slope < -0.1 ? "Declining \(formatted)/30d"
+                 : "Stable \(formatted)/30d"
+        }
+        return chartSection(title: "VO2 Max", unit: "ml/kg/min", tooltip: vo2MaxTooltip) {
+            VStack(alignment: .leading, spacing: 4) {
+                if let label = trendLabel {
+                    HStack(spacing: 4) {
+                        Image(systemName: (viewModel.vo2MaxTrend ?? 0) >= 0 ? "arrow.up.right" : "arrow.down.right")
+                            .font(.caption2)
+                            .foregroundColor((viewModel.vo2MaxTrend ?? 0) >= 0 ? Color(hex: "00C853") : Color(hex: "FF9100"))
+                        Text(label)
+                            .font(.caption2)
+                            .foregroundColor((viewModel.vo2MaxTrend ?? 0) >= 0 ? Color(hex: "00C853") : Color(hex: "FF9100"))
+                    }
+                }
+                Chart {
+                    ForEach(viewModel.vo2MaxHistory, id: \.0) { date, value in
+                        LineMark(x: .value("Date", date), y: .value("VO2", value))
+                            .foregroundStyle(Color(hex: "2979FF"))
+                            .interpolationMethod(.catmullRom)
+                        PointMark(x: .value("Date", date), y: .value("VO2", value))
+                            .foregroundStyle(Color(hex: "2979FF"))
+                            .symbolSize(isNearPinned(date, in: viewModel.vo2MaxHistory.map(\.0)) ? 80 : 30)
+                    }
+                    // Linear trend overlay
+                    if let slope = viewModel.vo2MaxTrend, let first = viewModel.vo2MaxHistory.first,
+                       let last = viewModel.vo2MaxHistory.last {
+                        let firstAvg = viewModel.vo2MaxHistory.prefix(3).map(\.1).reduce(0, +) / 3
+                        let trendStart = firstAvg
+                        let days = last.0.timeIntervalSince(first.0) / 86_400
+                        let trendEnd = trendStart + slope * (days / 30)
+                        LineMark(x: .value("Date", first.0), y: .value("Trend", trendStart))
+                            .foregroundStyle(Color(hex: "FFD600").opacity(0.7))
+                            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
+                        LineMark(x: .value("Date", last.0), y: .value("Trend", trendEnd))
+                            .foregroundStyle(Color(hex: "FFD600").opacity(0.7))
+                            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
+                    }
+                    if let sel = pinnedDate {
+                        RuleMark(x: .value("Selected", sel))
+                            .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
+                            .foregroundStyle(Color.white.opacity(0.6))
+                    }
+                }
+                .frame(height: 180)
+                .chartXAxis { chartXAxis() }
+                .chartYAxis { AxisMarks(position: .leading) }
+                .chartXSelection(value: $dragDate)
+                .onChange(of: dragDate) { _, d in onDragChanged(d) }
+            }
+        }
+    }
+
+    private var vo2MaxTooltip: String? {
+        guard let pinned = pinnedDate else { return nil }
+        guard let entry = viewModel.vo2MaxHistory.min(by: { abs($0.0.timeIntervalSince(pinned)) < abs($1.0.timeIntervalSince(pinned)) }) else { return nil }
+        let dateStr = entry.0.formatted(.dateTime.month(.abbreviated).day())
+        return "\(dateStr) · \(String(format: "%.1f ml/kg/min", entry.1))"
+    }
 
     private var ayurvedicSleepData: [(Date, Double)] {
         viewModel.metricHistory.compactMap { m in

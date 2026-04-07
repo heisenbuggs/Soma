@@ -3,6 +3,7 @@ import SwiftUI
 struct CheckInView: View {
     @ObservedObject var viewModel: CheckInViewModel
     @Environment(\.dismiss) private var dismiss
+    @State private var saveAnimating = false
 
     var body: some View {
         NavigationStack {
@@ -86,7 +87,12 @@ struct CheckInView: View {
             }
         }
         .onChange(of: viewModel.didSave) { _, saved in
-            if saved { dismiss() }
+            if saved {
+                // Brief pause so the checkmark is visible before dismissing
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                    dismiss()
+                }
+            }
         }
     }
 
@@ -171,11 +177,23 @@ struct CheckInView: View {
 
     private var saveButton: some View {
         Button {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
+                saveAnimating = true
+            }
             viewModel.save()
         } label: {
-            HStack {
+            HStack(spacing: 8) {
                 if viewModel.isSaving {
                     ProgressView().tint(.black).scaleEffect(0.8)
+                } else if saveAnimating && !viewModel.isSaving {
+                    Image(systemName: "checkmark")
+                        .font(.headline.weight(.bold))
+                        .foregroundColor(.black)
+                        .transition(.scale.combined(with: .opacity))
+                    Text("Saved!")
+                        .font(.headline)
+                        .foregroundColor(.black)
+                        .transition(.opacity)
                 } else {
                     Text("Save Check-In")
                         .font(.headline)
@@ -184,8 +202,10 @@ struct CheckInView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(Color.white)
+            .background(saveAnimating && !viewModel.isSaving ? Color(hex: "00C853") : Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .scaleEffect(saveAnimating ? 0.97 : 1.0)
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: saveAnimating)
         }
         .disabled(viewModel.isSaving)
         .padding(.horizontal)
@@ -213,13 +233,15 @@ struct CheckInView: View {
 
     private func toggleRow(icon: String, label: String, color: Color, binding: Binding<Bool>) -> some View {
         HStack(spacing: 12) {
-            Image(systemName: icon)
+            Image(systemName: binding.wrappedValue ? "\(icon)" : icon)
                 .font(.body)
-                .foregroundColor(color)
+                .foregroundColor(binding.wrappedValue ? color : color.opacity(0.6))
                 .frame(width: 28)
+                .scaleEffect(binding.wrappedValue ? 1.1 : 1.0)
+                .animation(.spring(response: 0.25, dampingFraction: 0.65), value: binding.wrappedValue)
             Text(label)
                 .font(.subheadline)
-                .foregroundColor(.primary)
+                .foregroundColor(binding.wrappedValue ? .primary : .primary.opacity(0.8))
             Spacer()
             Toggle("", isOn: binding)
                 .labelsHidden()
@@ -227,6 +249,10 @@ struct CheckInView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
+        .background(
+            binding.wrappedValue ? color.opacity(0.06) : Color.clear
+        )
+        .animation(.easeInOut(duration: 0.2), value: binding.wrappedValue)
     }
 
     private var stressColor: Color {

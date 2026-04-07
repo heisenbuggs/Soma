@@ -1,5 +1,20 @@
 import Foundation
 
+/// Per-workout HR zone breakdown, stored as part of DailyMetrics.
+/// Used to render a stacked zone bar chart in the Strain detail view.
+struct WorkoutZoneBreakdown: Codable, Identifiable {
+    var id: UUID = UUID()
+    let activityName: String
+    let totalStrain: Double
+    var z1Minutes: Double = 0   // Zone 1 (Warm Up) — no load contribution
+    var z2Minutes: Double = 0   // Zone 2 (Fat Burn)
+    var z3Minutes: Double = 0   // Zone 3 (Aerobic)
+    var z4Minutes: Double = 0   // Zone 4 (Anaerobic)
+    var z5Minutes: Double = 0   // Zone 5 (Max)
+
+    var totalZoneMinutes: Double { z1Minutes + z2Minutes + z3Minutes + z4Minutes + z5Minutes }
+}
+
 struct DailyMetrics: Identifiable, Codable {
     let id: UUID
     let date: Date
@@ -45,6 +60,43 @@ struct DailyMetrics: Identifiable, Codable {
     var napStartTime: Date?
     var napEndTime: Date?
 
+    // MARK: - New fields (Priority 2/3 features)
+
+    /// Nightly wrist temperature deviation from personal baseline (°C). Apple Watch Series 8+ / Ultra only.
+    /// Positive = above baseline (illness signal). Nil on unsupported hardware or older iOS.
+    var wristTempDeviation: Double?
+
+    /// Number of Apple Stand hours credited for the day (0–24). Measures incidental movement quality.
+    var standHours: Int?
+
+    /// Average heart rate during casual walking (bpm). Lower values indicate better cardiovascular efficiency.
+    var walkingHRAverage: Double?
+
+    /// Total mindful session minutes logged via the Mindfulness app or compatible apps.
+    var mindfulMinutes: Double?
+
+    /// Sleep consistency score (0–100): how stable bedtime and wake time are over the past 7 nights.
+    /// Computed from standard deviation of sleep start/end times across the rolling window.
+    var sleepConsistencyScore: Double?
+
+    /// Evening stress score (0–100), computed from HR and HRV samples in the 8 PM – 11 PM window.
+    /// Complements the daytime stress score (8 AM – 8 PM) to capture pre-sleep autonomic state.
+    var eveningStressScore: Double?
+
+    /// First-class stored readiness score (0–100). Promotes readiness from a derived training-guidance
+    /// value to a persistent metric that can be trended, charted, and shown in widgets.
+    var readinessScore: Double?
+
+    /// VO2 Max trend: slope in ml/kg/min per 30-day period derived from rolling history.
+    /// Positive = fitness improving, negative = declining.
+    var vo2MaxTrend: Double?
+
+    /// Per-workout HR zone breakdown for the day. Nil when no workouts were logged.
+    var workoutZoneDetails: [WorkoutZoneBreakdown]?
+
+    /// Combined movement quality score (0–100): step count + stand hours + walking HR efficiency.
+    var movementScore: Double?
+
     init(
         id: UUID = UUID(),
         date: Date,
@@ -74,7 +126,17 @@ struct DailyMetrics: Identifiable, Codable {
         ayurvedicSleepPoints: Double? = nil,
         napDurationMinutes: Double? = nil,
         napStartTime: Date? = nil,
-        napEndTime: Date? = nil
+        napEndTime: Date? = nil,
+        wristTempDeviation: Double? = nil,
+        standHours: Int? = nil,
+        walkingHRAverage: Double? = nil,
+        mindfulMinutes: Double? = nil,
+        sleepConsistencyScore: Double? = nil,
+        eveningStressScore: Double? = nil,
+        readinessScore: Double? = nil,
+        vo2MaxTrend: Double? = nil,
+        workoutZoneDetails: [WorkoutZoneBreakdown]? = nil,
+        movementScore: Double? = nil
     ) {
         self.id = id
         self.date = date
@@ -105,6 +167,16 @@ struct DailyMetrics: Identifiable, Codable {
         self.napDurationMinutes = napDurationMinutes
         self.napStartTime = napStartTime
         self.napEndTime = napEndTime
+        self.wristTempDeviation = wristTempDeviation
+        self.standHours = standHours
+        self.walkingHRAverage = walkingHRAverage
+        self.mindfulMinutes = mindfulMinutes
+        self.sleepConsistencyScore = sleepConsistencyScore
+        self.eveningStressScore = eveningStressScore
+        self.readinessScore = readinessScore
+        self.vo2MaxTrend = vo2MaxTrend
+        self.workoutZoneDetails = workoutZoneDetails
+        self.movementScore = movementScore
     }
 }
 

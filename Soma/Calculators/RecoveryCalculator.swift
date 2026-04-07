@@ -7,6 +7,7 @@ struct RecoveryInput {
     var rhrBaseline: Double?
     var sleepScore: Double        // 0–100
     var yesterdayStrain: Double   // 0–21
+    var acr: Double? = nil        // Acute-to-Chronic Ratio; penalty applied when > 1.3
 }
 
 struct RecoveryCalculator {
@@ -18,7 +19,16 @@ struct RecoveryCalculator {
         let sleep = clamp(input.sleepScore, 0, 100)
         let strainRecovery = clamp((1.0 - input.yesterdayStrain / 21.0), 0, 1) * 100
 
-        let recovery = 0.40 * hrv + 0.25 * rhr + 0.25 * sleep + 0.10 * strainRecovery
+        var recovery = 0.40 * hrv + 0.25 * rhr + 0.25 * sleep + 0.10 * strainRecovery
+
+        // ACR penalty: when Acute-to-Chronic Ratio > 1.3, apply up to -10 pts
+        // Excess capped at 0.7 (ratio 1.3→2.0) maps linearly to 0→10 point deduction.
+        if let acr = input.acr, acr > 1.3 {
+            let excess  = min(acr - 1.3, 0.7)
+            let penalty = (excess / 0.7) * 10.0
+            recovery -= penalty
+        }
+
         return clamp(recovery, 0, 100)
     }
 

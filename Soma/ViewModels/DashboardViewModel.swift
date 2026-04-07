@@ -92,6 +92,7 @@ final class DashboardViewModel: ObservableObject {
 
             let guidance = computeGuidance(for: metrics)
             trainingGuidance = guidance
+            store.setWidgetTrainingLabel(guidance.activityLevel.shortTitle)
 
             NotificationScheduler.shared.scheduleRecoveryNotification(metrics: metrics, guidance: guidance, settings: settings)
 
@@ -121,12 +122,20 @@ final class DashboardViewModel: ObservableObject {
         async let exerciseMin = healthKit.fetchExerciseMinutes(for: date)
         async let hrvHistory = healthKit.fetchHRVHistory(days: 30)
         async let rhrHistory = healthKit.fetchRestingHRHistory(days: 30)
+        // Priority 2 data sources
+        async let standHoursFetch      = healthKit.fetchStandHours(for: date)
+        async let walkingHRFetch       = healthKit.fetchWalkingHRAverage(for: date)
+        async let mindfulMinutesFetch  = healthKit.fetchMindfulMinutes(for: date)
+        async let wristTempFetch       = healthKit.fetchWristTemperature(for: date)
 
         let (hrvValues, rhrValue, hrData, sleepData, activeCalories, stepCount,
-             vo2Max, respRateVal, bloodOxygen, exerciseMinutes, hrvHist, rhrHist) = try await (
+             vo2Max, respRateVal, bloodOxygen, exerciseMinutes, hrvHist, rhrHist,
+             standHoursVal, walkingHRVal, mindfulMinsVal) = try await (
                 hrv, rhr, hrSamples, sleepFetch, calories, steps, vo2, respRate,
-                bloodOx, exerciseMin, hrvHistory, rhrHistory
+                bloodOx, exerciseMin, hrvHistory, rhrHistory,
+                standHoursFetch, walkingHRFetch, mindfulMinutesFetch
              )
+        let wristTempVal = try? await wristTempFetch
 
         // Fetch workouts independently so a failure here doesn't zero out all scores
         let fetchedWorkouts = (try? await healthKit.fetchWorkouts(for: date)) ?? []
@@ -210,21 +219,45 @@ final class DashboardViewModel: ObservableObject {
         // Use sleeping HRV for recovery — it's measured overnight and stays stable after waking.
         // Falls back to daytime HRV average only if no sleep window was detected.
         let recoveryHRV = sleepingHRV ?? todayHRV
+
+        // ACR: compute before recovery so penalty can feed into RecoveryCalculator
+        let acrHistory = store.loadLast(28)
+        let acr = TrainingGuidanceEngine.acrRatio(history: acrHistory)
+
         let recoveryScore = RecoveryCalculator.calculate(input: RecoveryInput(
             todayHRV: recoveryHRV,
             hrvBaseline: hrvBaseline,
             todayRestingHR: rhrValue,
             rhrBaseline: rhrBaseline,
             sleepScore: sleepScore,
-            yesterdayStrain: yesterdayStrain_0_21
+            yesterdayStrain: yesterdayStrain_0_21,
+            acr: acr
         ))
 
-        // Stress
+        // Daytime stress (8AM – 8PM) + mindful minutes bonus
+        // If HealthKit has no mindful session data but the manual Check-In shows "Meditated",
+        // use a conservative 15-min proxy so the feedback loop closes even without a mindfulness app.
+        let todayCheckIn = checkInStore.loadAll().first {
+            Calendar.current.isDateInToday($0.date) || Calendar.current.isDateInYesterday($0.date)
+        }
+        let effectiveMindfulMins: Double? = {
+            if mindfulMinsVal > 0 { return mindfulMinsVal }
+            if todayCheckIn?.meditated == true { return 15 }
+            return nil
+        }()
         let daytimeSamples = StressCalculator.filterDaytime(hrData, on: date)
         let stressScore = StressCalculator.calculate(
             daytimeHRV: todayHRV,
             daytimeAvgHR: StressCalculator.average(daytimeSamples),
             hrvBaseline: hrvBaseline,
+            rhrBaseline: rhrBaseline,
+            mindfulMinutes: effectiveMindfulMins
+        )
+
+        // Evening stress (8PM – 11PM) — HR elevation only since HRV isn't windowed separately
+        let eveningSamples   = StressCalculator.filterEvening(hrData, on: date)
+        let eveningStressScore = StressCalculator.calculateEveningStress(
+            eveningAvgHR: StressCalculator.average(eveningSamples),
             rhrBaseline: rhrBaseline
         )
 
@@ -237,6 +270,37 @@ final class DashboardViewModel: ObservableObject {
                 eveningDate: eveningDate
             )
         }()
+
+        // Sleep consistency score — stddev of sleep start/end times across prior 7 stored days
+        let consistencyWindow = last30
+            .filter { Calendar.current.startOfDay(for: $0.date) < Calendar.current.startOfDay(for: date) }
+            .sorted { $0.date < $1.date }
+            .suffix(7)
+        let sleepConsistencyScore = SleepConsistencyCalculator.calculate(
+            startTimes: Array(consistencyWindow).map { $0.sleepStartTime },
+            endTimes:   Array(consistencyWindow).map { $0.sleepEndTime }
+        )
+
+        // Per-workout HR zone breakdown (2.4)
+        let workoutZoneDetails: [WorkoutZoneBreakdown]? = strainResult.details.isEmpty ? nil :
+            strainResult.details.map { d in
+                WorkoutZoneBreakdown(
+                    activityName: d.activityName,
+                    totalStrain: d.strain,
+                    z1Minutes: d.zoneMinutes[.zone1] ?? 0,
+                    z2Minutes: d.zoneMinutes[.zone2] ?? 0,
+                    z3Minutes: d.zoneMinutes[.zone3] ?? 0,
+                    z4Minutes: d.zoneMinutes[.zone4] ?? 0,
+                    z5Minutes: d.zoneMinutes[.zone5] ?? 0
+                )
+            }
+
+        // Movement score (2.5): stand hours + steps + walking HR efficiency
+        let movementScore = MovementScoreCalculator.calculate(
+            standHours:       standHoursVal > 0 ? standHoursVal : nil,
+            stepCount:        stepCount > 0 ? stepCount : nil,
+            walkingHRAverage: walkingHRVal
+        )
 
         return DailyMetrics(
             date: date,
@@ -266,7 +330,15 @@ final class DashboardViewModel: ObservableObject {
             ayurvedicSleepPoints: ayurvedicPoints,
             napDurationMinutes: sleepData.napDurationSeconds > 0 ? sleepData.napDurationSeconds / 60.0 : nil,
             napStartTime: sleepData.napStartTime,
-            napEndTime: sleepData.napEndTime
+            napEndTime: sleepData.napEndTime,
+            eveningStressScore: eveningStressScore,
+            sleepConsistencyScore: sleepConsistencyScore,
+            wristTempDeviation: wristTempVal,
+            standHours: standHoursVal > 0 ? standHoursVal : nil,
+            walkingHRAverage: walkingHRVal,
+            mindfulMinutes: mindfulMinsVal > 0 ? mindfulMinsVal : nil,
+            workoutZoneDetails: workoutZoneDetails,
+            movementScore: movementScore
         )
     }
 

@@ -12,12 +12,21 @@ struct StressCalculator {
         daytimeHRV: Double?,
         daytimeAvgHR: Double?,
         hrvBaseline: Double?,
-        rhrBaseline: Double?
+        rhrBaseline: Double?,
+        mindfulMinutes: Double? = nil
     ) -> Double {
         let hrvSuppression = computeHRVSuppression(daytimeHRV: daytimeHRV, baseline: hrvBaseline)
         let hrElevation = computeHRElevation(daytimeAvgHR: daytimeAvgHR, rhrBaseline: rhrBaseline)
 
-        let stress = (0.6 * hrvSuppression + 0.4 * hrElevation) * 100
+        var stress = (0.6 * hrvSuppression + 0.4 * hrElevation) * 100
+
+        // Mindful minutes bonus: 10–60 min maps linearly to up to -5 pts.
+        // Encourages meditation by creating a visible feedback loop.
+        if let mins = mindfulMinutes, mins >= 10 {
+            let bonus = min((mins - 10) / 50.0, 1.0) * 5.0  // 0→5 across 10→60 min
+            stress -= bonus
+        }
+
         return BaselineCalculator.clamp(stress, min: 0, max: 100)
     }
 
@@ -45,6 +54,29 @@ extension StressCalculator {
               let eightPM = cal.date(bySettingHour: 20, minute: 0, second: 0, of: startOfDay)
         else { return [] }
         return samples.filter { $0.0 >= eightAM && $0.0 <= eightPM }
+    }
+
+    /// Filters heart rate samples to the evening pre-sleep window (8PM – 11PM).
+    /// Used to detect elevated autonomic arousal before bed, which can impair sleep quality.
+    static func filterEvening(_ samples: [(Date, Double)], on date: Date) -> [(Date, Double)] {
+        let cal = Calendar.current
+        let startOfDay = cal.startOfDay(for: date)
+        guard let eightPM  = cal.date(bySettingHour: 20, minute: 0, second: 0, of: startOfDay),
+              let elevenPM = cal.date(bySettingHour: 23, minute: 0, second: 0, of: startOfDay)
+        else { return [] }
+        return samples.filter { $0.0 >= eightPM && $0.0 <= elevenPM }
+    }
+
+    /// Computes an evening stress score (0–100) based solely on HR elevation above the resting baseline.
+    /// Used for the 8PM–11PM window where separate HRV data is not available.
+    /// Returns nil when there are no evening HR samples.
+    static func calculateEveningStress(
+        eveningAvgHR: Double?,
+        rhrBaseline: Double?
+    ) -> Double? {
+        guard let hr = eveningAvgHR else { return nil }
+        let elevation = computeHRElevation(daytimeAvgHR: hr, rhrBaseline: rhrBaseline)
+        return BaselineCalculator.clamp(elevation * 100, min: 0, max: 100)
     }
 
     static func average(_ samples: [(Date, Double)]) -> Double? {

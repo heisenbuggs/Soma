@@ -14,6 +14,8 @@ extension StrainCalculator {
         let id = UUID()
         let activityName: String
         let strain: Double  // raw StrainLoad for this workout
+        /// Zone minutes within this workout window. Key = zone, value = minutes.
+        let zoneMinutes: [HeartRateZone: Double]
     }
 
     struct WorkoutStrainResult {
@@ -155,7 +157,8 @@ struct StrainCalculator {
         var totalLoad = 0.0
         var wLoad     = 0.0
         var iLoad     = 0.0
-        var detailLoads = [Int: Double]()  // workoutIntervals index → load
+        var detailLoads = [Int: Double]()                     // workoutIntervals index → load
+        var detailZones = [Int: [HeartRateZone: Double]]()    // workoutIntervals index → zone minutes
 
         for i in 1..<allSamples.count {
             let (prevTime, prevHR) = allSamples[i - 1]
@@ -178,6 +181,7 @@ struct StrainCalculator {
             if let idx = workoutIntervals.firstIndex(where: { midpoint >= $0.start && midpoint <= $0.end }) {
                 wLoad += intervalLoad
                 detailLoads[idx, default: 0] += intervalLoad
+                detailZones[idx, default: [:]][zone, default: 0] += minutes
             } else {
                 iLoad += intervalLoad
             }
@@ -186,7 +190,11 @@ struct StrainCalculator {
         let details: [WorkoutStrainDetail] = workoutIntervals.enumerated().compactMap { idx, interval in
             let load = detailLoads[idx] ?? 0
             guard load > 0.5 else { return nil }
-            return WorkoutStrainDetail(activityName: interval.activityName, strain: load)
+            return WorkoutStrainDetail(
+                activityName: interval.activityName,
+                strain: load,
+                zoneMinutes: detailZones[idx] ?? [:]
+            )
         }
 
         return WorkoutStrainResult(total: totalLoad,

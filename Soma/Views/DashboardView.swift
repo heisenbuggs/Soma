@@ -168,6 +168,12 @@ struct DashboardView: View {
                     Text(AyurvedicSleepCalculator.guidanceText(for: score))
                         .font(.caption)
                         .foregroundColor(.secondary)
+                    if let start = viewModel.todayMetrics.sleepStartTime,
+                       let end   = viewModel.todayMetrics.sleepEndTime {
+                        Text("Slept \(start.formatted(.dateTime.hour().minute())) · Woke \(end.formatted(.dateTime.hour().minute()))")
+                            .font(.caption2)
+                            .foregroundColor(Color(hex: "8E8E93"))
+                    }
                 }
                 Spacer()
                 if points != nil {
@@ -282,10 +288,20 @@ struct DashboardView: View {
                 score: metric.score(from: viewModel.todayMetrics),
                 maxScore: 100,
                 state: metric.state(from: viewModel.todayMetrics),
-                sparklineValues: viewModel.sparklineData[metric.rawValue] ?? []
+                sparklineValues: viewModel.sparklineData[metric.rawValue] ?? [],
+                weekDelta: weekDelta(for: metric)
             )
         }
         .buttonStyle(.plain)
+    }
+
+    /// Change vs. prior 6-day average for a given metric's sparkline data.
+    private func weekDelta(for metric: DashboardMetric) -> Double? {
+        let values = viewModel.sparklineData[metric.rawValue] ?? []
+        guard values.count >= 2 else { return nil }
+        let prior = Array(values.dropLast())
+        let avg   = prior.reduce(0, +) / Double(prior.count)
+        return values.last.map { $0 - avg }
     }
 
     // MARK: - Subviews
@@ -462,6 +478,20 @@ struct DashboardView: View {
                         icon: "figure.strengthtraining.traditional",
                         value: String(format: "%.0f min", exercise),
                         label: "Activity"
+                    )
+                }
+                if let movement = viewModel.todayMetrics.movementScore {
+                    quickStat(
+                        icon: "figure.walk.motion",
+                        value: String(format: "%.0f", movement),
+                        label: "Movement"
+                    )
+                }
+                if let standH = viewModel.todayMetrics.standHours {
+                    quickStat(
+                        icon: "figure.stand",
+                        value: "\(standH)h",
+                        label: "Stand"
                     )
                 }
             }

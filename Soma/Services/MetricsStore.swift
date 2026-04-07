@@ -3,12 +3,24 @@ import WidgetKit
 
 // MARK: - Widget snapshot (mirrored in SomaWidgets.swift)
 
+/// Direction a score is trending vs. the prior 6-day average.
+enum TrendDirection: String, Codable {
+    case up, flat, down
+}
+
 struct WidgetMetricsSnapshot: Codable {
     let recoveryScore: Double
     let strainScore: Double
     let sleepScore: Double
     let stressScore: Double
     let date: Date
+    // Trend arrows — optional so existing snapshots decode without these keys.
+    var recoveryTrend: TrendDirection? = nil
+    var strainTrend: TrendDirection? = nil
+    var sleepTrend: TrendDirection? = nil
+    var stressTrend: TrendDirection? = nil
+    /// Short label for today's training guidance level, e.g. "Active Recovery", "Hard".
+    var trainingLevelLabel: String? = nil
 }
 
 // MARK: - MetricsStore (UserDefaults + Codable)
@@ -45,7 +57,7 @@ final class MetricsStore: ObservableObject {
         all.sort { $0.date < $1.date }
         persist(all)
         cachedMetrics = all
-        persistWidgetSnapshot(metrics)
+        persistWidgetSnapshot(metrics, history: all)
     }
 
     // MARK: - Load
@@ -90,18 +102,49 @@ final class MetricsStore: ObservableObject {
         }
     }
 
+    /// Writes today's training guidance level label into the existing widget snapshot.
+    /// Call this after `save(_:)` once training guidance has been computed.
+    func setWidgetTrainingLabel(_ label: String) {
+        guard let data = defaults.data(forKey: widgetKey),
+              var snapshot = try? JSONDecoder().decode(WidgetMetricsSnapshot.self, from: data)
+        else { return }
+        snapshot.trainingLevelLabel = label
+        if let newData = try? JSONEncoder().encode(snapshot) {
+            defaults.set(newData, forKey: widgetKey)
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+    }
+
     /// Writes a lightweight snapshot so widgets can display scores without HealthKit access.
-    private func persistWidgetSnapshot(_ metrics: DailyMetrics) {
+    /// Includes 7-day trend directions computed from stored history.
+    private func persistWidgetSnapshot(_ metrics: DailyMetrics, history: [DailyMetrics]) {
+        let recent = history.sorted { $0.date < $1.date }.suffix(7)
         let snapshot = WidgetMetricsSnapshot(
             recoveryScore: metrics.recoveryScore,
             strainScore:   metrics.strainScore,
             sleepScore:    metrics.sleepScore,
             stressScore:   metrics.stressScore,
-            date:          metrics.date
+            date:          metrics.date,
+            recoveryTrend: trend(for: recent.map { $0.recoveryScore }),
+            strainTrend:   trend(for: recent.map { $0.strainScore }),
+            sleepTrend:    trend(for: recent.map { $0.sleepScore }),
+            stressTrend:   trend(for: recent.map { $0.stressScore })
         )
         if let data = try? JSONEncoder().encode(snapshot) {
             defaults.set(data, forKey: widgetKey)
         }
         WidgetCenter.shared.reloadAllTimelines()
+    }
+
+    /// Returns trend direction by comparing the last value against the prior 6-day average.
+    /// Threshold of ±2 points avoids noise on stable scores.
+    private func trend(for values: [Double]) -> TrendDirection? {
+        guard values.count >= 2 else { return nil }
+        let prior = Array(values.dropLast())
+        let avg   = prior.reduce(0, +) / Double(prior.count)
+        let delta = (values.last ?? 0) - avg
+        if delta > 2  { return .up }
+        if delta < -2 { return .down }
+        return .flat
     }
 }

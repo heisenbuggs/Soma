@@ -15,19 +15,49 @@ struct AyurvedicSleepDetailView: View {
     @State private var selectedRange: TrendsViewModel.TimeRange = .twoWeeks
     @State private var selectedDate: Date?
 
+    // MARK: - Selected-date helpers
+    // When the user taps a date in the history chart, these drive the timeline/breakdown cards.
+
+    private var displayedMetrics: DailyMetrics? {
+        guard let sel = selectedDate else { return nil }
+        return history.min { abs($0.date.timeIntervalSince(sel)) < abs($1.date.timeIntervalSince(sel)) }
+    }
+
+    private var displayedScore: Double {
+        displayedMetrics?.ayurvedicSleepPoints ?? score
+    }
+
+    private var displayedSleepStart: Date? {
+        displayedMetrics?.sleepStartTime ?? sleepStart
+    }
+
+    private var displayedSleepEnd: Date? {
+        displayedMetrics?.sleepEndTime ?? sleepEnd
+    }
+
+    private var displayedEveningDate: Date {
+        guard let m = displayedMetrics else { return eveningDate }
+        return Calendar.current.date(byAdding: .day, value: -1, to: m.date) ?? eveningDate
+    }
+
+    private var displayedDateLabel: String? {
+        guard let m = displayedMetrics else { return nil }
+        return Calendar.current.isDateInToday(m.date) ? nil : m.date.formatted(.dateTime.month(.abbreviated).day())
+    }
+
     private var scoreColor: Color {
-        Color(hex: AyurvedicSleepCalculator.guidanceHex(for: score))
+        Color(hex: AyurvedicSleepCalculator.guidanceHex(for: displayedScore))
     }
 
     private var breakdown: [AyurvedicSleepCalculator.WindowBreakdown] {
-        guard let s = sleepStart, let e = sleepEnd else { return [] }
-        return AyurvedicSleepCalculator.breakdown(start: s, end: e, eveningDate: eveningDate)
+        guard let s = displayedSleepStart, let e = displayedSleepEnd else { return [] }
+        return AyurvedicSleepCalculator.breakdown(start: s, end: e, eveningDate: displayedEveningDate)
     }
 
     private var tip: String? {
-        guard let s = sleepStart, let e = sleepEnd else { return nil }
+        guard let s = displayedSleepStart, let e = displayedSleepEnd else { return nil }
         return AyurvedicSleepCalculator.improvementTip(
-            sleepStart: s, sleepEnd: e, currentScore: score, eveningDate: eveningDate
+            sleepStart: s, sleepEnd: e, currentScore: displayedScore, eveningDate: displayedEveningDate
         )
     }
 
@@ -83,15 +113,20 @@ struct AyurvedicSleepDetailView: View {
 
     private var scoreCard: some View {
         VStack(spacing: 6) {
+            if let label = displayedDateLabel {
+                Text(label)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
             HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text(String(format: "%.1f", score))
+                Text(String(format: "%.1f", displayedScore))
                     .font(.system(size: 56, weight: .bold, design: .rounded))
                     .foregroundColor(scoreColor)
                 Text("/ 10")
                     .font(.title2)
                     .foregroundColor(.secondary)
             }
-            Text(AyurvedicSleepCalculator.guidanceText(for: score))
+            Text(AyurvedicSleepCalculator.guidanceText(for: displayedScore))
                 .font(.subheadline)
                 .foregroundColor(.secondary)
         }
@@ -188,11 +223,19 @@ struct AyurvedicSleepDetailView: View {
 
     private var timelineCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Sleep Timeline")
-                .font(.headline)
-                .foregroundColor(.primary)
+            HStack {
+                Text("Sleep Timeline")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                if let label = displayedDateLabel {
+                    Spacer()
+                    Text(label)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
 
-            SleepTimelineView(sleepStart: sleepStart, sleepEnd: sleepEnd, eveningDate: eveningDate)
+            SleepTimelineView(sleepStart: displayedSleepStart, sleepEnd: displayedSleepEnd, eveningDate: displayedEveningDate)
                 .frame(height: 72)
         }
         .padding(14)
@@ -204,9 +247,17 @@ struct AyurvedicSleepDetailView: View {
 
     private var breakdownCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Window Breakdown")
-                .font(.headline)
-                .foregroundColor(.primary)
+            HStack {
+                Text("Window Breakdown")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                if let label = displayedDateLabel {
+                    Spacer()
+                    Text(label)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
 
             ForEach(breakdown.indices, id: \.self) { i in
                 let w = breakdown[i]

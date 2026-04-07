@@ -207,6 +207,17 @@ final class InsightsViewModel: ObservableObject {
             }
         }
 
+        // Wrist temperature illness signal (2.1) — Series 8+/Ultra only, iOS 17+
+        if let tempDev = today.wristTempDeviation, tempDev > 0.5 {
+            let formatted = String(format: "+%.1f°C", tempDev)
+            results.append(Insight(
+                icon: "thermometer.medium",
+                title: "Elevated Wrist Temp",
+                description: "Sleeping wrist temperature is \(formatted) above your baseline — a possible early illness signal. Consider rest and hydration.",
+                priority: .high
+            ))
+        }
+
         // High stress
         if today.stressScore > 60 {
             results.append(Insight(

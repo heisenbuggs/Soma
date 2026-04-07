@@ -9,12 +9,23 @@ import WidgetKit
 import SwiftUI
 
 // MARK: - Widget snapshot (mirrored from Soma app)
+
+/// Mirrored from MetricsStore.swift — keep in sync.
+enum TrendDirection: String, Codable {
+    case up, flat, down
+}
+
 struct WidgetMetricsSnapshot: Codable {
     let recoveryScore: Double
     let strainScore: Double
     let sleepScore: Double
     let stressScore: Double
     let date: Date
+    var recoveryTrend: TrendDirection? = nil
+    var strainTrend: TrendDirection? = nil
+    var sleepTrend: TrendDirection? = nil
+    var stressTrend: TrendDirection? = nil
+    var trainingLevelLabel: String? = nil
 }
 
 // MARK: - ColorState (mirrored from Soma app)
@@ -249,7 +260,17 @@ struct SmallWidgetView: View {
             }
             
             Spacer()
-            
+
+            if let label = metrics.trainingLevelLabel {
+                HStack {
+                    Text(label)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                    Spacer()
+                }
+            }
+
             // Other metrics summary
             HStack(spacing: 8) {
                 MetricDot(score: metrics.strainScore, color: ColorState.strain(score: metrics.strainScore).color)
@@ -265,31 +286,32 @@ struct SmallWidgetView: View {
 // MARK: - Medium Widget (4x2)
 struct MediumWidgetView: View {
     let metrics: WidgetMetricsSnapshot
-    
+
     var body: some View {
         HStack(spacing: 12) {
             MetricCard(
                 title: "Recovery",
                 score: metrics.recoveryScore,
-                colorState: ColorState.recovery(score: metrics.recoveryScore)
+                colorState: ColorState.recovery(score: metrics.recoveryScore),
+                trend: metrics.recoveryTrend
             )
-            
             MetricCard(
                 title: "Strain",
                 score: metrics.strainScore,
-                colorState: ColorState.strain(score: metrics.strainScore)
+                colorState: ColorState.strain(score: metrics.strainScore),
+                trend: metrics.strainTrend
             )
-            
             MetricCard(
                 title: "Sleep",
                 score: metrics.sleepScore,
-                colorState: ColorState.sleep(score: metrics.sleepScore)
+                colorState: ColorState.sleep(score: metrics.sleepScore),
+                trend: metrics.sleepTrend
             )
-            
             MetricCard(
                 title: "Stress",
                 score: metrics.stressScore,
-                colorState: ColorState.stress(score: metrics.stressScore)
+                colorState: ColorState.stress(score: metrics.stressScore),
+                trend: metrics.stressTrend
             )
         }
         .padding(12)
@@ -317,29 +339,31 @@ struct LargeWidgetView: View {
                     title: "Recovery",
                     score: metrics.recoveryScore,
                     colorState: ColorState.recovery(score: metrics.recoveryScore),
+                    trend: metrics.recoveryTrend,
                     showLabel: true
                 )
-                
                 MetricCard(
                     title: "Strain",
                     score: metrics.strainScore,
                     colorState: ColorState.strain(score: metrics.strainScore),
+                    trend: metrics.strainTrend,
                     showLabel: true
                 )
             }
-            
+
             HStack(spacing: 12) {
                 MetricCard(
                     title: "Sleep",
                     score: metrics.sleepScore,
                     colorState: ColorState.sleep(score: metrics.sleepScore),
+                    trend: metrics.sleepTrend,
                     showLabel: true
                 )
-                
                 MetricCard(
                     title: "Stress",
                     score: metrics.stressScore,
                     colorState: ColorState.stress(score: metrics.stressScore),
+                    trend: metrics.stressTrend,
                     showLabel: true
                 )
             }
@@ -353,27 +377,36 @@ struct MetricCard: View {
     let title: String
     let score: Double
     let colorState: ColorState
+    var trend: TrendDirection? = nil
     let showLabel: Bool
-    
-    init(title: String, score: Double, colorState: ColorState, showLabel: Bool = false) {
+
+    init(title: String, score: Double, colorState: ColorState, trend: TrendDirection? = nil, showLabel: Bool = false) {
         self.title = title
         self.score = score
         self.colorState = colorState
+        self.trend = trend
         self.showLabel = showLabel
     }
-    
+
     var body: some View {
         VStack(spacing: 4) {
             Text(title)
                 .font(.caption)
                 .fontWeight(.medium)
                 .foregroundColor(.secondary)
-            
-            Text("\(Int(score))")
-                .font(.title2)
-                .fontWeight(.bold)
-                .foregroundColor(colorState.color)
-            
+
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text("\(Int(score))")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(colorState.color)
+                if let t = trend, t != .flat {
+                    Image(systemName: t == .up ? "arrow.up" : "arrow.down")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(t == .up ? Color(hex: "00C853") : Color(hex: "FF9100"))
+                }
+            }
+
             if showLabel {
                 Text(colorState.label)
                     .font(.caption2)

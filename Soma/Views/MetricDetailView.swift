@@ -144,6 +144,18 @@ struct MetricInsightGenerator {
         return (obs, acts)
     }
 
+    static func acrDescription(history: [DailyMetrics]) -> String? {
+        let acr = TrainingGuidanceEngine.acrRatio(history: history)
+        guard let acr else { return nil }
+        let fmt = String(format: "%.2f", acr)
+        if acr > 1.3 {
+            return "ACR \(fmt) — training spike detected. Up to -10 pts applied to recovery."
+        } else if acr < 0.8 {
+            return "ACR \(fmt) — training load has been low recently."
+        }
+        return "ACR \(fmt) — training load is balanced."
+    }
+
     private static func strainInsights(metrics: DailyMetrics) -> (observations: [String], actions: [String]) {
         var obs: [String] = []
         var acts: [String] = []
@@ -242,6 +254,9 @@ struct MetricDetailView: View {
                         }
                         if metric == .strain {
                             intradayStrainChart
+                            if let m = selectedMetrics, let zones = m.workoutZoneDetails, !zones.isEmpty {
+                                workoutZoneChart(zones)
+                            }
                         }
                         if let m = selectedMetrics {
                             insightsPanel(for: m)
@@ -262,9 +277,16 @@ struct MetricDetailView: View {
             }
             .task {
                 if metric == .stress || metric == .strain {
-                    let date = history.max { $0.date < $1.date }?.date ?? Date()
-                    intradayDate = date
-                    intradayHRData = await viewModel.fetchIntradayHR(for: date)
+                    intradayDate = Date()
+                    intradayHRData = await viewModel.fetchIntradayHR(for: Date())
+                }
+            }
+            .onChange(of: selectedDate) { _, newDate in
+                if metric == .stress || metric == .strain, let date = newDate {
+                    Task {
+                        intradayDate = date
+                        intradayHRData = await viewModel.fetchIntradayHR(for: date)
+                    }
                 }
             }
         }
@@ -426,7 +448,7 @@ struct MetricDetailView: View {
             }
 
             if buckets.isEmpty {
-                Text("No heart rate data available for today.")
+                Text("No heart rate data available for \(dayLabel.lowercased()).")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -555,7 +577,7 @@ struct MetricDetailView: View {
             }
 
             if buckets.isEmpty {
-                Text("No heart rate data available for today.")
+                Text("No heart rate data available for \(dayLabel.lowercased()).")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -597,12 +619,93 @@ struct MetricDetailView: View {
         .padding(.horizontal)
     }
 
+    // MARK: - Workout Zone Breakdown (2.4)
+
+    private func workoutZoneChart(_ zones: [WorkoutZoneBreakdown]) -> some View {
+        let zoneColors: [(Color, String)] = [
+            (Color(hex: "8E8E93"), "Z1"),
+            (Color(hex: "2979FF"), "Z2"),
+            (Color(hex: "00C853"), "Z3"),
+            (Color(hex: "FFD600"), "Z4"),
+            (Color(hex: "FF1744"), "Z5"),
+        ]
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "chart.bar.fill")
+                    .foregroundColor(DashboardMetric.strain.accentColor)
+                Text("Workout Zone Breakdown")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+            }
+
+            ForEach(zones) { workout in
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(workout.activityName)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text(String(format: "%.0f min total", workout.totalZoneMinutes))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    // Horizontal stacked bar
+                    let totalMins = max(workout.totalZoneMinutes, 1)
+                    let fractions: [Double] = [
+                        workout.z1Minutes / totalMins,
+                        workout.z2Minutes / totalMins,
+                        workout.z3Minutes / totalMins,
+                        workout.z4Minutes / totalMins,
+                        workout.z5Minutes / totalMins,
+                    ]
+                    GeometryReader { geo in
+                        HStack(spacing: 2) {
+                            ForEach(0..<5, id: \.self) { i in
+                                if fractions[i] > 0 {
+                                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                        .fill(zoneColors[i].0)
+                                        .frame(width: max(4, geo.size.width * fractions[i]))
+                                }
+                            }
+                        }
+                    }
+                    .frame(height: 12)
+                    // Zone legend
+                    HStack(spacing: 10) {
+                        ForEach(0..<5, id: \.self) { i in
+                            let mins = [workout.z1Minutes, workout.z2Minutes, workout.z3Minutes,
+                                        workout.z4Minutes, workout.z5Minutes][i]
+                            if mins > 0 {
+                                HStack(spacing: 3) {
+                                    Circle().fill(zoneColors[i].0).frame(width: 6, height: 6)
+                                    Text("\(zoneColors[i].1): \(String(format: "%.0f", mins))m")
+                                        .font(.system(size: 10))
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
+                .padding(.vertical, 4)
+                if zones.last?.id != workout.id {
+                    Divider()
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.somaCard)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal)
+    }
+
     // MARK: - Insights Panel
 
     private func insightsPanel(for m: DailyMetrics) -> some View {
         let score = Int(metric.score(from: m).rounded())
         let state = metric.state(from: m)
         let result = MetricInsightGenerator.generate(for: metric, metrics: m, sleepGoal: sleepGoal)
+        let acrNote = metric == .recovery ? MetricInsightGenerator.acrDescription(history: history) : nil
 
         return VStack(alignment: .leading, spacing: 14) {
             // Header
@@ -613,6 +716,22 @@ struct MetricDetailView: View {
                     .font(.subheadline)
                     .fontWeight(.semibold)
                     .foregroundColor(.primary)
+            }
+
+            // ACR sub-row for recovery (2.3)
+            if let acr = acrNote {
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.caption)
+                        .foregroundColor(Color(hex: "FF9100"))
+                    Text(acr)
+                        .font(.caption)
+                        .foregroundColor(Color(hex: "FF9100"))
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.horizontal, 8).padding(.vertical, 6)
+                .background(Color(hex: "FF9100").opacity(0.10))
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
 
             if !result.observations.isEmpty {

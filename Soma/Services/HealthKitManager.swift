@@ -16,6 +16,7 @@ protocol HealthDataProviding {
     func fetchActiveEnergy(for date: Date) async throws -> Double
     func fetchSteps(for date: Date) async throws -> Double
     func fetchVO2Max() async throws -> Double?
+    func fetchVO2MaxHistory(days: Int) async throws -> [(Date, Double)]
     func fetchRespiratoryRate(for date: Date) async throws -> Double?
     func fetchWorkouts(for date: Date) async throws -> [HKWorkout]
     func fetchSleepGoal() async throws -> Double?
@@ -23,6 +24,11 @@ protocol HealthDataProviding {
     func fetchExerciseMinutes(for date: Date) async throws -> Double?
     func writeBehavioralData(_ checkIn: DailyCheckIn) async throws
     func fetchEarliestDataDate() async -> Date?
+    // Priority 2/3 data sources
+    func fetchWristTemperature(for date: Date) async throws -> Double?
+    func fetchStandHours(for date: Date) async throws -> Int
+    func fetchWalkingHRAverage(for date: Date) async throws -> Double?
+    func fetchMindfulMinutes(for date: Date) async throws -> Double
 }
 
 // MARK: - HealthKitManager
@@ -34,19 +40,29 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
     @Published var authorizationDenied = false
     @Published var healthKitAvailable = HKHealthStore.isHealthDataAvailable()
 
-    let readTypes: Set<HKObjectType> = [
-        HKQuantityType(.heartRateVariabilitySDNN),
-        HKQuantityType(.restingHeartRate),
-        HKQuantityType(.heartRate),
-        HKCategoryType(.sleepAnalysis),
-        HKQuantityType(.respiratoryRate),
-        HKQuantityType(.activeEnergyBurned),
-        HKQuantityType(.vo2Max),
-        HKQuantityType(.stepCount),
-        HKQuantityType(.oxygenSaturation),
-        HKQuantityType(.appleExerciseTime),
-        HKWorkoutType.workoutType()
-    ]
+    var readTypes: Set<HKObjectType> {
+        var types: Set<HKObjectType> = [
+            HKQuantityType(.heartRateVariabilitySDNN),
+            HKQuantityType(.restingHeartRate),
+            HKQuantityType(.heartRate),
+            HKCategoryType(.sleepAnalysis),
+            HKQuantityType(.respiratoryRate),
+            HKQuantityType(.activeEnergyBurned),
+            HKQuantityType(.vo2Max),
+            HKQuantityType(.stepCount),
+            HKQuantityType(.oxygenSaturation),
+            HKQuantityType(.appleExerciseTime),
+            HKWorkoutType.workoutType(),
+            // Priority 2/3 additions
+            HKQuantityType(.walkingHeartRateAverage),
+            HKCategoryType(.appleStandHour),
+            HKCategoryType(.mindfulSession),
+        ]
+        if #available(iOS 17, *) {
+            types.insert(HKQuantityType(.appleSleepingWristTemperature))
+        }
+        return types
+    }
 
     let writeTypes: Set<HKSampleType> = []
 
@@ -454,6 +470,68 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
         }
         
         return totalMinutes > 0 ? totalMinutes : nil
+    }
+
+    // MARK: - VO2 Max History
+
+    /// Fetches VO2 Max samples over the last `days` days, grouped by calendar day.
+    /// Used to compute a rolling trend slope (ml/kg/min per month).
+    func fetchVO2MaxHistory(days: Int) async throws -> [(Date, Double)] {
+        let endDate = Date()
+        let startDate = Calendar.current.date(byAdding: .day, value: -days, to: endDate)!
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate, options: .strictStartDate)
+        let type = HKQuantityType(.vo2Max)
+        let unit = HKUnit(from: "ml/kg*min")
+        let samples = try await fetchSamples(type: type, predicate: predicate)
+        return groupByDay(samples: samples.compactMap { $0 as? HKQuantitySample }, unit: unit)
+    }
+
+    // MARK: - Wrist Temperature (Apple Watch Series 8+ / Ultra, requires iOS 17+)
+
+    /// Returns the nightly sleeping wrist temperature deviation from the user's personal baseline (°C).
+    /// Apple Watch computes and stores this automatically each night. Nil on unsupported hardware.
+    func fetchWristTemperature(for date: Date) async throws -> Double? {
+        guard #available(iOS 17, *) else { return nil }
+        let type = HKQuantityType(.appleSleepingWristTemperature)
+        let predicate = dayPredicate(for: date)
+        return try await fetchStatisticsAverage(type: type, predicate: predicate, unit: .degreeCelsius())
+    }
+
+    // MARK: - Stand Hours
+
+    /// Returns the number of Apple Stand hours credited on the given date (0–24).
+    /// Each hour where the watch detected at least 1 minute of standing/movement counts.
+    func fetchStandHours(for date: Date) async throws -> Int {
+        let predicate = dayPredicate(for: date)
+        let type = HKCategoryType(.appleStandHour)
+        let samples = try await fetchSamples(type: type, predicate: predicate)
+        return samples.compactMap { $0 as? HKCategorySample }
+            .filter { $0.value == HKCategoryValueAppleStandHour.stood.rawValue }
+            .count
+    }
+
+    // MARK: - Walking Heart Rate Average
+
+    /// Returns the average heart rate during casual, low-exertion walking for the given date.
+    /// Lower values indicate better cardiovascular efficiency.
+    func fetchWalkingHRAverage(for date: Date) async throws -> Double? {
+        let predicate = dayPredicate(for: date)
+        let type = HKQuantityType(.walkingHeartRateAverage)
+        let unit = HKUnit.count().unitDivided(by: .minute())
+        return try await fetchStatisticsAverage(type: type, predicate: predicate, unit: unit)
+    }
+
+    // MARK: - Mindful Minutes
+
+    /// Returns the total number of mindful session minutes on the given date,
+    /// summed across all sessions from the Mindfulness app or compatible third-party apps.
+    func fetchMindfulMinutes(for date: Date) async throws -> Double {
+        let predicate = dayPredicate(for: date)
+        let type = HKCategoryType(.mindfulSession)
+        let samples = try await fetchSamples(type: type, predicate: predicate)
+        let totalSeconds = samples.compactMap { $0 as? HKCategorySample }
+            .reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) }
+        return totalSeconds / 60.0
     }
 
     // MARK: - Write Behavioral Data
