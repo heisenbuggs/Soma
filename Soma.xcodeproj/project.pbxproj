@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 56;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -60,6 +60,10 @@
 		AA300000000000000000039 /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000039 /* NotificationsView.swift */; };
 		AA30000000000000000003A /* DailyTrainingGuidance.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000003A /* DailyTrainingGuidance.swift */; };
 		AA30000000000000000003B /* TrainingGuidanceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000003B /* TrainingGuidanceEngine.swift */; };
+		DE0500062F84F4A8009F2586 /* WeeklySummaryEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0500052F84F4A8009F2586 /* WeeklySummaryEngine.swift */; };
+		DE0500082F84F4BD009F2586 /* ReadinessHeroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0500072F84F4BD009F2586 /* ReadinessHeroView.swift */; };
+		AA300000000000000000040 /* SleepConsistencyCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000040 /* SleepConsistencyCalculator.swift */; };
+		AA300000000000000000041 /* MovementScoreCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000041 /* MovementScoreCalculator.swift */; };
 		DE2C6BF02F69D0FD00BC222F /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE2C6B8B2F69D02F00BC222F /* WidgetKit.framework */; };
 		DE2C6BF12F69D0FD00BC222F /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE2C6B8D2F69D02F00BC222F /* SwiftUI.framework */; };
 		DE2C6C022F69D0FE00BC222F /* SomaWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DE2C6BEF2F69D0FD00BC222F /* SomaWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -156,6 +160,10 @@
 		AA100000000000000000039 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		AA10000000000000000003A /* DailyTrainingGuidance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyTrainingGuidance.swift; sourceTree = "<group>"; };
 		AA10000000000000000003B /* TrainingGuidanceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingGuidanceEngine.swift; sourceTree = "<group>"; };
+		DE0500052F84F4A8009F2586 /* WeeklySummaryEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklySummaryEngine.swift; sourceTree = "<group>"; };
+		DE0500072F84F4BD009F2586 /* ReadinessHeroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadinessHeroView.swift; sourceTree = "<group>"; };
+		AA100000000000000000040 /* SleepConsistencyCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepConsistencyCalculator.swift; sourceTree = "<group>"; };
+		AA100000000000000000041 /* MovementScoreCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementScoreCalculator.swift; sourceTree = "<group>"; };
 		DE2C6B8B2F69D02F00BC222F /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		DE2C6B8D2F69D02F00BC222F /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		DE2C6BEF2F69D0FD00BC222F /* SomaWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SomaWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -259,6 +267,7 @@
 		AA500000000000000000004 /* Calculators */ = {
 			isa = PBXGroup;
 			children = (
+				DE0500052F84F4A8009F2586 /* WeeklySummaryEngine.swift */,
 				AA100000000000000000007 /* BaselineCalculator.swift */,
 				AA100000000000000000008 /* RecoveryCalculator.swift */,
 				AA100000000000000000009 /* StrainCalculator.swift */,
@@ -267,6 +276,8 @@
 				AA100000000000000000027 /* BehaviorEngine.swift */,
 				AA100000000000000000033 /* AyurvedicSleepCalculator.swift */,
 				AA10000000000000000003B /* TrainingGuidanceEngine.swift */,
+				AA100000000000000000040 /* SleepConsistencyCalculator.swift */,
+				AA100000000000000000041 /* MovementScoreCalculator.swift */,
 			);
 			path = Calculators;
 			sourceTree = "<group>";
@@ -298,6 +309,7 @@
 				AA100000000000000000032 /* DayDetailPageView.swift */,
 				AA100000000000000000034 /* AyurvedicSleepDetailView.swift */,
 				AA100000000000000000039 /* NotificationsView.swift */,
+				DE0500072F84F4BD009F2586 /* ReadinessHeroView.swift */,
 				AA500000000000000000007 /* Components */,
 			);
 			path = Views;
@@ -500,6 +512,7 @@
 				AA30000000000000000000D /* TrendsViewModel.swift in Sources */,
 				AA30000000000000000000E /* InsightsViewModel.swift in Sources */,
 				AA30000000000000000000F /* MainTabView.swift in Sources */,
+				DE0500062F84F4A8009F2586 /* WeeklySummaryEngine.swift in Sources */,
 				AA300000000000000000010 /* DashboardView.swift in Sources */,
 				AA300000000000000000011 /* TrendsView.swift in Sources */,
 				AA300000000000000000012 /* InsightsView.swift in Sources */,
@@ -513,6 +526,7 @@
 				AA300000000000000000026 /* CheckInStore.swift in Sources */,
 				AA300000000000000000027 /* BehaviorEngine.swift in Sources */,
 				AA300000000000000000028 /* CheckInViewModel.swift in Sources */,
+				DE0500082F84F4BD009F2586 /* ReadinessHeroView.swift in Sources */,
 				AA300000000000000000029 /* CheckInView.swift in Sources */,
 				AA30000000000000000002B /* NotificationScheduler.swift in Sources */,
 				AA30000000000000000002C /* DayDetailViewModel.swift in Sources */,
@@ -527,6 +541,8 @@
 				AA300000000000000000039 /* NotificationsView.swift in Sources */,
 				AA30000000000000000003A /* DailyTrainingGuidance.swift in Sources */,
 				AA30000000000000000003B /* TrainingGuidanceEngine.swift in Sources */,
+				AA300000000000000000040 /* SleepConsistencyCalculator.swift in Sources */,
+				AA300000000000000000041 /* MovementScoreCalculator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

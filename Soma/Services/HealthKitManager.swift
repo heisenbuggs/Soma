@@ -150,78 +150,250 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
         let napWindowStart = cal.date(bySettingHour: 10, minute: 0, second: 0, of: startOfDay)!
         let napWindowEnd   = cal.date(bySettingHour: 20, minute: 0, second: 0, of: startOfDay)!
 
-        var deep: TimeInterval = 0
-        var rem: TimeInterval = 0
-        var core: TimeInterval = 0
-        var awake: TimeInterval = 0
-        var inBed: TimeInterval = 0
+        // Separate tracking for night sleep and naps
+        var nightDeep: TimeInterval = 0
+        var nightRem: TimeInterval = 0
+        var nightCore: TimeInterval = 0
+        var nightAwake: TimeInterval = 0
+        var nightInBed: TimeInterval = 0
+        
+        var napDeep: TimeInterval = 0
+        var napRem: TimeInterval = 0
+        var napCore: TimeInterval = 0
 
-        // Night sleep (excludes daytime naps)
+        // Night sleep bounds (excludes daytime naps)
         var nightStart: Date?
         var nightEnd: Date?
 
-        // Nap tracking
+        // Nap tracking - separate from night sleep
         var napDuration: TimeInterval = 0
         var napStart: Date?
         var napEnd: Date?
 
         let sleepStages: Set<HKCategoryValueSleepAnalysis> = [.asleepDeep, .asleepREM, .asleepCore, .asleepUnspecified]
 
-        for sample in samples {
-            let duration = sample.endDate.timeIntervalSince(sample.startDate)
-            guard let value = HKCategoryValueSleepAnalysis(rawValue: sample.value) else { continue }
+        // Group samples into sleep sessions to better handle multiple sessions
+        let sleepSessions = groupSamplesIntoSessions(samples)
+        
+        for (sessionIndex, session) in sleepSessions.enumerated() {
+            let sessionStart = session.startDate
+            let sessionEnd = session.endDate
+            
+            // Classify entire session as nap if it starts and ends within nap window
+            // This prevents morning sleep sessions (like 07:41-09:07) from being classified as naps
+            let isNapSession = sessionStart >= napWindowStart && sessionEnd <= napWindowEnd
+            
+            #if DEBUG
+            let formatter = DateFormatter()
+            formatter.dateFormat = "HH:mm"
+            print("  Processing session \(sessionIndex + 1): \(formatter.string(from: sessionStart))-\(formatter.string(from: sessionEnd)) -> \(isNapSession ? "NAP" : "NIGHT SLEEP")")
+            #endif
+            
+            var sessionNightSleep: TimeInterval = 0
+            var sessionNapSleep: TimeInterval = 0
+            
+            for sample in session.samples {
+                let duration = sample.endDate.timeIntervalSince(sample.startDate)
+                guard let value = HKCategoryValueSleepAnalysis(rawValue: sample.value) else { continue }
 
-            // Classify as nap if the sample falls entirely within the daytime nap window
-            let isNap = sleepStages.contains(value)
-                && sample.startDate >= napWindowStart
-                && sample.endDate <= napWindowEnd
-
-            switch value {
-            case .asleepDeep:
-                deep += duration
-            case .asleepREM:
-                rem += duration
-            case .asleepCore, .asleepUnspecified:
-                core += duration
-            case .awake:
-                awake += duration
-            case .inBed:
-                inBed += duration
-            @unknown default:
-                break
+                switch value {
+                case .asleepDeep:
+                    if isNapSession {
+                        napDeep += duration
+                        sessionNapSleep += duration
+                    } else {
+                        nightDeep += duration
+                        sessionNightSleep += duration
+                    }
+                case .asleepREM:
+                    if isNapSession {
+                        napRem += duration
+                        sessionNapSleep += duration
+                    } else {
+                        nightRem += duration
+                        sessionNightSleep += duration
+                    }
+                case .asleepCore, .asleepUnspecified:
+                    if isNapSession {
+                        napCore += duration
+                        sessionNapSleep += duration
+                    } else {
+                        nightCore += duration
+                        sessionNightSleep += duration
+                    }
+                case .awake:
+                    if !isNapSession {
+                        nightAwake += duration
+                    }
+                case .inBed:
+                    if !isNapSession {
+                        nightInBed += duration
+                    }
+                @unknown default:
+                    break
+                }
             }
-
-            if isNap {
-                napDuration += duration
-                if napStart == nil || sample.startDate < napStart! { napStart = sample.startDate }
-                if napEnd == nil || sample.endDate > napEnd! { napEnd = sample.endDate }
-            } else if sleepStages.contains(value) {
-                if nightStart == nil || sample.startDate < nightStart! { nightStart = sample.startDate }
-                if nightEnd == nil || sample.endDate > nightEnd! { nightEnd = sample.endDate }
+            
+            #if DEBUG
+            if sessionNightSleep > 0 {
+                print("    Night sleep contribution: \(String(format: "%.2f", sessionNightSleep / 3600.0))h (\(String(format: "%.0f", sessionNightSleep / 60.0))min)")
+            }
+            if sessionNapSleep > 0 {
+                print("    Nap sleep contribution: \(String(format: "%.2f", sessionNapSleep / 3600.0))h (\(String(format: "%.0f", sessionNapSleep / 60.0))min)")
+            }
+            #endif
+            
+            // Track session bounds
+            if isNapSession && sessionNapSleep > 0 {
+                if napStart == nil || sessionStart < napStart! { napStart = sessionStart }
+                if napEnd == nil || sessionEnd > napEnd! { napEnd = sessionEnd }
+            } else if !isNapSession && sessionNightSleep > 0 {
+                if nightStart == nil || sessionStart < nightStart! { nightStart = sessionStart }
+                if nightEnd == nil || sessionEnd > nightEnd! { nightEnd = sessionEnd }
             }
         }
 
-        // Count distinct awake segments (interruptions) during the night sleep window
-        let awakeSamples = samples.filter {
-            HKCategoryValueSleepAnalysis(rawValue: $0.value) == .awake
+        // Count interruptions only during night sleep
+        let nightAwakeSamples = samples.filter { sample in
+            let value = HKCategoryValueSleepAnalysis(rawValue: sample.value)
+            let isInNapWindow = sample.startDate >= napWindowStart && sample.endDate <= napWindowEnd
+            return value == .awake && !isInNapWindow
         }.sorted { $0.startDate < $1.startDate }
-        let interruptionCount = awakeSamples.count
+        let interruptionCount = nightAwakeSamples.count
 
-        let total = deep + rem + core
+        // Total night sleep duration (this is what gets reported as main sleep)
+        let totalNightSleep = nightDeep + nightRem + nightCore
+        // Total nap duration
+        let totalNapSleep = napDeep + napRem + napCore
+        
+        #if DEBUG
+        // Debug logging to validate sleep calculations
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        let dateStr = formatter.string(from: targetDate)
+        
+        print("💤 Sleep Data Summary for \(dateStr):")
+        print("  Night Sleep Total: \(String(format: "%.2f", totalNightSleep / 3600.0))h (\(String(format: "%.0f", totalNightSleep / 60.0))min)")
+        print("    Deep: \(String(format: "%.0f", nightDeep / 60.0))min, REM: \(String(format: "%.0f", nightRem / 60.0))min, Core: \(String(format: "%.0f", nightCore / 60.0))min")
+        if totalNapSleep > 0 {
+            print("  Nap Sleep Total: \(String(format: "%.2f", totalNapSleep / 3600.0))h (\(String(format: "%.0f", totalNapSleep / 60.0))min)")
+        }
+        if let start = nightStart, let end = nightEnd {
+            formatter.dateFormat = "HH:mm"
+            print("  Night Period: \(formatter.string(from: start)) - \(formatter.string(from: end))")
+        }
+        print("  Interruptions: \(interruptionCount)")
+        
+        // Show expected vs actual for debugging
+        if totalNightSleep > 0 {
+            let expectedMinutes = totalNightSleep / 60.0
+            let reportedHours = totalNightSleep / 3600.0
+            print("  Expected in UI: \(String(format: "%.0f", expectedMinutes))min or \(String(format: "%.2f", reportedHours))h")
+        }
+        #endif
+        
         return SleepData(
-            totalDuration: total,
-            deepSleepDuration: deep,
-            remSleepDuration: rem,
-            coreSleepDuration: core,
-            awakeDuration: awake,
-            inBedDuration: inBed,
+            totalDuration: totalNightSleep, // Only night sleep counts toward main sleep score
+            deepSleepDuration: nightDeep,
+            remSleepDuration: nightRem,
+            coreSleepDuration: nightCore,
+            awakeDuration: nightAwake,
+            inBedDuration: nightInBed,
             sleepStartTime: nightStart,
             sleepEndTime: nightEnd,
             interruptionCount: interruptionCount,
-            napDurationSeconds: napDuration,
+            napDurationSeconds: totalNapSleep, // Separate nap tracking
             napStartTime: napStart,
             napEndTime: napEnd
         )
+    }
+    
+    // MARK: - Sleep Session Grouping
+    
+    private struct SleepSession {
+        let startDate: Date
+        let endDate: Date
+        let samples: [HKCategorySample]
+    }
+    
+    /// Groups sleep samples into discrete sessions based on temporal proximity
+    /// This helps distinguish between separate sleep periods (night + morning + afternoon)
+    private func groupSamplesIntoSessions(_ samples: [HKCategorySample]) -> [SleepSession] {
+        guard !samples.isEmpty else { return [] }
+        
+        let sortedSamples = samples.sorted { $0.startDate < $1.startDate }
+        var sessions: [SleepSession] = []
+        var currentSessionSamples: [HKCategorySample] = []
+        
+        let maxGapBetweenSessions: TimeInterval = 4 * 3600 // 4 hours gap indicates new session
+        
+        for sample in sortedSamples {
+            if let lastSample = currentSessionSamples.last {
+                let gap = sample.startDate.timeIntervalSince(lastSample.endDate)
+                if gap > maxGapBetweenSessions {
+                    // End current session and start new one
+                    if !currentSessionSamples.isEmpty {
+                        let sessionStart = currentSessionSamples.first!.startDate
+                        let sessionEnd = currentSessionSamples.last!.endDate
+                        sessions.append(SleepSession(
+                            startDate: sessionStart,
+                            endDate: sessionEnd,
+                            samples: currentSessionSamples
+                        ))
+                    }
+                    currentSessionSamples = [sample]
+                } else {
+                    currentSessionSamples.append(sample)
+                }
+            } else {
+                currentSessionSamples.append(sample)
+            }
+        }
+        
+        // Add final session
+        if !currentSessionSamples.isEmpty {
+            let sessionStart = currentSessionSamples.first!.startDate
+            let sessionEnd = currentSessionSamples.last!.endDate
+            sessions.append(SleepSession(
+                startDate: sessionStart,
+                endDate: sessionEnd,
+                samples: currentSessionSamples
+            ))
+        }
+        
+        #if DEBUG
+        // Debug logging to help validate sleep session detection
+        if !sessions.isEmpty {
+            print("🛏️ Sleep Analysis Debug - Detected \(sessions.count) session(s):")
+            for (index, session) in sessions.enumerated() {
+                let duration = session.endDate.timeIntervalSince(session.startDate) / 3600.0
+                let formatter = DateFormatter()
+                formatter.dateFormat = "HH:mm"
+                print("  Session \(index + 1): \(formatter.string(from: session.startDate)) - \(formatter.string(from: session.endDate)) (\(String(format: "%.2f", duration))h)")
+                
+                let sleepStages = session.samples.filter { 
+                    let value = HKCategoryValueSleepAnalysis(rawValue: $0.value)
+                    return [.asleepDeep, .asleepREM, .asleepCore, .asleepUnspecified].contains(value ?? .inBed)
+                }
+                let totalSleep = sleepStages.reduce(0.0) { $0 + $1.endDate.timeIntervalSince($1.startDate) }
+                print("    Sleep duration: \(String(format: "%.2f", totalSleep / 3600.0))h (\(String(format: "%.0f", totalSleep / 60.0))min)")
+                
+                // Debug individual sleep stages
+                var stageBreakdown: [String: TimeInterval] = [:]
+                for sample in session.samples {
+                    guard let value = HKCategoryValueSleepAnalysis(rawValue: sample.value) else { continue }
+                    let duration = sample.endDate.timeIntervalSince(sample.startDate)
+                    let key = "\(value)"
+                    stageBreakdown[key, default: 0] += duration
+                }
+                for (stage, duration) in stageBreakdown {
+                    print("      \(stage): \(String(format: "%.0f", duration / 60.0))min")
+                }
+            }
+        }
+        #endif
+        
+        return sessions
     }
 
     // MARK: - Sleeping Window HR / HRV

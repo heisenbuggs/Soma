@@ -15,6 +15,49 @@ struct AyurvedicSleepDetailView: View {
     @State private var selectedRange: TrendsViewModel.TimeRange = .twoWeeks
     @State private var selectedDate: Date?
 
+    // MARK: - Date Navigation
+
+    private var sortedNavigableDates: [Date] {
+        let histDates = history.compactMap { m -> Date? in
+            guard m.ayurvedicSleepPoints != nil else { return nil }
+            return Calendar.current.startOfDay(for: m.date)
+        }
+        let today = Calendar.current.startOfDay(for: Date())
+        return Array(Set(histDates + [today])).sorted()
+    }
+
+    private var currentNavDate: Date {
+        if let sel = selectedDate,
+           let nearest = history.min(by: { abs($0.date.timeIntervalSince(sel)) < abs($1.date.timeIntervalSince(sel)) }) {
+            return Calendar.current.startOfDay(for: nearest.date)
+        }
+        return Calendar.current.startOfDay(for: Date())
+    }
+
+    private var currentNavIndex: Int {
+        sortedNavigableDates.firstIndex { Calendar.current.isDate($0, inSameDayAs: currentNavDate) }
+            ?? sortedNavigableDates.count - 1
+    }
+
+    private func navigateDate(_ direction: Int) {
+        let newIdx = currentNavIndex + direction
+        guard sortedNavigableDates.indices.contains(newIdx) else { return }
+        let newDate = sortedNavigableDates[newIdx]
+        if Calendar.current.isDateInToday(newDate) {
+            selectedDate = nil
+        } else {
+            selectedDate = newDate
+        }
+    }
+
+    private var dateNavLabel: String {
+        if let m = displayedMetrics {
+            if Calendar.current.isDateInToday(m.date) { return "Today" }
+            return m.date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+        }
+        return "Today"
+    }
+
     // MARK: - Selected-date helpers
     // When the user taps a date in the history chart, these drive the timeline/breakdown cards.
 
@@ -86,6 +129,36 @@ struct AyurvedicSleepDetailView: View {
                 Color.somaBackground.ignoresSafeArea()
                 ScrollView {
                     VStack(spacing: 20) {
+                        // Date navigation
+                        HStack {
+                            Button { navigateDate(-1) } label: {
+                                Image(systemName: "chevron.left.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(currentNavIndex > 0 ? Color(hex: "2979FF") : Color(hex: "8E8E93").opacity(0.4))
+                            }
+                            .disabled(currentNavIndex <= 0)
+
+                            Spacer()
+                            VStack(spacing: 2) {
+                                Text(dateNavLabel)
+                                    .font(.headline)
+                                    .fontWeight(.semibold)
+                                    .foregroundColor(.primary)
+                                Text("Tap chart to jump to a date")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                            Spacer()
+
+                            Button { navigateDate(1) } label: {
+                                Image(systemName: "chevron.right.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(currentNavIndex < sortedNavigableDates.count - 1 ? Color(hex: "2979FF") : Color(hex: "8E8E93").opacity(0.4))
+                            }
+                            .disabled(currentNavIndex >= sortedNavigableDates.count - 1)
+                        }
+                        .padding(.horizontal)
+
                         scoreCard
                         timelineCard
                         if !breakdown.isEmpty { breakdownCard }

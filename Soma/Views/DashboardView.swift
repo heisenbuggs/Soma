@@ -11,6 +11,7 @@ struct DashboardView: View {
     @State private var showRawData = false
     @State private var activeMetric: DashboardMetric?
     @State private var showAyurvedicDetail = false
+    @State private var showWeeklySummary = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -28,8 +29,19 @@ struct DashboardView: View {
                             errorBanner(error)
                         }
 
+                        // 3.1 — Illness Arc persistent amber banner
+                        if viewModel.illnessArcActive {
+                            illnessArcBanner
+                        }
+
                         if viewModel.isBaselineBuilding {
                             baselineBanner
+                        }
+
+                        // 3.3 — Readiness hero KPI ring (full-width, above the 2×2 grid)
+                        if let guidance = viewModel.trainingGuidance {
+                            readinessHeroCard(guidance: guidance)
+                                .padding(.horizontal)
                         }
 
                         // 2x2 Metric Grid
@@ -59,6 +71,11 @@ struct DashboardView: View {
                         // How to Improve Today
                         if !viewModel.coachingTips.isEmpty {
                             improvementCard
+                        }
+
+                        // 3.4 — Weekly Summary (shown on Mondays when available)
+                        if let summary = viewModel.weeklySummary {
+                            weeklySummaryTeaser(summary)
                         }
 
                         // Bedtime recommendation
@@ -138,6 +155,11 @@ struct DashboardView: View {
                     napStartTime: viewModel.todayMetrics.napStartTime,
                     napEndTime: viewModel.todayMetrics.napEndTime
                 )
+            }
+            .sheet(isPresented: $showWeeklySummary) {
+                if let summary = viewModel.weeklySummary {
+                    WeeklySummarySheet(summary: summary)
+                }
             }
         }
         .onAppear {
@@ -304,6 +326,73 @@ struct DashboardView: View {
         return values.last.map { $0 - avg }
     }
 
+    // MARK: - Readiness Hero Card (3.3)
+
+    @ViewBuilder
+    private func readinessHeroCard(guidance: DailyTrainingGuidance) -> some View {
+        let factors = guidance.factors
+
+        // HRV score: ratio × 70 maps baseline (1.0) → 70, above-baseline → higher.
+        // Clamped 0–100. A ratio of 1.43 saturates at 100.
+        let hrvScore: Double? = factors.hrvRatio.map { ratio in
+            max(0, min(100, ratio * 70))
+        }
+
+        // RHR score: score = 80 − delta×3.
+        // delta=0 (at baseline) → 80; delta=+5 (elevated, penalty territory) → 65;
+        // delta=−5 (below baseline, great) → 95; delta=+15 → 35.
+        let rhrScore: Double? = factors.rhrDelta.map { delta in
+            max(0, min(100, 80 - delta * 3))
+        }
+
+        ReadinessHeroView(
+            readinessScore: guidance.readinessScore,
+            recoveryScore: factors.recoveryScore,
+            sleepScore: factors.sleepScore,
+            hrvScore: hrvScore,
+            rhrScore: rhrScore
+        )
+    }
+
+    // MARK: - Illness Arc Banner (3.1)
+
+    private var illnessArcBanner: some View {
+        let daysText = viewModel.illnessArcDays == 1 ? "1 night" : "\(viewModel.illnessArcDays) nights"
+        let recoveryEstimate: String = {
+            let remaining = max(0, 5 - viewModel.illnessArcDays)
+            if remaining <= 1 { return "You may be in the clear soon — watch for a return to baseline temperature." }
+            return "Typical recovery takes 3–5 days. Estimated \(remaining)+ days remaining."
+        }()
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: "thermometer.medium")
+                    .foregroundColor(Color(hex: "FF9100"))
+                    .font(.subheadline)
+                Text("Illness Arc Detected — \(daysText)")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(Color(hex: "FF9100"))
+            }
+            Text("Elevated wrist temperature detected. All strain targets are disabled. Focus on rest, hydration, and sleep.")
+                .font(.caption)
+                .foregroundColor(Color(hex: "FF9100").opacity(0.85))
+                .fixedSize(horizontal: false, vertical: true)
+            Text(recoveryEstimate)
+                .font(.caption)
+                .foregroundColor(Color(hex: "FF9100").opacity(0.7))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(hex: "FF9100").opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .strokeBorder(Color(hex: "FF9100").opacity(0.35), lineWidth: 1)
+        )
+        .padding(.horizontal)
+    }
+
     // MARK: - Subviews
 
     private func errorBanner(_ message: String) -> some View {
@@ -437,62 +526,48 @@ struct DashboardView: View {
     }
 
     private var quickStatsRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                quickStat(
-                    icon: "figure.walk",
-                    value: formattedSteps,
-                    label: "Steps"
-                )
-                quickStat(
-                    icon: "flame.fill",
-                    value: formattedCalories,
-                    label: "Active Cal"
-                )
-                quickStat(
-                    icon: "moon.zzz.fill",
-                    value: formattedSleep,
-                    label: "Sleep"
-                )
-                quickStat(
-                    icon: "figure.run",
-                    value: formattedWorkoutMinutes,
-                    label: "Workout"
-                )
+        let threeColumns = [
+            GridItem(.flexible(), spacing: 10),
+            GridItem(.flexible(), spacing: 10),
+            GridItem(.flexible(), spacing: 10)
+        ]
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Today's Stats")
+                .font(.subheadline)
+                .fontWeight(.semibold)
+                .foregroundColor(.primary)
+                .padding(.horizontal)
+
+            LazyVGrid(columns: threeColumns, spacing: 10) {
+                quickStat(icon: "figure.walk",    value: formattedSteps,          label: "Steps")
+                quickStat(icon: "flame.fill",      value: formattedCalories,       label: "Active Cal")
+                quickStat(icon: "moon.zzz.fill",   value: formattedSleep,          label: "Sleep")
+                quickStat(icon: "figure.run",      value: formattedWorkoutMinutes, label: "Workout")
+
                 if let vo2 = viewModel.todayMetrics.vo2Max {
-                    quickStat(
-                        icon: "lungs.fill",
-                        value: String(format: "%.0f", vo2),
-                        label: "VO2 Max"
-                    )
+                    quickStat(icon: "lungs.fill",
+                              value: String(format: "%.0f", vo2),
+                              label: "VO2 Max")
                 }
                 if let bloodOx = viewModel.todayMetrics.bloodOxygen {
-                    quickStat(
-                        icon: "drop.circle.fill",
-                        value: String(format: "%.1f%%", bloodOx),
-                        label: "SpO2"
-                    )
+                    quickStat(icon: "drop.circle.fill",
+                              value: String(format: "%.1f%%", bloodOx),
+                              label: "SpO2")
                 }
                 if let exercise = viewModel.todayMetrics.exerciseMinutes {
-                    quickStat(
-                        icon: "figure.strengthtraining.traditional",
-                        value: String(format: "%.0f min", exercise),
-                        label: "Activity"
-                    )
+                    quickStat(icon: "figure.strengthtraining.traditional",
+                              value: String(format: "%.0f min", exercise),
+                              label: "Activity")
                 }
                 if let movement = viewModel.todayMetrics.movementScore {
-                    quickStat(
-                        icon: "figure.walk.motion",
-                        value: String(format: "%.0f", movement),
-                        label: "Movement"
-                    )
+                    quickStat(icon: "figure.walk.motion",
+                              value: String(format: "%.0f", movement),
+                              label: "Movement")
                 }
                 if let standH = viewModel.todayMetrics.standHours {
-                    quickStat(
-                        icon: "figure.stand",
-                        value: "\(standH)h",
-                        label: "Stand"
-                    )
+                    quickStat(icon: "figure.stand",
+                              value: "\(standH)h",
+                              label: "Stand")
                 }
             }
             .padding(.horizontal)
@@ -500,22 +575,63 @@ struct DashboardView: View {
     }
 
     private func quickStat(icon: String, value: String, label: String) -> some View {
-        VStack(spacing: 6) {
+        HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.title3)
+                .font(.body)
                 .foregroundColor(Color(hex: "2979FF"))
-            Text(value)
-                .font(.headline)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
-            Text(label)
-                .font(.caption2)
-                .foregroundColor(Color(hex: "8E8E93"))
+                .frame(width: 22)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(value)
+                    .font(.subheadline)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Text(label)
+                    .font(.caption2)
+                    .foregroundColor(Color(hex: "8E8E93"))
+            }
+            Spacer(minLength: 0)
         }
-        .frame(minWidth: 80)
-        .padding(12)
+        .padding(10)
         .background(Color.somaCard)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    // MARK: - Weekly Summary Teaser (3.4)
+
+    private func weeklySummaryTeaser(_ summary: WeeklySummaryEngine.WeeklySummary) -> some View {
+        Button { showWeeklySummary = true } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: "doc.text.fill")
+                        .foregroundColor(Color(hex: "2979FF"))
+                        .font(.subheadline)
+                    Text("Your Week in Review")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(Color(hex: "8E8E93"))
+                }
+                Text(summary.teaser)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(14)
+            .background(Color(hex: "2979FF").opacity(0.07))
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16, style: .continuous)
+                    .strokeBorder(Color(hex: "2979FF").opacity(0.2), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal)
     }
 
     private var recommendationIcon: String {
@@ -553,6 +669,56 @@ struct DashboardView: View {
         if hrs == 0 { return "\(mins)m" }
         if mins == 0 { return "\(hrs)h" }
         return "\(hrs)h \(mins)m"
+    }
+}
+
+// MARK: - Weekly Summary Sheet (3.4)
+
+private struct WeeklySummarySheet: View {
+    let summary: WeeklySummaryEngine.WeeklySummary
+    @Environment(\.dismiss) private var dismiss
+
+    private var weekRange: String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM d"
+        return "\(fmt.string(from: summary.weekStart)) – \(fmt.string(from: summary.weekEnd))"
+    }
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.somaBackground.ignoresSafeArea()
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(weekRange)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal)
+                            .padding(.top, 8)
+
+                        // Narrative paragraphs
+                        let paragraphs = summary.narrative.components(separatedBy: "\n\n")
+                        ForEach(Array(paragraphs.enumerated()), id: \.offset) { _, para in
+                            Text(para)
+                                .font(.body)
+                                .foregroundColor(.primary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.horizontal)
+                                .padding(.top, 16)
+                        }
+                        Spacer(minLength: 32)
+                    }
+                }
+            }
+            .navigationTitle("Week in Review")
+            .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                        .foregroundColor(Color(hex: "2979FF"))
+                }
+            }
+        }
     }
 }
 

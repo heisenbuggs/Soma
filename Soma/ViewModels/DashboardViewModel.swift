@@ -15,6 +15,15 @@ final class DashboardViewModel: ObservableObject {
     @Published var bedtimeTarget: Date?
     @Published var lastRefreshed: Date?
 
+    // MARK: - Illness Arc (3.1)
+    /// True when wrist temperature has exceeded +0.5°C for 2+ consecutive nights.
+    @Published var illnessArcActive: Bool = false
+    /// How many consecutive nights of elevated temperature have been detected.
+    @Published var illnessArcDays: Int = 0
+
+    // MARK: - Weekly Summary (3.4)
+    @Published var weeklySummary: WeeklySummaryEngine.WeeklySummary?
+
     private let healthKit: HealthDataProviding
     private let store: MetricsStore
     private let checkInStore: CheckInStore
@@ -44,6 +53,10 @@ final class DashboardViewModel: ObservableObject {
     func loadCached() {
         if let cached = store.load(for: Date()) {
             todayMetrics = cached
+            let recentHistory = store.loadLast(7)
+            let (arcActive, arcDays) = detectIllnessArc(from: recentHistory, today: cached)
+            illnessArcActive = arcActive
+            illnessArcDays   = arcDays
             trainingGuidance = computeGuidance(for: cached)
             updateSparklines()
             updateCoachingTips()
@@ -76,7 +89,20 @@ final class DashboardViewModel: ObservableObject {
         defer { isLoading = false }
 
         do {
-            let metrics = try await fetchAndComputeMetrics(for: Date())
+            var metrics = try await fetchAndComputeMetrics(for: Date())
+
+            // 3.1 — Illness arc detection: must run before computeGuidance so the
+            // guidance override (forced Rest) can read illnessArcActive.
+            let recentHistory = store.loadLast(7)
+            let (arcActive, arcDays) = detectIllnessArc(from: recentHistory, today: metrics)
+            illnessArcActive = arcActive
+            illnessArcDays   = arcDays
+
+            // Compute guidance (reads illnessArcActive for illness override).
+            let guidance = computeGuidance(for: metrics)
+
+            // 3.3 — Persist readiness score so it can be trended and shown in the hero ring.
+            metrics.readinessScore = guidance.readinessScore
 
             store.save(metrics)
             todayMetrics = metrics
@@ -90,11 +116,13 @@ final class DashboardViewModel: ObservableObject {
                 sleepNeed: metrics.sleepNeedHours ?? settings.sleepGoalHours
             )
 
-            let guidance = computeGuidance(for: metrics)
             trainingGuidance = guidance
             store.setWidgetTrainingLabel(guidance.activityLevel.shortTitle)
 
             NotificationScheduler.shared.scheduleRecoveryNotification(metrics: metrics, guidance: guidance, settings: settings)
+
+            // 3.4 — Weekly narrative: generate and schedule every Monday.
+            generateAndScheduleWeeklySummaryIfNeeded(metrics: metrics)
 
             updateSparklines()
             updateCoachingTips()
@@ -331,15 +359,64 @@ final class DashboardViewModel: ObservableObject {
             napDurationMinutes: sleepData.napDurationSeconds > 0 ? sleepData.napDurationSeconds / 60.0 : nil,
             napStartTime: sleepData.napStartTime,
             napEndTime: sleepData.napEndTime,
-            eveningStressScore: eveningStressScore,
-            sleepConsistencyScore: sleepConsistencyScore,
             wristTempDeviation: wristTempVal,
             standHours: standHoursVal > 0 ? standHoursVal : nil,
             walkingHRAverage: walkingHRVal,
             mindfulMinutes: mindfulMinsVal > 0 ? mindfulMinsVal : nil,
+            sleepConsistencyScore: sleepConsistencyScore,
+            eveningStressScore: eveningStressScore,
             workoutZoneDetails: workoutZoneDetails,
             movementScore: movementScore
         )
+    }
+
+    // MARK: - Illness Arc Detection (3.1)
+
+    /// Returns whether an illness arc is active and how many consecutive elevated-temperature nights.
+    /// An arc starts when wristTempDeviation > +0.5°C for 2 or more consecutive nights (most recent first).
+    private func detectIllnessArc(from history: [DailyMetrics], today: DailyMetrics) -> (active: Bool, days: Int) {
+        let all = (history + [today]).sorted { $0.date < $1.date }
+        var consecutive = 0
+        for m in all.reversed() {
+            if let temp = m.wristTempDeviation, temp > 0.5 {
+                consecutive += 1
+            } else {
+                break
+            }
+        }
+        return (consecutive >= 2, consecutive)
+    }
+
+    // MARK: - Weekly Summary (3.4)
+
+    private func generateAndScheduleWeeklySummaryIfNeeded(metrics: DailyMetrics) {
+        // Only generate on Mondays (weekday = 2 in Gregorian calendar).
+        let weekday = Calendar.current.component(.weekday, from: Date())
+        guard weekday == 2 else { return }
+
+        // Avoid regenerating if already done today.
+        let key = "weeklySummaryGenerated"
+        let todayKey = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970
+        if UserDefaults.standard.double(forKey: key) == todayKey { return }
+
+        let last7 = store.loadLast(7)
+        let checkIns = checkInStore.loadAll()
+        let last30 = store.loadLast(30)
+        let hrvHist = BaselineCalculator.extractHistory(from: last30, \.hrvAverage)
+        let rhrHist = BaselineCalculator.extractHistory(from: last30, \.restingHR)
+        let hrvBaseline = BaselineCalculator.computeHRVBaseline(from: hrvHist)
+        let rhrBaseline = BaselineCalculator.computeRHRBaseline(from: rhrHist)
+
+        guard let summary = WeeklySummaryEngine.generate(
+            metrics: last7,
+            checkIns: checkIns,
+            hrvBaseline: hrvBaseline,
+            rhrBaseline: rhrBaseline
+        ) else { return }
+
+        weeklySummary = summary
+        UserDefaults.standard.set(todayKey, forKey: key)
+        NotificationScheduler.shared.scheduleWeeklyNarrative(summary: summary, settings: settings)
     }
 
     // MARK: - Training Guidance
@@ -359,7 +436,7 @@ final class DashboardViewModel: ObservableObject {
         let strainLoadHistory = store.loadLast(StrainCalculator.rollingCapacityDays).compactMap { $0.strainLoad }
         let isCalibrating = StrainCalculator.isCalibrating(loadHistory: strainLoadHistory)
 
-        return TrainingGuidanceEngine.generate(
+        var guidance = TrainingGuidanceEngine.generate(
             metrics: metrics,
             history: history,
             hrvBaseline: hrvBaseline,
@@ -367,17 +444,115 @@ final class DashboardViewModel: ObservableObject {
             sleepGoal: sleepGoal,
             isCalibrating: isCalibrating
         )
+
+        // 3.1 — Illness arc override: force Rest, disable all strain targets.
+        if illnessArcActive {
+            let illnessExplanation = "Elevated wrist temperature detected for \(illnessArcDays) consecutive night\(illnessArcDays == 1 ? "" : "s"). All strain targets are disabled — your body needs rest and recovery above all else right now."
+            guidance = DailyTrainingGuidance(
+                date: metrics.date,
+                readinessScore: guidance.readinessScore,
+                activityLevel: .rest,
+                targetStrainMin: 0,
+                targetStrainMax: 0,
+                suggestedWorkouts: ["Rest", "Short walk", "Stretching", "Meditation"],
+                fatigueFlags: ["Illness Arc"],
+                factors: guidance.factors,
+                explanation: illnessExplanation
+            )
+        }
+
+        return guidance
     }
 
     // MARK: - Historical Backfill
 
-    /// Called once on app launch. If the store is empty (fresh install or reset),
-    /// fetches and computes metrics for the past 90 days from HealthKit history.
+    /// Called once on app launch. Backfills missing historical data needed for trends and calendar views.
+    /// Focuses on the past 45 days for calendar grid, then fills longer history if completely empty.
     /// Runs silently in the background — does not affect isLoading or errorMessage.
     func backfillHistoricalDataIfNeeded() {
-        guard store.loadAll().isEmpty else { return }
         Task {
-            await backfillMetrics()
+            await backfillRecentMissingData()
+            // Only do full backfill if store is completely empty
+            if store.loadAll().isEmpty {
+                await backfillMetrics()
+            }
+        }
+    }
+    
+    /// Backfills any missing data in the past 45 days to ensure calendar and trends work properly
+    private func backfillRecentMissingData() async {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        
+        // Don't backfill data before Apple Health data is available
+        guard let earliestHealthDate = await healthKit.fetchEarliestDataDate() else {
+            print("⚠️ No Apple Health data available - skipping backfill")
+            return 
+        }
+        
+        let earliestDate = cal.startOfDay(for: earliestHealthDate)
+        print("📅 Backfilling data from \(earliestDate) to today")
+        
+        // Check last 45 days for gaps, but respect earliest available date
+        for dayOffset in -45...(-1) {
+            guard let date = cal.date(byAdding: .day, value: dayOffset, to: today) else { continue }
+            
+            // Skip if date is before Apple Health data availability
+            if date < earliestDate {
+                print("⏸️ Skipping \(date) - before Apple Health data availability (\(earliestDate))")
+                continue
+            }
+            
+            // Skip if we already have data for this date
+            if store.load(for: date) != nil { continue }
+            
+            print("🔍 Attempting to backfill data for \(date)")
+            
+            // Try to fetch and compute metrics for this missing date
+            if let metrics = try? await fetchAndComputeMetrics(for: date) {
+                // More strict data validation - require at least one primary health metric from Apple Health
+                // Don't save metrics that only have calculated/default values (like sleep need, strain scores, etc.)
+                let hasPrimaryHealthData = (metrics.hrvAverage != nil && metrics.hrvAverage! > 0)
+                    || (metrics.restingHR != nil && metrics.restingHR! > 0)
+                    || (metrics.sleepDurationHours != nil && metrics.sleepDurationHours! > 0.1) // At least 6 minutes of sleep
+                    || (metrics.activeCalories != nil && metrics.activeCalories! > 10) // At least 10 calories
+                    || (metrics.stepCount != nil && metrics.stepCount! > 100) // At least 100 steps
+                
+                // Additional check: if we only have sleep need but no actual sleep, it's likely a default calculation
+                let onlyHasCalculatedValues = metrics.sleepNeedHours != nil 
+                    && metrics.sleepDurationHours == nil 
+                    && metrics.hrvAverage == nil 
+                    && metrics.restingHR == nil
+                    && (metrics.activeCalories ?? 0) <= 10
+                    && (metrics.stepCount ?? 0) <= 100
+                
+                let hasHealthData = hasPrimaryHealthData && !onlyHasCalculatedValues
+                
+                print("📊 Metrics summary for \(date):")
+                print("  HRV: \(metrics.hrvAverage?.description ?? "nil")")
+                print("  RHR: \(metrics.restingHR?.description ?? "nil")")
+                print("  Sleep: \(metrics.sleepDurationHours?.description ?? "nil")h")
+                print("  Calories: \(metrics.activeCalories?.description ?? "nil")")
+                print("  Steps: \(metrics.stepCount?.description ?? "nil")")
+                print("  Has valid data: \(hasHealthData)")
+                
+                if hasHealthData {
+                    print("✅ Saved metrics for \(date)")
+                    store.save(metrics)
+                } else {
+                    print("❌ No meaningful health data found for \(date)")
+                }
+            } else {
+                print("❌ Failed to fetch metrics for \(date)")
+            }
+            
+            // Small delay to prevent overwhelming HealthKit
+            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+        }
+        
+        // Update UI after backfill
+        await MainActor.run {
+            updateSparklines()
         }
     }
 

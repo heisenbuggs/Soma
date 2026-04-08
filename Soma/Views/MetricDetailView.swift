@@ -261,6 +261,12 @@ struct MetricDetailView: View {
                         if let m = selectedMetrics {
                             insightsPanel(for: m)
                         }
+                        // 3.2 — Sleep Regularity Dashboard (sleep metric only)
+                        if metric == .sleep {
+                            sleepRegularityPanel
+                            sleepDebtChart
+                            sleepCalendarGrid
+                        }
                         statsRow
                     }
                     .padding(.top, 8)
@@ -814,6 +820,321 @@ struct MetricDetailView: View {
         .padding(12)
         .background(Color.somaCard)
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+    }
+
+    // MARK: - Sleep Regularity Dashboard (3.2)
+
+    /// All sleep metrics from the past 30 days (independent of the range picker — regularity is a long-term metric).
+    private var last30History: [DailyMetrics] { viewModel.loadHistory(days: 30) }
+
+    // MARK: Sleep Regularity Index
+
+    private var sleepRegularityIndex: Double? {
+        let times = last30History.compactMap { $0.sleepStartTime }
+        guard times.count >= 5 else { return nil }
+
+        let cal = Calendar.current
+        // Convert sleep start times to minutes-since-noon (normalises across midnight).
+        // Using noon as pivot: PM times are positive, AM times (next day) get +24h offset.
+        let minutesFromNoon: [Double] = times.map { t in
+            let comps = cal.dateComponents([.hour, .minute], from: t)
+            var min = Double((comps.hour ?? 0) * 60 + (comps.minute ?? 0))
+            // Times before 10 AM are almost certainly "after midnight" — shift +24h.
+            if min < 10 * 60 { min += 24 * 60 }
+            // Pivot around noon (720 min) so signed distance is meaningful.
+            return min - 12 * 60
+        }
+
+        let sorted = minutesFromNoon.sorted()
+        let median = sorted[sorted.count / 2]
+
+        let within30 = minutesFromNoon.filter { abs($0 - median) <= 30 }.count
+        return Double(within30) / Double(minutesFromNoon.count) * 100
+    }
+
+    private var sleepRegularityPanel: some View {
+        let sri = sleepRegularityIndex
+        let accentColor = sleepRegularityColor(sri)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "calendar.badge.clock")
+                    .foregroundColor(accentColor)
+                Text("Sleep Regularity")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+            }
+
+            HStack(alignment: .bottom, spacing: 4) {
+                if let s = sri {
+                    Text("\(Int(s.rounded()))%")
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .foregroundColor(accentColor)
+                } else {
+                    Text("--")
+                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .foregroundColor(.secondary)
+                }
+                Text("nights within 30 min of your median bedtime")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.bottom, 6)
+            }
+
+            // Progress bar
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule().fill(accentColor.opacity(0.12))
+                    Capsule().fill(accentColor)
+                        .frame(width: geo.size.width * min(1, (sri ?? 0) / 100))
+                        .animation(.easeOut(duration: 1.0), value: sri)
+                }
+            }
+            .frame(height: 8)
+
+            Text(sleepRegularityCaption(sri))
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(14)
+        .background(Color.somaCard)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal)
+    }
+
+    private func sleepRegularityColor(_ sri: Double?) -> Color {
+        guard let s = sri else { return Color(hex: "8E8E93") }
+        if s >= 80 { return Color(hex: "00C853") }
+        if s >= 60 { return Color(hex: "FFD600") }
+        return Color(hex: "FF9100")
+    }
+
+    private func sleepRegularityCaption(_ sri: Double?) -> String {
+        guard let s = sri else { return "Need at least 5 nights of data to compute regularity." }
+        if s >= 80 { return "Excellent — consistent sleep timing strengthens your circadian rhythm and improves deep-sleep architecture." }
+        if s >= 60 { return "Good — minor variation in your sleep schedule. Keeping bedtime within 30 min on weekends has the biggest impact." }
+        return "High variability in sleep timing can suppress melatonin and reduce sleep quality. Aim for a fixed bedtime ± 30 min."
+    }
+
+    // MARK: 30-Day Sleep Debt Chart
+
+    private var sleepDebtData: [(Date, Double)] {
+        last30History.compactMap { m -> (Date, Double)? in
+            guard let actual = m.sleepDurationHours else { return nil }
+            let goal = m.sleepNeedHours ?? sleepGoal
+            return (m.date, max(0, goal - actual))
+        }
+        .sorted { $0.0 < $1.0 }
+    }
+
+    private var sleepDebtChart: some View {
+        let data = sleepDebtData
+        let totalDebt = data.map { $0.1 }.reduce(0, +)
+        let maxDebt = data.map { $0.1 }.max() ?? 1
+        let accentColor = Color(hex: "2979FF")
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "zzz")
+                    .foregroundColor(accentColor)
+                Text("30-Day Sleep Debt")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text(formatHoursShort(totalDebt))
+                        .font(.headline)
+                        .fontWeight(.bold)
+                        .foregroundColor(totalDebt > 7 ? Color(hex: "FF9100") : accentColor)
+                    Text("cumulative debt")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            if data.isEmpty {
+                Text("No sleep data available for the past 30 days.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 24)
+            } else {
+                Chart(data, id: \.0) { date, debt in
+                    BarMark(
+                        x: .value("Date", date, unit: .day),
+                        y: .value("Debt (h)", debt)
+                    )
+                    .foregroundStyle(debtBarColor(debt, max: maxDebt).gradient)
+                    .cornerRadius(3)
+                }
+                .chartYScale(domain: 0...(max(maxDebt + 0.5, 2.0)))
+                .chartXAxis {
+                    AxisMarks(values: .stride(by: .day, count: 7)) { _ in
+                        AxisGridLine()
+                        AxisTick()
+                        AxisValueLabel(format: .dateTime.month(.abbreviated).day())
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading) { val in
+                        AxisGridLine()
+                        AxisValueLabel {
+                            if let v = val.as(Double.self) {
+                                Text("\(String(format: "%.0f", v))h")
+                                    .font(.system(size: 10))
+                            }
+                        }
+                    }
+                }
+                .frame(height: 140)
+
+                Text("Daily sleep debt = your personalised sleep need minus actual sleep. Zero is ideal.")
+                    .font(.caption)
+                    .foregroundColor(Color(hex: "8E8E93"))
+            }
+        }
+        .padding(14)
+        .background(Color.somaCard)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal)
+    }
+
+    private func debtBarColor(_ debt: Double, max maxDebt: Double) -> Color {
+        if debt <= 0.25 { return Color(hex: "00C853") }
+        if debt <= 1.0  { return Color(hex: "FFD600") }
+        return Color(hex: "FF9100")
+    }
+
+    private func formatHoursShort(_ h: Double) -> String {
+        let total = Int((h * 60).rounded())
+        let hrs = total / 60; let mins = total % 60
+        if hrs == 0  { return "\(mins)m" }
+        if mins == 0 { return "\(hrs)h" }
+        return "\(hrs)h \(mins)m"
+    }
+
+    // MARK: GitHub-Style Sleep Score Calendar Grid
+
+    /// Builds a 6-week (42-cell) grid aligned to calendar weeks.
+    /// Each row is a week starting on Sunday. Cells outside [today-41d, today] are empty.
+    private var calendarGridData: [Date?] {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+
+        // Find the Sunday that starts the week containing (today - 41 days).
+        guard let earliest = cal.date(byAdding: .day, value: -41, to: today) else { return [] }
+        let weekdayOfEarliest = cal.component(.weekday, from: earliest) // 1=Sun
+        let offsetToSunday = weekdayOfEarliest - 1
+        guard let gridStart = cal.date(byAdding: .day, value: -offsetToSunday, to: earliest) else { return [] }
+
+        // 6 rows × 7 columns = 42 cells
+        return (0..<42).map { offset -> Date? in
+            guard let date = cal.date(byAdding: .day, value: offset, to: gridStart) else { return nil }
+            if date > today { return nil }                            // future: empty
+            let daysAgo = cal.dateComponents([.day], from: date, to: today).day ?? 99
+            if daysAgo > 41 { return nil }                           // before window: empty
+            return date
+        }
+    }
+
+    private var sleepCalendarGrid: some View {
+        let cells     = calendarGridData                             // 42 elements, nil = empty
+        let dayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+        let accentColor = DashboardMetric.sleep.accentColor
+        let cal       = Calendar.current
+        let history   = viewModel.loadHistory(days: 45)             // 6 weeks needs up to 45 days
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "calendar")
+                    .foregroundColor(accentColor)
+                Text("Sleep Score Calendar")
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Spacer()
+                // Legend
+                HStack(spacing: 6) {
+                    ForEach(["None", "Low", "Mid", "High"], id: \.self) { label in
+                        HStack(spacing: 3) {
+                            RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                .fill(calendarLegendColor(label))
+                                .frame(width: 10, height: 10)
+                            Text(label)
+                                .font(.system(size: 9))
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+            }
+
+            // Day-of-week header
+            HStack(spacing: 4) {
+                ForEach(dayLabels, id: \.self) { day in
+                    Text(day)
+                        .font(.system(size: 9, weight: .medium))
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+
+            // 6 rows × 7 columns
+            VStack(spacing: 4) {
+                ForEach(0..<6, id: \.self) { row in
+                    HStack(spacing: 4) {
+                        ForEach(0..<7, id: \.self) { col in
+                            let idx = row * 7 + col
+                            if idx < cells.count, let date = cells[idx] {
+                                let score = history.first { cal.isDate($0.date, inSameDayAs: date) }?.sleepScore
+                                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                    .fill(calendarCellColor(score))
+                                    .frame(maxWidth: .infinity)
+                                    .aspectRatio(1, contentMode: .fit)
+                                    .overlay(
+                                        Group {
+                                            if let s = score {
+                                                Text("\(Int(s.rounded()))")
+                                                    .font(.system(size: 8, weight: .semibold))
+                                                    .foregroundColor(.white.opacity(0.9))
+                                            }
+                                        }
+                                    )
+                            } else {
+                                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                    .fill(Color.secondary.opacity(0.05))
+                                    .frame(maxWidth: .infinity)
+                                    .aspectRatio(1, contentMode: .fit)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Text("Each cell shows your sleep score for that night. Last 6 weeks, aligned to calendar weeks.")
+                .font(.caption)
+                .foregroundColor(Color(hex: "8E8E93"))
+        }
+        .padding(14)
+        .background(Color.somaCard)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal)
+    }
+
+    private func calendarCellColor(_ score: Double?) -> Color {
+        guard let s = score else { return Color.secondary.opacity(0.12) }
+        if s >= 75 { return Color(hex: "00C853") }
+        if s >= 50 { return Color(hex: "2979FF") }
+        if s >= 25 { return Color(hex: "FF9100") }
+        return Color(hex: "FF1744")
+    }
+
+    private func calendarLegendColor(_ label: String) -> Color {
+        switch label {
+        case "High":    return Color(hex: "00C853")
+        case "Mid":     return Color(hex: "2979FF")
+        case "Low":     return Color(hex: "FF9100")
+        default:        return Color.secondary.opacity(0.12)
+        }
     }
 
     // MARK: - Helpers

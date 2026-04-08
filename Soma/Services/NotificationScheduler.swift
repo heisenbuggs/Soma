@@ -8,9 +8,10 @@ final class NotificationScheduler {
 
     static let shared = NotificationScheduler()
 
-    private let recoveryNotificationID = "com.soma.daily-recovery"
-    private let bedtimeReminderID = "com.soma.bedtime-reminder"
-    private let checkinReminderID = "com.soma.checkin-reminder"
+    private let recoveryNotificationID  = "com.soma.daily-recovery"
+    private let bedtimeReminderID       = "com.soma.bedtime-reminder"
+    private let checkinReminderID       = "com.soma.checkin-reminder"
+    private let weeklyNarrativeID       = "com.soma.weekly-narrative"
 
     private init() {}
 
@@ -156,12 +157,51 @@ final class NotificationScheduler {
         scheduleCheckinReminder(settings: settings)
     }
 
+    // MARK: - Weekly Narrative (3.4)
+
+    /// Schedules the Monday-morning weekly health narrative notification.
+    /// Fires at the same time as the daily recovery notification on Mondays.
+    func scheduleWeeklyNarrative(summary: WeeklySummaryEngine.WeeklySummary, settings: UserSettings = UserSettings()) {
+        Task {
+            let center = UNUserNotificationCenter.current()
+            let notifSettings = await center.notificationSettings()
+            guard notifSettings.authorizationStatus == .authorized,
+                  settings.notificationsEnabled else { return }
+
+            let content = UNMutableNotificationContent()
+            content.sound = .default
+            content.title = "Your Week in Review"
+            content.body  = summary.teaser
+
+            // Fire Monday at the user's recovery notification time.
+            var components = DateComponents()
+            components.weekday = 2   // Monday
+            components.hour    = settings.recoveryNotificationHour
+            components.minute  = settings.recoveryNotificationMinute
+            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+
+            let request = UNNotificationRequest(
+                identifier: weeklyNarrativeID,
+                content: content,
+                trigger: trigger
+            )
+
+            center.removePendingNotificationRequests(withIdentifiers: [weeklyNarrativeID])
+            try? await center.add(request)
+
+            NotificationStore.shared.save(
+                NotificationRecord(title: content.title, body: content.body)
+            )
+        }
+    }
+
     func cancelPendingNotifications() {
         UNUserNotificationCenter.current()
             .removePendingNotificationRequests(withIdentifiers: [
                 recoveryNotificationID,
                 bedtimeReminderID,
-                checkinReminderID
+                checkinReminderID,
+                weeklyNarrativeID
             ])
     }
 

@@ -26,6 +26,7 @@ struct TrendsView: View {
 
                 ScrollView {
                     VStack(spacing: 20) {
+                        // Time range selector (consistent with other views)
                         Picker("Range", selection: $viewModel.selectedRange) {
                             ForEach(TrendsViewModel.TimeRange.allCases, id: \.self) {
                                 Text($0.rawValue).tag($0)
@@ -33,7 +34,7 @@ struct TrendsView: View {
                         }
                         .pickerStyle(.segmented)
                         .padding(.horizontal)
-                        .onChange(of: viewModel.selectedRange) {
+                        .onChange(of: viewModel.selectedRange) { _, _ in
                             pinnedDate = nil
                             showDetailSheet = false
                             viewModel.rangeChanged()
@@ -95,9 +96,12 @@ struct TrendsView: View {
     /// Call this from every chart's chartXSelection onChange.
     /// Touch only pins the date for inline tooltip — sheet opens via long press.
     private func onDragChanged(_ date: Date?) {
-        dragDate = date
-        if let date {
-            pinnedDate = date
+        // Disable animations during drag to prevent the chart "dancing" effect
+        var t = Transaction()
+        t.disablesAnimations = true
+        withTransaction(t) {
+            dragDate = date
+            if let date { pinnedDate = date }
         }
     }
 
@@ -121,7 +125,7 @@ struct TrendsView: View {
                         .interpolationMethod(.catmullRom)
                     PointMark(x: .value("Date", date), y: .value("HRV", value))
                         .foregroundStyle(isLow ? Color(hex: "FF1744") : Color(hex: "00C853"))
-                        .symbolSize(isNearPinned(date, in: viewModel.hrvHistory.map(\.0)) ? 80 : (isLow ? 50 : 30))
+                        .symbolSize(isLow ? 50 : 30)
                         .annotation(position: .top, spacing: 2) {
                             if isLow {
                                 Image(systemName: "exclamationmark.circle.fill")
@@ -163,7 +167,7 @@ struct TrendsView: View {
                         .interpolationMethod(.catmullRom)
                     PointMark(x: .value("Date", date), y: .value("RHR", value))
                         .foregroundStyle(Color(hex: "FF1744"))
-                        .symbolSize(isNearPinned(date, in: viewModel.rhrHistory.map(\.0)) ? 80 : 30)
+                        .symbolSize(30)
                 }
                 if let baseline = viewModel.rhrBaseline {
                     RuleMark(y: .value("Baseline", baseline))
@@ -285,7 +289,7 @@ struct TrendsView: View {
                     y: .value("Recovery", metrics.recoveryScore)
                 )
                 .foregroundStyle(isBest ? Color(hex: "FFD600") : recoveryAreaColor(metrics.recoveryScore))
-                .symbolSize(isBest ? 100 : (isSelected(metrics.date) ? 80 : 30))
+                .symbolSize(isBest ? 100 : 30)
                 // Gold star above the personal-best point
                 .annotation(position: .top, spacing: 2) {
                     if isBest {
@@ -340,7 +344,7 @@ struct TrendsView: View {
                             .interpolationMethod(.catmullRom)
                         PointMark(x: .value("Date", date), y: .value("VO2", value))
                             .foregroundStyle(Color(hex: "2979FF"))
-                            .symbolSize(isNearPinned(date, in: viewModel.vo2MaxHistory.map(\.0)) ? 80 : 30)
+                            .symbolSize(30)
                     }
                     // Linear trend overlay
                     if let slope = viewModel.vo2MaxTrend, let first = viewModel.vo2MaxHistory.first,
@@ -394,7 +398,7 @@ struct TrendsView: View {
                         .interpolationMethod(.catmullRom)
                     PointMark(x: .value("Date", date), y: .value("Score", value))
                         .foregroundStyle(Color(hex: "00C853"))
-                        .symbolSize(isNearPinned(date, in: ayurvedicSleepData.map(\.0)) ? 80 : 30)
+                        .symbolSize(30)
                 }
                 if let sel = pinnedDate {
                     RuleMark(x: .value("Selected", sel))
@@ -437,12 +441,6 @@ struct TrendsView: View {
                     Text("Full Detail")
                         .font(.caption)
                         .foregroundColor(Color(hex: "2979FF"))
-                }
-                Button {
-                    withAnimation { pinnedDate = nil; viewModel.selectDate(nil) }
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(Color(hex: "8E8E93"))
                 }
             }
 
