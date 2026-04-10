@@ -47,6 +47,10 @@ struct TrendsView: View {
                             rhrChart
                             strainChart
                             sleepChart
+                            if !viewModel.weeklyGoalHistory.isEmpty {
+                                WeeklyGoalCard(history: viewModel.weeklyGoalHistory)
+                                    .padding(.horizontal)
+                            }
                             recoveryChart
                             ayurvedicSleepChart
                             if !viewModel.vo2MaxHistory.isEmpty {
@@ -121,25 +125,25 @@ struct TrendsView: View {
                     // Mark illness-risk days (HRV < 75% of baseline) in red
                     let isLow = baseline.map { value < $0 * 0.75 } ?? false
                     LineMark(x: .value("Date", date), y: .value("HRV", value))
-                        .foregroundStyle(Color(hex: "00C853"))
+                        .foregroundStyle(Color.somaGreen)
                         .interpolationMethod(.catmullRom)
                     PointMark(x: .value("Date", date), y: .value("HRV", value))
-                        .foregroundStyle(isLow ? Color(hex: "FF1744") : Color(hex: "00C853"))
+                        .foregroundStyle(isLow ? Color.somaRed : Color.somaGreen)
                         .symbolSize(isLow ? 50 : 30)
                         .annotation(position: .top, spacing: 2) {
                             if isLow {
                                 Image(systemName: "exclamationmark.circle.fill")
                                     .font(.system(size: 8))
-                                    .foregroundColor(Color(hex: "FF1744"))
+                                    .foregroundColor(Color.somaRed)
                             }
                         }
                 }
                 if let b = baseline {
                     RuleMark(y: .value("Baseline", b))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                        .foregroundStyle(Color(hex: "8E8E93"))
+                        .foregroundStyle(Color.somaGray)
                         .annotation(position: .top, alignment: .trailing) {
-                            Text("Baseline").font(.caption2).foregroundColor(Color(hex: "8E8E93"))
+                            Text("Baseline").font(.caption2).foregroundColor(Color.somaGray)
                         }
                 }
                 if let sel = pinnedDate {
@@ -163,18 +167,18 @@ struct TrendsView: View {
             Chart {
                 ForEach(viewModel.rhrHistory, id: \.0) { date, value in
                     LineMark(x: .value("Date", date), y: .value("RHR", value))
-                        .foregroundStyle(Color(hex: "FF1744"))
+                        .foregroundStyle(Color.somaRed)
                         .interpolationMethod(.catmullRom)
                     PointMark(x: .value("Date", date), y: .value("RHR", value))
-                        .foregroundStyle(Color(hex: "FF1744"))
+                        .foregroundStyle(Color.somaRed)
                         .symbolSize(30)
                 }
                 if let baseline = viewModel.rhrBaseline {
                     RuleMark(y: .value("Baseline", baseline))
                         .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                        .foregroundStyle(Color(hex: "8E8E93"))
+                        .foregroundStyle(Color.somaGray)
                         .annotation(position: .top, alignment: .trailing) {
-                            Text("Baseline").font(.caption2).foregroundColor(Color(hex: "8E8E93"))
+                            Text("Baseline").font(.caption2).foregroundColor(Color.somaGray)
                         }
                 }
                 if let sel = pinnedDate {
@@ -232,7 +236,7 @@ struct TrendsView: View {
                         x: .value("Date", metrics.date, unit: .day),
                         y: .value("Sleep", metrics.sleepDurationHours ?? 0)
                     )
-                    .foregroundStyle(Color(hex: "2979FF"))
+                    .foregroundStyle(Color.somaBlue)
                     .cornerRadius(4)
                     .opacity(pinnedDate == nil || isSelected(metrics.date) ? 1.0 : 0.45)
                 }
@@ -242,7 +246,7 @@ struct TrendsView: View {
                             x: .value("Date", metrics.date, unit: .day),
                             y: .value("Need", need)
                         )
-                        .foregroundStyle(Color(hex: "FFD600"))
+                        .foregroundStyle(Color.somaYellow)
                         .lineStyle(StrokeStyle(lineWidth: 2, dash: [4, 4]))
                     }
                 }
@@ -288,14 +292,14 @@ struct TrendsView: View {
                     x: .value("Date", metrics.date, unit: .day),
                     y: .value("Recovery", metrics.recoveryScore)
                 )
-                .foregroundStyle(isBest ? Color(hex: "FFD600") : recoveryAreaColor(metrics.recoveryScore))
+                .foregroundStyle(isBest ? Color.somaYellow : recoveryAreaColor(metrics.recoveryScore))
                 .symbolSize(isBest ? 100 : 30)
                 // Gold star above the personal-best point
                 .annotation(position: .top, spacing: 2) {
                     if isBest {
                         Image(systemName: "star.fill")
                             .font(.system(size: 9))
-                            .foregroundColor(Color(hex: "FFD600"))
+                            .foregroundColor(Color.somaYellow)
                     }
                 }
 
@@ -331,19 +335,19 @@ struct TrendsView: View {
                     HStack(spacing: 4) {
                         Image(systemName: (viewModel.vo2MaxTrend ?? 0) >= 0 ? "arrow.up.right" : "arrow.down.right")
                             .font(.caption2)
-                            .foregroundColor((viewModel.vo2MaxTrend ?? 0) >= 0 ? Color(hex: "00C853") : Color(hex: "FF9100"))
+                            .foregroundColor((viewModel.vo2MaxTrend ?? 0) >= 0 ? Color.somaGreen : Color.somaOrange)
                         Text(label)
                             .font(.caption2)
-                            .foregroundColor((viewModel.vo2MaxTrend ?? 0) >= 0 ? Color(hex: "00C853") : Color(hex: "FF9100"))
+                            .foregroundColor((viewModel.vo2MaxTrend ?? 0) >= 0 ? Color.somaGreen : Color.somaOrange)
                     }
                 }
                 Chart {
                     ForEach(viewModel.vo2MaxHistory, id: \.0) { date, value in
                         LineMark(x: .value("Date", date), y: .value("VO2", value))
-                            .foregroundStyle(Color(hex: "2979FF"))
+                            .foregroundStyle(Color.somaBlue)
                             .interpolationMethod(.catmullRom)
                         PointMark(x: .value("Date", date), y: .value("VO2", value))
-                            .foregroundStyle(Color(hex: "2979FF"))
+                            .foregroundStyle(Color.somaBlue)
                             .symbolSize(30)
                     }
                     // Linear trend overlay
@@ -354,10 +358,10 @@ struct TrendsView: View {
                         let days = last.0.timeIntervalSince(first.0) / 86_400
                         let trendEnd = trendStart + slope * (days / 30)
                         LineMark(x: .value("Date", first.0), y: .value("Trend", trendStart))
-                            .foregroundStyle(Color(hex: "FFD600").opacity(0.7))
+                            .foregroundStyle(Color.somaYellow.opacity(0.7))
                             .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
                         LineMark(x: .value("Date", last.0), y: .value("Trend", trendEnd))
-                            .foregroundStyle(Color(hex: "FFD600").opacity(0.7))
+                            .foregroundStyle(Color.somaYellow.opacity(0.7))
                             .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
                     }
                     if let sel = pinnedDate {
@@ -394,10 +398,10 @@ struct TrendsView: View {
             Chart {
                 ForEach(ayurvedicSleepData, id: \.0) { date, value in
                     LineMark(x: .value("Date", date), y: .value("Score", value))
-                        .foregroundStyle(Color(hex: "00C853"))
+                        .foregroundStyle(Color.somaGreen)
                         .interpolationMethod(.catmullRom)
                     PointMark(x: .value("Date", date), y: .value("Score", value))
-                        .foregroundStyle(Color(hex: "00C853"))
+                        .foregroundStyle(Color.somaGreen)
                         .symbolSize(30)
                 }
                 if let sel = pinnedDate {
@@ -436,11 +440,21 @@ struct TrendsView: View {
                     .foregroundColor(.primary)
                 Spacer()
                 Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                     showDetailSheet = true
                 } label: {
-                    Text("Full Detail")
-                        .font(.caption)
-                        .foregroundColor(Color(hex: "2979FF"))
+                    HStack(spacing: 5) {
+                        Text("Full Detail")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                        Image(systemName: "arrow.up.right")
+                            .font(.caption2.weight(.bold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.somaBlue)
+                    .clipShape(Capsule())
                 }
             }
 
@@ -460,7 +474,7 @@ struct TrendsView: View {
                         Text("Prev")
                     }
                     .font(.caption)
-                    .foregroundColor(canNavigate(-1) ? Color(hex: "2979FF") : Color(hex: "8E8E93"))
+                    .foregroundColor(canNavigate(-1) ? Color.somaBlue : Color.somaGray)
                 }
                 .disabled(!canNavigate(-1))
 
@@ -468,7 +482,7 @@ struct TrendsView: View {
 
                 Text("Swipe ← → to navigate")
                     .font(.caption2)
-                    .foregroundColor(Color(hex: "8E8E93"))
+                    .foregroundColor(Color.somaGray)
 
                 Spacer()
 
@@ -478,7 +492,7 @@ struct TrendsView: View {
                         Image(systemName: "chevron.right")
                     }
                     .font(.caption)
-                    .foregroundColor(canNavigate(1) ? Color(hex: "2979FF") : Color(hex: "8E8E93"))
+                    .foregroundColor(canNavigate(1) ? Color.somaBlue : Color.somaGray)
                 }
                 .disabled(!canNavigate(1))
             }
@@ -488,7 +502,7 @@ struct TrendsView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color(hex: "2979FF").opacity(0.3), lineWidth: 1)
+                .strokeBorder(Color.somaBlue.opacity(0.3), lineWidth: 1)
         )
         .padding(.horizontal)
         .gesture(
@@ -509,7 +523,7 @@ struct TrendsView: View {
                 .foregroundColor(color)
             Text(label)
                 .font(.caption2)
-                .foregroundColor(Color(hex: "8E8E93"))
+                .foregroundColor(Color.somaGray)
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 8)
@@ -628,7 +642,7 @@ struct TrendsView: View {
         @ViewBuilder content: () -> C
     ) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(alignment: .center) {
                 Text(title)
                     .font(.headline)
                     .foregroundColor(.primary)
@@ -642,20 +656,23 @@ struct TrendsView: View {
                         .padding(.vertical, 3)
                         .background(Color.somaCardElevated)
                         .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                        .transition(.opacity.combined(with: .scale))
                 } else {
                     Text(unit)
                         .font(.caption)
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color.somaGray)
                 }
             }
+
             content()
         }
         .padding(14)
         .background(Color.somaCard)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .padding(.horizontal)
-        .onLongPressGesture(minimumDuration: 0.5) {
+        .onLongPressGesture(minimumDuration: 0.4) {
             if pinnedDate != nil {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 showDetailSheet = true
             }
         }

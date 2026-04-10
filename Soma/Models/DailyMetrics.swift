@@ -6,13 +6,17 @@ struct WorkoutZoneBreakdown: Codable, Identifiable {
     var id: UUID = UUID()
     let activityName: String
     let totalStrain: Double
-    var z1Minutes: Double = 0   // Zone 1 (Warm Up) — no load contribution
-    var z2Minutes: Double = 0   // Zone 2 (Fat Burn)
-    var z3Minutes: Double = 0   // Zone 3 (Aerobic)
-    var z4Minutes: Double = 0   // Zone 4 (Anaerobic)
-    var z5Minutes: Double = 0   // Zone 5 (Max)
+    var startTime: Date? = nil
+    var durationMinutes: Double = 0
+    var calories: Double? = nil
+    var z1Minutes: Double = 0   // Zone 1 (Warm Up / ≤60% MaxHR)
+    var z2Minutes: Double = 0   // Zone 2 (Fat Burn / 60–70%)
+    var z3Minutes: Double = 0   // Zone 3 (Aerobic / 70–80%)
+    var z4Minutes: Double = 0   // Zone 4 (Anaerobic / 80–90%)
+    var z5Minutes: Double = 0   // Zone 5 (Max / >90%)
 
     var totalZoneMinutes: Double { z1Minutes + z2Minutes + z3Minutes + z4Minutes + z5Minutes }
+    var activeZoneMinutes: Double { z2Minutes + z3Minutes + z4Minutes + z5Minutes }
 }
 
 struct DailyMetrics: Identifiable, Codable {
@@ -44,6 +48,11 @@ struct DailyMetrics: Identifiable, Codable {
     var sleepingHR: Double?        // avg HR during sleep window (bpm)
     var sleepingHRV: Double?       // avg HRV during sleep window (ms)
     var sleepInterruptions: Int?   // number of awake segments
+
+    // Sleep stage durations (minutes) — night sleep only, excludes naps
+    var deepSleepMinutes: Double?
+    var remSleepMinutes: Double?
+    var coreSleepMinutes: Double?
 
     // Workout-aware strain breakdown
     var workoutStrain: Double?     // strain attributed to HKWorkout sessions
@@ -117,6 +126,9 @@ struct DailyMetrics: Identifiable, Codable {
         sleepingHR: Double? = nil,
         sleepingHRV: Double? = nil,
         sleepInterruptions: Int? = nil,
+        deepSleepMinutes: Double? = nil,
+        remSleepMinutes: Double? = nil,
+        coreSleepMinutes: Double? = nil,
         strainLoad: Double? = nil,
         workoutStrain: Double? = nil,
         incidentalStrain: Double? = nil,
@@ -157,6 +169,9 @@ struct DailyMetrics: Identifiable, Codable {
         self.sleepingHR = sleepingHR
         self.sleepingHRV = sleepingHRV
         self.sleepInterruptions = sleepInterruptions
+        self.deepSleepMinutes = deepSleepMinutes
+        self.remSleepMinutes = remSleepMinutes
+        self.coreSleepMinutes = coreSleepMinutes
         self.strainLoad = strainLoad
         self.workoutStrain = workoutStrain
         self.incidentalStrain = incidentalStrain
@@ -186,18 +201,18 @@ extension DailyMetrics {
     }
 
     var recoveryState: ColorState {
-        ColorState.recovery(score: recoveryScore)
+        ColorState.recovery(score: recoveryScore.rounded())
     }
 
     var strainState: ColorState {
-        ColorState.strain(score: strainScore)
+        ColorState.strain(score: strainScore.rounded())
     }
 
     var sleepState: ColorState {
-        ColorState.sleep(score: sleepScore)
+        ColorState.sleep(score: sleepScore.rounded())
     }
 
     var stressState: ColorState {
-        ColorState.stress(score: stressScore)
+        ColorState.stress(score: stressScore.rounded())
     }
 }

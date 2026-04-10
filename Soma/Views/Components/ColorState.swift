@@ -11,13 +11,13 @@ enum ColorState {
 
     var color: Color {
         switch self {
-        case .green:      return Color(hex: "00C853")
-        case .lightGreen: return Color(hex: "69F0AE")
-        case .yellow:     return Color(hex: "FFD600")
-        case .red:        return Color(hex: "FF1744")
-        case .blue:       return Color(hex: "2979FF")
-        case .orange:     return Color(hex: "FF9100")
-        case .gray:       return Color(hex: "8E8E93")
+        case .green:      return .somaGreen
+        case .lightGreen: return .somaLightGreen
+        case .yellow:     return .somaYellow
+        case .red:        return .somaRed
+        case .blue:       return .somaBlue
+        case .orange:     return .somaOrange
+        case .gray:       return .somaGray
         }
     }
 

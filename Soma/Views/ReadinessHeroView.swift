@@ -1,142 +1,149 @@
 import SwiftUI
 
-// MARK: - ReadinessHeroView
-//
-// Full-width ring that promotes readiness to the top-level hero KPI.
-// The large outer ring shows the composite readiness score (0–100).
-// Four smaller component arcs below surface the individual inputs.
-
 struct ReadinessHeroView: View {
     let readinessScore: Double
     let recoveryScore: Double
     let sleepScore: Double
-    /// HRV ratio normalised to 0–100 (nil when no baseline yet).
     let hrvScore: Double?
-    /// RHR score normalised to 0–100 (nil when no baseline yet).
     let rhrScore: Double?
 
-    // MARK: - Derived
+    private var state: ColorState { ColorState.recovery(score: readinessScore) }
+    private var accent: Color { state.color }
 
     private var headline: String {
         switch readinessScore {
-        case 85...100: return "Good to Push Hard"
-        case 65..<85:  return "Ready to Train"
-        case 45..<65:  return "Train Smart Today"
-        case 30..<45:  return "Take It Easy"
-        default:       return "Rest and Recover Today"
+            case 85...100: return "Peak Performance — Go All In"
+            case 65..<85:  return "Strong Day — Train Hard"
+            case 45..<65:  return "Moderate Day — Steady Training"
+            case 30..<45:  return "Low Readiness — Go Light"
+            default:       return "Recovery First — Rest Up"
         }
     }
-
-    private var ringColor: Color {
-        switch readinessScore {
-        case 67...100: return Color(hex: "00C853")
-        case 34..<67:  return Color(hex: "FFD600")
-        default:       return Color(hex: "FF1744")
-        }
-    }
-
-    // MARK: - Body
 
     var body: some View {
-        VStack(spacing: 20) {
-            // Large readiness ring
-            ZStack {
-                // Track
-                Circle()
-                    .stroke(ringColor.opacity(0.12), lineWidth: 20)
-                    .frame(width: 168, height: 168)
+        VStack(spacing: 0) {
 
-                // Progress arc
-                Circle()
-                    .trim(from: 0, to: min(1, readinessScore / 100))
-                    .stroke(
-                        AngularGradient(
-                            colors: [ringColor.opacity(0.6), ringColor],
-                            center: .center,
-                            startAngle: .degrees(-90),
-                            endAngle: .degrees(270)
-                        ),
-                        style: StrokeStyle(lineWidth: 20, lineCap: .round)
-                    )
-                    .frame(width: 168, height: 168)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.easeOut(duration: 1.2), value: readinessScore)
+            // ── Top section ───────────────────────────────────────────────
+            VStack(spacing: 16) {
 
-                // Centre label
-                VStack(spacing: 2) {
-                    Text("\(Int(readinessScore.rounded()))")
-                        .font(.system(size: 50, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
-                        .contentTransition(.numericText())
-                    Text("READINESS")
-                        .font(.system(size: 9, weight: .semibold, design: .rounded))
-                        .foregroundColor(.secondary)
-                        .tracking(1.5)
+                // Header row
+                HStack {
+                    Text("Today's Readiness")
+                        .font(.caption)
+                        .foregroundColor(Color.somaGray)
+                    Spacer()
+                    Text(state.label)
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(accent)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(accent.opacity(0.15))
+                        .clipShape(Capsule())
                 }
+
+                // Centered ring
+                ZStack {
+                    // Track
+                    Circle()
+                        .stroke(accent.opacity(0.12), lineWidth: 16)
+                        .frame(width: 130, height: 130)
+
+                    // Progress arc
+                    Circle()
+                        .trim(from: 0, to: min(1, readinessScore / 100))
+                        .stroke(
+                            AngularGradient(
+                                colors: [accent.opacity(0.5), accent],
+                                center: .center,
+                                startAngle: .degrees(-90),
+                                endAngle: .degrees(270)
+                            ),
+                            style: StrokeStyle(lineWidth: 16, lineCap: .round)
+                        )
+                        .frame(width: 130, height: 130)
+                        .rotationEffect(.degrees(-90))
+                        .animation(.easeOut(duration: 1.2), value: readinessScore)
+
+                    // Score
+                    VStack(spacing: 1) {
+                        Text("\(Int(readinessScore.rounded()))")
+                            .font(.system(size: 44, weight: .bold, design: .rounded))
+                            .foregroundColor(.primary)
+                            .contentTransition(.numericText())
+                        Text("READINESS")
+                            .font(.system(size: 8, weight: .semibold, design: .rounded))
+                            .foregroundColor(.secondary)
+                            .tracking(1.5)
+                    }
+                }
+
+                // Headline below ring
+                Text(headline)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                    .multilineTextAlignment(.center)
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 16)
+            .padding(.bottom, 20)
 
-            // Headline
-            Text(headline)
-                .font(.title3)
-                .fontWeight(.bold)
-                .foregroundColor(.primary)
-                .multilineTextAlignment(.center)
+            // ── Divider ───────────────────────────────────────────────────
+            Rectangle()
+                .fill(Color.secondary.opacity(0.12))
+                .frame(height: 1)
 
-            // Component score arcs
+            // ── Bottom metric row ─────────────────────────────────────────
             HStack(spacing: 0) {
-                componentCell(label: "Recovery", score: recoveryScore, color: Color(hex: "00C853"))
-                separator
-                componentCell(label: "Sleep", score: sleepScore, color: Color(hex: "2979FF"))
+                metricCell(
+                    label: "Recovery",
+                    score: recoveryScore,
+                    color: ColorState.recovery(score: recoveryScore).color
+                )
+                verticalDivider
+                metricCell(
+                    label: "Sleep",
+                    score: sleepScore,
+                    color: Color.somaBlue
+                )
                 if let hrv = hrvScore {
-                    separator
-                    componentCell(label: "HRV", score: hrv, color: Color(hex: "9C27B0"))
+                    verticalDivider
+                    metricCell(label: "HRV", score: hrv, color: Color.somaPurple)
                 }
                 if let rhr = rhrScore {
-                    separator
-                    componentCell(label: "RHR", score: rhr, color: Color(hex: "FF9100"))
+                    verticalDivider
+                    metricCell(label: "RHR", score: rhr, color: Color.somaOrange)
                 }
             }
-            .frame(maxWidth: .infinity)
-            .padding(.top, 4)
+            .padding(.vertical, 14)
         }
-        .padding(20)
         .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .strokeBorder(ringColor.opacity(0.22), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(accent.opacity(0.25), lineWidth: 1)
         )
     }
 
-    // MARK: - Component Cell
+    // MARK: - Metric Cell
 
-    private func componentCell(label: String, score: Double, color: Color) -> some View {
-        VStack(spacing: 6) {
-            ZStack {
-                Circle()
-                    .stroke(color.opacity(0.15), lineWidth: 5)
-                    .frame(width: 38, height: 38)
-                Circle()
-                    .trim(from: 0, to: min(1, score / 100))
-                    .stroke(color, style: StrokeStyle(lineWidth: 5, lineCap: .round))
-                    .frame(width: 38, height: 38)
-                    .rotationEffect(.degrees(-90))
-                    .animation(.easeOut(duration: 1.0), value: score)
-                Text("\(Int(score.rounded()))")
-                    .font(.system(size: 10, weight: .bold, design: .rounded))
-                    .foregroundColor(.primary)
-            }
+    private func metricCell(label: String, score: Double, color: Color) -> some View {
+        VStack(spacing: 3) {
+            Text("\(Int(score.rounded()))")
+                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .foregroundColor(color)
             Text(label)
-                .font(.system(size: 10, weight: .medium))
-                .foregroundColor(.secondary)
+                .font(.caption2)
+                .foregroundColor(Color.somaGray)
         }
         .frame(maxWidth: .infinity)
     }
 
-    private var separator: some View {
+    private var verticalDivider: some View {
         Rectangle()
-            .fill(Color.secondary.opacity(0.15))
-            .frame(width: 1, height: 44)
+            .fill(Color.secondary.opacity(0.12))
+            .frame(width: 1, height: 36)
     }
 }
 
@@ -146,18 +153,18 @@ struct ReadinessHeroView: View {
 #Preview {
     ZStack {
         Color(hex: "121212").ignoresSafeArea()
-        VStack(spacing: 20) {
+        VStack(spacing: 16) {
             ReadinessHeroView(
-                readinessScore: 78,
-                recoveryScore: 82,
-                sleepScore: 71,
-                hrvScore: 91,
-                rhrScore: 68
+                readinessScore: 50,
+                recoveryScore: 81,
+                sleepScore: 75,
+                hrvScore: 88,
+                rhrScore: 72
             )
             ReadinessHeroView(
-                readinessScore: 35,
-                recoveryScore: 38,
-                sleepScore: 41,
+                readinessScore: 88,
+                recoveryScore: 90,
+                sleepScore: 85,
                 hrvScore: nil,
                 rhrScore: nil
             )

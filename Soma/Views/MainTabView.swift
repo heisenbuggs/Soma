@@ -66,7 +66,7 @@ struct MainTabView: View {
                 Label("Notifications", systemImage: "bell.fill")
             }
         }
-        .tint(Color(hex: "2979FF"))
+        .tint(Color.somaBlue)
         .onAppear {
             // Initialize notification schedules on app launch
             NotificationScheduler.shared.updateAllSchedules(settings: settings)

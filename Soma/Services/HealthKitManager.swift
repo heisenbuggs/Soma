@@ -166,11 +166,8 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
         var nightEnd: Date?
 
         // Nap tracking - separate from night sleep
-        var napDuration: TimeInterval = 0
         var napStart: Date?
         var napEnd: Date?
-
-        let sleepStages: Set<HKCategoryValueSleepAnalysis> = [.asleepDeep, .asleepREM, .asleepCore, .asleepUnspecified]
 
         // Group samples into sleep sessions to better handle multiple sessions
         let sleepSessions = groupSamplesIntoSessions(samples)
@@ -253,13 +250,45 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
             }
         }
 
-        // Count interruptions only during night sleep
+        // Count mid-sleep interruptions only.
+        // Rules:
+        //   1. Only awake samples that start AFTER the first actual sleep stage
+        //      (pre-sleep wakefulness before falling asleep is not an interruption).
+        //   2. Must be followed by another night-sleep stage (morning wake-up excluded).
+        //   3. Must be at least 60 s long (filters Apple Watch motion-detection flickers).
+        let nightSleepStageValues: Set<Int> = [
+            HKCategoryValueSleepAnalysis.asleepDeep.rawValue,
+            HKCategoryValueSleepAnalysis.asleepREM.rawValue,
+            HKCategoryValueSleepAnalysis.asleepCore.rawValue,
+            HKCategoryValueSleepAnalysis.asleepUnspecified.rawValue
+        ]
+
+        // Find the start of the first real night-sleep stage (not a nap).
+        let firstNightSleepStart = samples
+            .filter { nightSleepStageValues.contains($0.value) }
+            .filter { !($0.startDate >= napWindowStart && $0.endDate <= napWindowEnd) }
+            .map { $0.startDate }
+            .min()
+
         let nightAwakeSamples = samples.filter { sample in
             let value = HKCategoryValueSleepAnalysis(rawValue: sample.value)
             let isInNapWindow = sample.startDate >= napWindowStart && sample.endDate <= napWindowEnd
             return value == .awake && !isInNapWindow
         }.sorted { $0.startDate < $1.startDate }
-        let interruptionCount = nightAwakeSamples.count
+
+        let interruptionCount = nightAwakeSamples.filter { awakeSample in
+            // Rule 1: must start after the first sleep stage (exclude pre-sleep lying awake)
+            guard let firstSleep = firstNightSleepStart,
+                  awakeSample.startDate >= firstSleep else { return false }
+            // Rule 3: must be at least 60 seconds (skip sensor noise)
+            guard awakeSample.endDate.timeIntervalSince(awakeSample.startDate) >= 60 else { return false }
+            // Rule 2: must be followed by a night-sleep stage (exclude morning wake-up)
+            return samples.contains { s in
+                guard nightSleepStageValues.contains(s.value) else { return false }
+                let isInNapWindow = s.startDate >= napWindowStart && s.endDate <= napWindowEnd
+                return !isInNapWindow && s.startDate >= awakeSample.endDate
+            }
+        }.count
 
         // Total night sleep duration (this is what gets reported as main sleep)
         let totalNightSleep = nightDeep + nightRem + nightCore

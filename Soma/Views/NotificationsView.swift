@@ -31,7 +31,7 @@ struct NotificationsView: View {
                         Text(sectionTitle(for: group.date))
                             .font(.caption)
                             .fontWeight(.semibold)
-                            .foregroundColor(Color(hex: "8E8E93"))
+                            .foregroundColor(Color.somaGray)
                             .textCase(.uppercase)
 
                         ForEach(group.records) { record in
@@ -49,14 +49,14 @@ struct NotificationsView: View {
     private func notificationCard(_ record: NotificationRecord) -> some View {
         HStack(spacing: 0) {
             RoundedRectangle(cornerRadius: 3)
-                .fill(Color(hex: "2979FF"))
+                .fill(Color.somaBlue)
                 .frame(width: 4)
                 .padding(.vertical, 8)
 
             HStack(spacing: 12) {
                 Image(systemName: "bell.fill")
                     .font(.title3)
-                    .foregroundColor(Color(hex: "2979FF"))
+                    .foregroundColor(Color.somaBlue)
                     .frame(width: 28)
 
                 VStack(alignment: .leading, spacing: 4) {
@@ -66,11 +66,11 @@ struct NotificationsView: View {
                         .foregroundColor(.primary)
                     Text(record.body)
                         .font(.caption)
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color.somaGray)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(record.timestamp, format: .dateTime.hour().minute())
                         .font(.caption2)
-                        .foregroundColor(Color(hex: "8E8E93").opacity(0.7))
+                        .foregroundColor(Color.somaGray.opacity(0.7))
                 }
                 Spacer()
             }
@@ -86,14 +86,14 @@ struct NotificationsView: View {
         VStack(spacing: 12) {
             Image(systemName: "bell.slash.fill")
                 .font(.system(size: 48))
-                .foregroundColor(Color(hex: "8E8E93"))
+                .foregroundColor(Color.somaGray)
             Text("No Notifications")
                 .font(.title2)
                 .fontWeight(.semibold)
                 .foregroundColor(.primary)
             Text("Notifications from the past 14 days will appear here.")
                 .font(.subheadline)
-                .foregroundColor(Color(hex: "8E8E93"))
+                .foregroundColor(Color.somaGray)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
         }

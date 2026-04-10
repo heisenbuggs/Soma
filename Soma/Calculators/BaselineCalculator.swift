@@ -2,7 +2,7 @@ import Foundation
 
 struct BaselineCalculator {
 
-    static let minDaysRequired = 3
+    static let minDaysRequired = 7
 
     /// Computes HRV baseline from historical data (mean of daily averages).
     /// Returns nil if fewer than minDaysRequired samples.

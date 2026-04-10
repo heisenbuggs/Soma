@@ -4,8 +4,8 @@ struct DashboardView: View {
     @ObservedObject var viewModel: DashboardViewModel
     let checkInStore: CheckInStore
     let healthKit: HealthDataProviding
-    @AppStorage("userFirstName") private var firstName: String = ""
-    @AppStorage("cacheEnabled") private var cacheEnabled: Bool = false
+    @AppStorage(UserDefaultsKeys.userFirstName) private var firstName: String = ""
+    @AppStorage(UserDefaultsKeys.cacheEnabled) private var cacheEnabled: Bool = false
     @State private var showSettings = false
     @State private var showCheckIn = false
     @State private var showRawData = false
@@ -47,8 +47,8 @@ struct DashboardView: View {
                         // 2x2 Metric Grid
                         LazyVGrid(columns: columns, spacing: 12) {
                             metricCard(.recovery)
-                            metricCard(.strain)
                             metricCard(.sleep)
+                            metricCard(.strain)
                             metricCard(.stress)
                         }
                         .padding(.horizontal)
@@ -57,21 +57,21 @@ struct DashboardView: View {
                         ayurvedicSleepWidget
                             .padding(.horizontal)
 
+                        // How to Improve Today
+                        if !viewModel.coachingTips.isEmpty {
+                            improvementCard
+                        }
+
                         // Training Guidance card
                         if let guidance = viewModel.trainingGuidance {
                             trainingGuidanceCard(guidance)
                                 .padding(.horizontal)
                         }
 
-                        // Daily Check-In prompt
-                        if !checkInStore.hasCompletedToday() {
-                            checkInPrompt
-                        }
-
-                        // How to Improve Today
-                        if !viewModel.coachingTips.isEmpty {
-                            improvementCard
-                        }
+                        // Daily Check-In prompt — disabled for now
+                        // if !checkInStore.hasCompletedToday() {
+                        //     checkInPrompt
+                        // }
 
                         // 3.4 — Weekly Summary (shown on Mondays when available)
                         if let summary = viewModel.weeklySummary {
@@ -111,20 +111,20 @@ struct DashboardView: View {
                                 showCheckIn = true
                             } label: {
                                 Image(systemName: "checkmark.circle")
-                                    .foregroundColor(Color(hex: "00C853"))
+                                    .foregroundColor(Color.somaGreen)
                             }
                         }
                         Button {
                             showRawData = true
                         } label: {
                             Image(systemName: "info.circle")
-                                .foregroundColor(Color(hex: "8E8E93"))
+                                .foregroundColor(Color.somaGray)
                         }
                         Button {
                             showSettings = true
                         } label: {
                             Image(systemName: "gearshape.fill")
-                                .foregroundColor(Color(hex: "8E8E93"))
+                                .foregroundColor(Color.somaGray)
                         }
                     }
                 }
@@ -194,7 +194,7 @@ struct DashboardView: View {
                        let end   = viewModel.todayMetrics.sleepEndTime {
                         Text("Slept \(start.formatted(.dateTime.hour().minute())) · Woke \(end.formatted(.dateTime.hour().minute()))")
                             .font(.caption2)
-                            .foregroundColor(Color(hex: "8E8E93"))
+                            .foregroundColor(Color.somaGray)
                     }
                 }
                 Spacer()
@@ -212,7 +212,7 @@ struct DashboardView: View {
                 }
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundColor(Color(hex: "8E8E93"))
+                    .foregroundColor(Color.somaGray)
             }
             .padding(14)
             .background(accent.opacity(0.08))
@@ -330,27 +330,12 @@ struct DashboardView: View {
 
     @ViewBuilder
     private func readinessHeroCard(guidance: DailyTrainingGuidance) -> some View {
-        let factors = guidance.factors
-
-        // HRV score: ratio × 70 maps baseline (1.0) → 70, above-baseline → higher.
-        // Clamped 0–100. A ratio of 1.43 saturates at 100.
-        let hrvScore: Double? = factors.hrvRatio.map { ratio in
-            max(0, min(100, ratio * 70))
-        }
-
-        // RHR score: score = 80 − delta×3.
-        // delta=0 (at baseline) → 80; delta=+5 (elevated, penalty territory) → 65;
-        // delta=−5 (below baseline, great) → 95; delta=+15 → 35.
-        let rhrScore: Double? = factors.rhrDelta.map { delta in
-            max(0, min(100, 80 - delta * 3))
-        }
-
         ReadinessHeroView(
             readinessScore: guidance.readinessScore,
-            recoveryScore: factors.recoveryScore,
-            sleepScore: factors.sleepScore,
-            hrvScore: hrvScore,
-            rhrScore: rhrScore
+            recoveryScore: guidance.factors.recoveryScore,
+            sleepScore: guidance.factors.sleepScore,
+            hrvScore: viewModel.todayMetrics.hrvAverage,
+            rhrScore: viewModel.todayMetrics.restingHR
         )
     }
 
@@ -366,29 +351,29 @@ struct DashboardView: View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
                 Image(systemName: "thermometer.medium")
-                    .foregroundColor(Color(hex: "FF9100"))
+                    .foregroundColor(Color.somaOrange)
                     .font(.subheadline)
                 Text("Illness Arc Detected — \(daysText)")
                     .font(.subheadline)
                     .fontWeight(.semibold)
-                    .foregroundColor(Color(hex: "FF9100"))
+                    .foregroundColor(Color.somaOrange)
             }
             Text("Elevated wrist temperature detected. All strain targets are disabled. Focus on rest, hydration, and sleep.")
                 .font(.caption)
-                .foregroundColor(Color(hex: "FF9100").opacity(0.85))
+                .foregroundColor(Color.somaOrange.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
             Text(recoveryEstimate)
                 .font(.caption)
-                .foregroundColor(Color(hex: "FF9100").opacity(0.7))
+                .foregroundColor(Color.somaOrange.opacity(0.7))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(hex: "FF9100").opacity(0.10))
+        .background(Color.somaOrange.opacity(0.10))
         .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color(hex: "FF9100").opacity(0.35), lineWidth: 1)
+                .strokeBorder(Color.somaOrange.opacity(0.35), lineWidth: 1)
         )
         .padding(.horizontal)
     }
@@ -398,13 +383,13 @@ struct DashboardView: View {
     private func errorBanner(_ message: String) -> some View {
         HStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(Color(hex: "FF1744"))
+                .foregroundColor(Color.somaRed)
             Text(message)
                 .font(.caption)
-                .foregroundColor(Color(hex: "FF1744"))
+                .foregroundColor(Color.somaRed)
         }
         .padding(10)
-        .background(Color(hex: "FF1744").opacity(0.1))
+        .background(Color.somaRed.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .padding(.horizontal)
     }
@@ -412,13 +397,13 @@ struct DashboardView: View {
     private var baselineBanner: some View {
         HStack(spacing: 8) {
             Image(systemName: "clock.badge.fill")
-                .foregroundColor(Color(hex: "FFD600"))
-            Text("Building baseline — scores improve after 3 days of Apple Watch data.")
+                .foregroundColor(Color.somaYellow)
+            Text("Building baseline — scores improve after 7 days of Apple Watch data.")
                 .font(.caption)
-                .foregroundColor(Color(hex: "FFD600"))
+                .foregroundColor(Color.somaYellow)
         }
         .padding(10)
-        .background(Color(hex: "FFD600").opacity(0.1))
+        .background(Color.somaYellow.opacity(0.1))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .padding(.horizontal)
     }
@@ -430,7 +415,7 @@ struct DashboardView: View {
             HStack(spacing: 12) {
                 Image(systemName: "checkmark.circle.fill")
                     .font(.title2)
-                    .foregroundColor(Color(hex: "00C853"))
+                    .foregroundColor(Color.somaGreen)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Daily Check-In")
                         .font(.subheadline)
@@ -438,19 +423,19 @@ struct DashboardView: View {
                         .foregroundColor(.primary)
                     Text("Log yesterday's behaviors to unlock insights")
                         .font(.caption)
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color.somaGray)
                 }
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.caption)
-                    .foregroundColor(Color(hex: "8E8E93"))
+                    .foregroundColor(Color.somaGray)
             }
             .padding(14)
-            .background(Color(hex: "00C853").opacity(0.1))
+            .background(Color.somaGreen.opacity(0.1))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color(hex: "00C853").opacity(0.3), lineWidth: 1)
+                    .strokeBorder(Color.somaGreen.opacity(0.3), lineWidth: 1)
             )
         }
         .padding(.horizontal)
@@ -471,12 +456,12 @@ struct DashboardView: View {
             ForEach(Array(viewModel.coachingTips.enumerated()), id: \.offset) { _, tip in
                 HStack(alignment: .top, spacing: 8) {
                     Circle()
-                        .fill(Color(hex: "2979FF"))
+                        .fill(Color.somaBlue)
                         .frame(width: 5, height: 5)
                         .padding(.top, 6)
                     Text(tip)
                         .font(.caption)
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color.somaGray)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -501,7 +486,7 @@ struct DashboardView: View {
         return HStack(spacing: 12) {
             Image(systemName: "bed.double.fill")
                 .font(.title2)
-                .foregroundColor(Color(hex: "2979FF"))
+                .foregroundColor(Color.somaBlue)
             VStack(alignment: .leading, spacing: 2) {
                 Text("Bedtime Target")
                     .font(.subheadline)
@@ -513,14 +498,14 @@ struct DashboardView: View {
             }
             Spacer()
             Image(systemName: "moon.fill")
-                .foregroundColor(Color(hex: "2979FF"))
+                .foregroundColor(Color.somaBlue)
         }
         .padding(14)
-        .background(Color(hex: "2979FF").opacity(0.08))
+        .background(Color.somaBlue.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color(hex: "2979FF").opacity(0.25), lineWidth: 1)
+                .strokeBorder(Color.somaBlue.opacity(0.25), lineWidth: 1)
         )
         .padding(.horizontal)
     }
@@ -543,12 +528,6 @@ struct DashboardView: View {
                 quickStat(icon: "flame.fill",      value: formattedCalories,       label: "Active Cal")
                 quickStat(icon: "moon.zzz.fill",   value: formattedSleep,          label: "Sleep")
                 quickStat(icon: "figure.run",      value: formattedWorkoutMinutes, label: "Workout")
-
-                if let vo2 = viewModel.todayMetrics.vo2Max {
-                    quickStat(icon: "lungs.fill",
-                              value: String(format: "%.0f", vo2),
-                              label: "VO2 Max")
-                }
                 if let bloodOx = viewModel.todayMetrics.bloodOxygen {
                     quickStat(icon: "drop.circle.fill",
                               value: String(format: "%.1f%%", bloodOx),
@@ -559,16 +538,6 @@ struct DashboardView: View {
                               value: String(format: "%.0f min", exercise),
                               label: "Activity")
                 }
-                if let movement = viewModel.todayMetrics.movementScore {
-                    quickStat(icon: "figure.walk.motion",
-                              value: String(format: "%.0f", movement),
-                              label: "Movement")
-                }
-                if let standH = viewModel.todayMetrics.standHours {
-                    quickStat(icon: "figure.stand",
-                              value: "\(standH)h",
-                              label: "Stand")
-                }
             }
             .padding(.horizontal)
         }
@@ -578,7 +547,7 @@ struct DashboardView: View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.body)
-                .foregroundColor(Color(hex: "2979FF"))
+                .foregroundColor(Color.somaBlue)
                 .frame(width: 22)
             VStack(alignment: .leading, spacing: 2) {
                 Text(value)
@@ -589,7 +558,7 @@ struct DashboardView: View {
                     .minimumScaleFactor(0.8)
                 Text(label)
                     .font(.caption2)
-                    .foregroundColor(Color(hex: "8E8E93"))
+                    .foregroundColor(Color.somaGray)
             }
             Spacer(minLength: 0)
         }
@@ -605,7 +574,7 @@ struct DashboardView: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
                     Image(systemName: "doc.text.fill")
-                        .foregroundColor(Color(hex: "2979FF"))
+                        .foregroundColor(Color.somaBlue)
                         .font(.subheadline)
                     Text("Your Week in Review")
                         .font(.subheadline)
@@ -614,7 +583,7 @@ struct DashboardView: View {
                     Spacer()
                     Image(systemName: "chevron.right")
                         .font(.caption)
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color.somaGray)
                 }
                 Text(summary.teaser)
                     .font(.caption)
@@ -623,11 +592,11 @@ struct DashboardView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(14)
-            .background(Color(hex: "2979FF").opacity(0.07))
+            .background(Color.somaBlue.opacity(0.07))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .strokeBorder(Color(hex: "2979FF").opacity(0.2), lineWidth: 1)
+                    .strokeBorder(Color.somaBlue.opacity(0.2), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -715,7 +684,7 @@ private struct WeeklySummarySheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(Color(hex: "2979FF"))
+                        .foregroundColor(Color.somaBlue)
                 }
             }
         }
@@ -761,6 +730,9 @@ private struct RawDataView: View {
                     Section("Sleep") {
                         rawRow("Duration", value: metrics.sleepDurationHours.map { formatHours($0) })
                         rawRow("Sleep Need", value: metrics.sleepNeedHours.map { formatHours($0) })
+                        rawRow("Deep Sleep", value: metrics.deepSleepMinutes.map { String(format: "%.0f min", $0) })
+                        rawRow("REM Sleep", value: metrics.remSleepMinutes.map { String(format: "%.0f min", $0) })
+                        rawRow("Core Sleep", value: metrics.coreSleepMinutes.map { String(format: "%.0f min", $0) })
                         rawRow("Interruptions", value: metrics.sleepInterruptions.map { "\($0)" })
                         rawRow("Sleep Start", value: metrics.sleepStartTime.map { timeFormatter.string(from: $0) })
                         rawRow("Sleep End", value: metrics.sleepEndTime.map { timeFormatter.string(from: $0) })
@@ -788,6 +760,26 @@ private struct RawDataView: View {
                         rawRow("Strain", value: String(format: "%.1f", metrics.strainScore))
                         rawRow("Sleep Score", value: String(format: "%.1f", metrics.sleepScore))
                         rawRow("Stress", value: String(format: "%.1f", metrics.stressScore))
+                        rawRow("Readiness", value: metrics.readinessScore.map { String(format: "%.1f", $0) })
+                        rawRow("Movement Score", value: metrics.movementScore.map { String(format: "%.0f", $0) })
+                        rawRow("Sleep Consistency", value: metrics.sleepConsistencyScore.map { String(format: "%.0f", $0) })
+                        rawRow("Evening Stress", value: metrics.eveningStressScore.map { String(format: "%.0f", $0) })
+                        rawRow("VO2 Max Trend", value: metrics.vo2MaxTrend.map { String(format: "%+.2f ml/kg/min per 30d", $0) })
+                    }
+                    .listRowBackground(Color.somaCard)
+
+                    Section("Signals") {
+                        rawRow("Wrist Temp Deviation", value: metrics.wristTempDeviation.map { String(format: "%+.2f°C", $0) })
+                        rawRow("Walking HR Avg", value: metrics.walkingHRAverage.map { String(format: "%.0f bpm", $0) })
+                        rawRow("Stand Hours", value: metrics.standHours.map { "\($0)h" })
+                        rawRow("Mindful Minutes", value: metrics.mindfulMinutes.map { String(format: "%.0f min", $0) })
+                    }
+                    .listRowBackground(Color.somaCard)
+
+                    Section("Nap") {
+                        rawRow("Nap Duration", value: metrics.napDurationMinutes.map { String(format: "%.0f min", $0) })
+                        rawRow("Nap Start", value: metrics.napStartTime.map { timeFormatter.string(from: $0) })
+                        rawRow("Nap End", value: metrics.napEndTime.map { timeFormatter.string(from: $0) })
                     }
                     .listRowBackground(Color.somaCard)
                 }
@@ -798,7 +790,7 @@ private struct RawDataView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(Color(hex: "2979FF"))
+                        .foregroundColor(Color.somaBlue)
                 }
             }
         }
@@ -810,7 +802,7 @@ private struct RawDataView: View {
                 .foregroundColor(.primary)
             Spacer()
             Text(value ?? "--")
-                .foregroundColor(value != nil ? Color(hex: "8E8E93") : Color(hex: "8E8E93").opacity(0.5))
+                .foregroundColor(value != nil ? Color.somaGray : Color.somaGray.opacity(0.5))
                 .font(.subheadline)
         }
     }
@@ -821,5 +813,135 @@ private struct RawDataView: View {
         if hrs == 0 { return "\(mins)m" }
         if mins == 0 { return "\(hrs)h" }
         return "\(hrs)h \(mins)m"
+    }
+}
+
+// MARK: - WeeklyGoalCard
+
+struct WeeklyGoalCard: View {
+    let history: [(date: Date, actual: Double, goal: Double)]
+
+    private var daysMetGoal: Int { history.filter { $0.actual >= $0.goal - 0.25 }.count }
+    private var avgActual: Double {
+        guard !history.isEmpty else { return 0 }
+        return history.map(\.actual).reduce(0, +) / Double(history.count)
+    }
+    private var avgGoal: Double {
+        guard !history.isEmpty else { return 0 }
+        return history.map(\.goal).reduce(0, +) / Double(history.count)
+    }
+    private var streak: Int {
+        var count = 0
+        for entry in history.sorted(by: { $0.date > $1.date }) {
+            if entry.actual >= entry.goal - 0.25 { count += 1 } else { break }
+        }
+        return count
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "target")
+                        .font(.body)
+                        .foregroundColor(Color.somaBlue)
+                    Text("Sleep Goal Tracking")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                }
+                Spacer()
+                if streak >= 3 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "flame.fill").font(.caption2)
+                        Text("\(streak)d streak").font(.caption2).fontWeight(.semibold)
+                    }
+                    .foregroundColor(Color.somaOrange)
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Color.somaOrange.opacity(0.15))
+                    .clipShape(Capsule())
+                }
+            }
+
+            if !history.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(history.sorted(by: { $0.date < $1.date }), id: \.date) { entry in
+                        DayGoalColumn(entry: entry)
+                    }
+                }
+            }
+
+            HStack(spacing: 0) {
+                goalSummaryPill(label: "Goal Met",  value: "\(daysMetGoal)/\(history.count)d", color: Color.somaGreen)
+                Divider().frame(height: 28).padding(.horizontal, 8)
+                goalSummaryPill(label: "Avg Sleep", value: fmtH(avgActual),                   color: Color.somaBlue)
+                Divider().frame(height: 28).padding(.horizontal, 8)
+                goalSummaryPill(label: "Goal",      value: fmtH(avgGoal),                     color: Color.somaGray)
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding(16)
+        .background(Color.somaCard)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private func goalSummaryPill(label: String, value: String, color: Color) -> some View {
+        VStack(spacing: 2) {
+            Text(value).font(.system(size: 15, weight: .bold, design: .rounded)).foregroundColor(color)
+            Text(label).font(.caption2).foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func fmtH(_ h: Double) -> String {
+        let total = Int((h * 60).rounded())
+        let hrs = total / 60; let mins = total % 60
+        return mins == 0 ? "\(hrs)h" : "\(hrs)h \(mins)m"
+    }
+}
+
+private struct DayGoalColumn: View {
+    let entry: (date: Date, actual: Double, goal: Double)
+
+    private var fill: Double { min(1.0, entry.actual / max(entry.goal, 0.1)) }
+    private var isToday: Bool { Calendar.current.isDateInToday(entry.date) }
+    private var barColor: Color {
+        let shortfall = entry.goal - entry.actual
+        if shortfall <= 0.25 { return Color.somaGreen }
+        if shortfall <= 1.0  { return Color.somaYellow }
+        return Color.somaOrange
+    }
+    private var dayLabel: String {
+        if isToday { return "T" }
+        let f = DateFormatter(); f.dateFormat = "E"
+        return String(f.string(from: entry.date).prefix(1))
+    }
+
+    var body: some View {
+        VStack(spacing: 5) {
+            GeometryReader { geo in
+                ZStack(alignment: .bottom) {
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(Color.secondary.opacity(0.12))
+                        .frame(maxHeight: .infinity)
+                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        .fill(barColor.opacity(isToday ? 1.0 : 0.75))
+                        .frame(height: geo.size.height * fill)
+                        .animation(.spring(response: 0.6, dampingFraction: 0.75), value: fill)
+                    Rectangle()
+                        .fill(Color.white.opacity(0.5))
+                        .frame(height: 1.5)
+                        .offset(y: -(geo.size.height - 1))
+                }
+            }
+            .frame(height: 64)
+            Text(dayLabel)
+                .font(.system(size: 10, weight: isToday ? .bold : .regular))
+                .foregroundColor(isToday ? .primary : .secondary)
+            Text(String(format: "%.1f", entry.actual))
+                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                .foregroundColor(barColor)
+        }
+        .frame(maxWidth: .infinity)
     }
 }

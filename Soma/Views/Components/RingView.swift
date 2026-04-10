@@ -25,7 +25,7 @@ struct RingView: View {
 }
 
 #Preview {
-    RingView(progress: 0.78, color: Color(hex: "00C853"))
+    RingView(progress: 0.78, color: .somaGreen)
         .frame(width: 80, height: 80)
         .background(Color.black)
 }

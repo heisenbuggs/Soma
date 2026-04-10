@@ -22,7 +22,7 @@ final class NotificationStore {
 
     static let shared = NotificationStore()
 
-    private let key = "storedNotificationHistory"
+    private let key = UserDefaultsKeys.storedNotificationHistory
     private let retentionDays = 14
     private let calendar = Calendar.current
 

@@ -126,7 +126,7 @@ struct BehaviorEngine {
 
     // MARK: - Recovery Coaching
 
-    /// Returns the top 1–3 targeted coaching tips based on today's metrics and recent check-ins.
+    /// Returns the top targeted coaching tips based on today's metrics and recent check-ins.
     static func coachingTips(
         todayMetrics: DailyMetrics,
         recentCheckIns: [DailyCheckIn],
@@ -134,21 +134,71 @@ struct BehaviorEngine {
     ) -> [String] {
         var tips: [String] = []
 
-        // 1. Behavior-driven tips from correlations (show top harmful behavior)
+        // 1. Behavior-driven tips from correlations (top harmful behaviors first)
         let harmful = insights.filter { $0.isNegativeImpact }.prefix(2)
         for insight in harmful {
             tips.append(insight.impactDescription)
         }
 
-        // 2. Physiological tips
+        // 2. Physiological tips — ordered roughly by actionability
+
+        // Pre-sleep stress — most actionable before tonight
+        if let es = todayMetrics.eveningStressScore, es > 55 {
+            tips.append("Pre-sleep autonomic stress was high. Try 4-7-8 breathing or light stretching in the hour before bed.")
+        }
+
+        // Sleeping HR elevation
         if let sleepingHR = todayMetrics.sleepingHR,
            let rhr = todayMetrics.restingHR,
            sleepingHR > rhr + 5 {
-            tips.append("Your sleeping HR was elevated. Avoid alcohol and late meals to lower it.")
+            tips.append("Your sleeping HR was \(Int(sleepingHR)) bpm — elevated vs resting. Avoid alcohol and heavy meals within 3h of bed.")
         }
 
+        // Fragmented sleep
         if let interruptions = todayMetrics.sleepInterruptions, interruptions >= 3 {
-            tips.append("Sleep was interrupted \(interruptions) times. Consider a consistent bedtime and limiting fluids before sleep.")
+            tips.append("Sleep was fragmented (\(interruptions) interruptions). Limit fluids after 7 PM and keep your room cool and dark.")
+        }
+
+        // Low stand hours — only after 8 PM when the day is effectively over
+        let currentHour = Calendar.current.component(.hour, from: Date())
+        if let stand = todayMetrics.standHours, stand < 6, currentHour >= 20 {
+            tips.append("You only stood for \(stand)h today. Even a 5-minute walk each hour improves insulin sensitivity and recovery.")
+        }
+
+        // Irregular sleep schedule
+        if let consistency = todayMetrics.sleepConsistencyScore, consistency < 45 {
+            tips.append("Your sleep schedule is irregular. Pick a fixed wake time and hold it — even on weekends — to stabilize your circadian rhythm.")
+        }
+
+        // Long nap
+        if let nap = todayMetrics.napDurationMinutes, nap > 90 {
+            tips.append("Your nap was \(Int(nap)) min — quite long. Cap naps at 25 min to avoid sleep inertia and protect tonight's sleep pressure.")
+        }
+
+        // Blood oxygen low
+        if let spo2 = todayMetrics.bloodOxygen, spo2 < 95 {
+            tips.append("SpO2 is \(String(format: "%.1f", spo2))% — skip intense training today and ensure good room ventilation while sleeping.")
+        }
+
+        // Walking HR elevated
+        if let whr = todayMetrics.walkingHRAverage, whr > 95 {
+            tips.append("Walking heart rate is elevated (\(Int(whr)) bpm). Your cardiovascular system is under load — keep today's effort light.")
+        }
+
+        // VO2 Max trending down
+        if let trend = todayMetrics.vo2MaxTrend, trend < -0.5 {
+            tips.append("Aerobic fitness is drifting down. Two 30-minute zone 2 sessions per week (easy conversational pace) will reverse the trend.")
+        }
+
+        // No mindfulness logged — suggest it
+        if (todayMetrics.mindfulMinutes ?? 0) == 0,
+           todayMetrics.stressScore > 45 {
+            tips.append("Stress is elevated and no mindfulness was logged. Even 5 minutes of focused breathing lowers cortisol and improves HRV.")
+        }
+
+        // High recovery — encourage training
+        if todayMetrics.recoveryScore >= 80, tips.count < 2 {
+            tips.append("Recovery is excellent — your body is ready. A quality training session today will yield the best adaptation.")
         }
 
         // 3. Fallback: generic recommendation from recovery
@@ -160,7 +210,7 @@ struct BehaviorEngine {
             ))
         }
 
-        return Array(tips.prefix(3))
+        return Array(tips.prefix(4))
     }
 }
 

@@ -8,11 +8,6 @@ final class NotificationScheduler {
 
     static let shared = NotificationScheduler()
 
-    private let recoveryNotificationID  = "com.soma.daily-recovery"
-    private let bedtimeReminderID       = "com.soma.bedtime-reminder"
-    private let checkinReminderID       = "com.soma.checkin-reminder"
-    private let weeklyNarrativeID       = "com.soma.weekly-narrative"
-
     private init() {}
 
     // MARK: - Permission
@@ -28,13 +23,12 @@ final class NotificationScheduler {
 
     // MARK: - Schedule
 
-    /// Schedules (or replaces) the daily recovery notification at the user's preferred time.
+    /// Schedules two daily notifications after scores are computed:
+    ///   1. Score summary — readiness + key scores + training recommendation.
+    ///   2. Insights alert — top high-priority physiological issues (fires 2 min later).
     ///
-    /// Using a calendar trigger means:
-    /// - If metrics are computed before the notification time, it fires that same morning.
-    /// - If computed after the notification time, it fires the next morning.
-    ///
-    /// Called once per day after scores are freshly computed.
+    /// Using calendar triggers means both fire the next morning if computed after the
+    /// notification time, or that same morning if computed before.
     func scheduleRecoveryNotification(metrics: DailyMetrics, guidance: DailyTrainingGuidance? = nil, settings: UserSettings = UserSettings()) {
         Task {
             let center = UNUserNotificationCenter.current()
@@ -42,31 +36,54 @@ final class NotificationScheduler {
             guard notificationSettings.authorizationStatus == .authorized,
                   settings.notificationsEnabled else { return }
 
-            let content = UNMutableNotificationContent()
-            content.sound = .default
-            let (title, body) = Self.content(for: metrics, guidance: guidance)
-            content.title = title
-            content.body  = body
+            // ── Notification 1: Score summary ─────────────────────────────
+            let scoreContent = UNMutableNotificationContent()
+            scoreContent.sound = .default
+            let (scoreTitle, scoreBody) = Self.scoreContent(for: metrics, guidance: guidance)
+            scoreContent.title = scoreTitle
+            scoreContent.body  = scoreBody
 
-            // Fire at the user's preferred time
-            var components = DateComponents()
-            components.hour   = settings.recoveryNotificationHour
-            components.minute = settings.recoveryNotificationMinute
-            let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: false)
+            var scoreComponents = DateComponents()
+            scoreComponents.hour   = settings.recoveryNotificationHour
+            scoreComponents.minute = settings.recoveryNotificationMinute
+            let scoreTrigger = UNCalendarNotificationTrigger(dateMatching: scoreComponents, repeats: false)
 
-            let request = UNNotificationRequest(
-                identifier: recoveryNotificationID,
-                content: content,
-                trigger: trigger
-            )
+            center.removePendingNotificationRequests(withIdentifiers: [NotificationIDs.dailyRecovery])
+            try? await center.add(UNNotificationRequest(
+                identifier: NotificationIDs.dailyRecovery,
+                content: scoreContent,
+                trigger: scoreTrigger
+            ))
 
-            center.removePendingNotificationRequests(withIdentifiers: [recoveryNotificationID])
-            try? await center.add(request)
+            NotificationStore.shared.save(NotificationRecord(title: scoreTitle, body: scoreBody))
 
-            // Persist to notification history (one record per calendar day).
-            NotificationStore.shared.save(
-                NotificationRecord(title: title, body: body)
-            )
+            // ── Notification 2: Top insights ──────────────────────────────
+            let topInsights = Self.topInsights(for: metrics)
+            guard !topInsights.isEmpty else { return }
+
+            let insightsContent = UNMutableNotificationContent()
+            insightsContent.sound = .default
+            let insightsTitle = "Today's Health Alerts"
+            let insightsBody  = topInsights.prefix(3).joined(separator: " · ")
+            insightsContent.title = insightsTitle
+            insightsContent.body  = insightsBody
+
+            // Fire 2 minutes after the score notification so both are distinct
+            var insightsComponents = DateComponents()
+            insightsComponents.hour   = settings.recoveryNotificationHour
+            insightsComponents.minute = (settings.recoveryNotificationMinute + 2) % 60
+            // If wrapping past the hour, bump the hour
+            if settings.recoveryNotificationMinute + 2 >= 60 {
+                insightsComponents.hour = (settings.recoveryNotificationHour + 1) % 24
+            }
+            let insightsTrigger = UNCalendarNotificationTrigger(dateMatching: insightsComponents, repeats: false)
+
+            center.removePendingNotificationRequests(withIdentifiers: [NotificationIDs.dailyInsights])
+            try? await center.add(UNNotificationRequest(
+                identifier: NotificationIDs.dailyInsights,
+                content: insightsContent,
+                trigger: insightsTrigger
+            ))
         }
     }
 
@@ -77,7 +94,7 @@ final class NotificationScheduler {
             let notificationSettings = await center.notificationSettings()
             guard notificationSettings.authorizationStatus == .authorized,
                   settings.bedtimeReminderEnabled else { 
-                center.removePendingNotificationRequests(withIdentifiers: [bedtimeReminderID])
+                center.removePendingNotificationRequests(withIdentifiers: [NotificationIDs.bedtimeReminder])
                 return 
             }
 
@@ -109,12 +126,12 @@ final class NotificationScheduler {
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
 
             let request = UNNotificationRequest(
-                identifier: bedtimeReminderID,
+                identifier: NotificationIDs.bedtimeReminder,
                 content: content,
                 trigger: trigger
             )
 
-            center.removePendingNotificationRequests(withIdentifiers: [bedtimeReminderID])
+            center.removePendingNotificationRequests(withIdentifiers: [NotificationIDs.bedtimeReminder])
             try? await center.add(request)
         }
     }
@@ -126,7 +143,7 @@ final class NotificationScheduler {
             let notificationSettings = await center.notificationSettings()
             guard notificationSettings.authorizationStatus == .authorized,
                   settings.checkinReminderEnabled else { 
-                center.removePendingNotificationRequests(withIdentifiers: [checkinReminderID])
+                center.removePendingNotificationRequests(withIdentifiers: [NotificationIDs.checkinReminder])
                 return 
             }
 
@@ -141,12 +158,12 @@ final class NotificationScheduler {
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
 
             let request = UNNotificationRequest(
-                identifier: checkinReminderID,
+                identifier: NotificationIDs.checkinReminder,
                 content: content,
                 trigger: trigger
             )
 
-            center.removePendingNotificationRequests(withIdentifiers: [checkinReminderID])
+            center.removePendingNotificationRequests(withIdentifiers: [NotificationIDs.checkinReminder])
             try? await center.add(request)
         }
     }
@@ -181,12 +198,12 @@ final class NotificationScheduler {
             let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
 
             let request = UNNotificationRequest(
-                identifier: weeklyNarrativeID,
+                identifier: NotificationIDs.weeklyNarrative,
                 content: content,
                 trigger: trigger
             )
 
-            center.removePendingNotificationRequests(withIdentifiers: [weeklyNarrativeID])
+            center.removePendingNotificationRequests(withIdentifiers: [NotificationIDs.weeklyNarrative])
             try? await center.add(request)
 
             NotificationStore.shared.save(
@@ -198,56 +215,111 @@ final class NotificationScheduler {
     func cancelPendingNotifications() {
         UNUserNotificationCenter.current()
             .removePendingNotificationRequests(withIdentifiers: [
-                recoveryNotificationID,
-                bedtimeReminderID,
-                checkinReminderID,
-                weeklyNarrativeID
+                NotificationIDs.dailyRecovery,
+                NotificationIDs.dailyInsights,
+                NotificationIDs.bedtimeReminder,
+                NotificationIDs.checkinReminder,
+                NotificationIDs.weeklyNarrative
             ])
     }
 
-    // MARK: - Content Generation
+    func cancelPendingInsightsNotification() {
+        UNUserNotificationCenter.current()
+            .removePendingNotificationRequests(withIdentifiers: [NotificationIDs.dailyInsights])
+    }
+
+    // MARK: - Score Content
+
+    static func scoreContent(for metrics: DailyMetrics, guidance: DailyTrainingGuidance? = nil) -> (title: String, body: String) {
+        let recoveryScore = Int(metrics.recoveryScore.rounded())
+        let sleepScore    = Int(metrics.sleepScore.rounded())
+        let readiness     = metrics.readinessScore.map { Int($0.rounded()) }
+        let name          = UserDefaults.standard.string(forKey: UserDefaultsKeys.userFirstName) ?? ""
+        let prefix        = name.isEmpty ? "" : "\(name), "
+        let recoveryLabel = ColorState.recovery(score: metrics.recoveryScore).label
+
+        var parts: [String] = []
+        parts.append("\(prefix)Recovery \(recoveryScore) (\(recoveryLabel)).")
+        parts.append("Sleep score: \(sleepScore).")
+        if let r = readiness {
+            parts.append("Readiness: \(r).")
+        }
+        if let g = guidance {
+            parts.append("\(g.activityLevel.title) recommended (strain \(g.targetStrainMin)–\(g.targetStrainMax)).")
+        }
+
+        let title = "Readiness \(readiness ?? recoveryScore) — \(recoveryLabel)"
+        return (title, parts.joined(separator: " "))
+    }
+
+    // MARK: - Top Insights Generator
+
+    /// Returns a list of the most important single-line health alerts based on today's metrics.
+    /// Prioritises the most actionable issues (HRV, RHR, sleep stages, stress, SPO2).
+    static func topInsights(for metrics: DailyMetrics) -> [String] {
+        var alerts: [(priority: Int, text: String)] = []
+
+        // SPO2 (highest priority — health risk)
+        if let spo2 = metrics.bloodOxygen, spo2 < 95 {
+            alerts.append((0, String(format: "SpO₂ low at %.1f%% — avoid intense exercise", spo2)))
+        }
+
+        // Wrist temperature (illness risk)
+        if let temp = metrics.wristTempDeviation, temp > 0.5 {
+            alerts.append((0, String(format: "Wrist temp +%.1f°C above baseline — possible illness signal", temp)))
+        }
+
+        // HRV below baseline
+        if let hrv = metrics.sleepingHRV ?? metrics.hrvAverage {
+            if hrv < 30 {
+                alerts.append((1, String(format: "HRV very low at %.0f ms — rest recommended today", hrv)))
+            }
+        }
+
+        // Elevated RHR (no baseline needed — absolute threshold)
+        if let rhr = metrics.restingHR, rhr > 70 {
+            alerts.append((1, String(format: "Resting HR elevated at %.0f bpm", rhr)))
+        }
+
+        // Deep sleep critically low
+        if let deep = metrics.deepSleepMinutes, deep < 40 {
+            alerts.append((1, String(format: "Deep sleep only %.0f min — physical recovery was limited", deep)))
+        }
+
+        // Sleep deficit
+        if let actual = metrics.sleepDurationHours, let need = metrics.sleepNeedHours, actual < need - 1 {
+            let debt = need - actual
+            alerts.append((2, String(format: "%.1fh sleep debt — aim for an earlier bedtime tonight", debt)))
+        }
+
+        // REM low
+        if let rem = metrics.remSleepMinutes, rem < 60 {
+            alerts.append((2, String(format: "REM sleep low at %.0f min — mood and memory may be affected", rem)))
+        }
+
+        // Recovery in red
+        if metrics.recoveryScore < 34 {
+            alerts.append((2, "Recovery in the red — prioritise rest and hydration today"))
+        }
+
+        // High pre-sleep stress
+        if let es = metrics.eveningStressScore, es > 60 {
+            alerts.append((2, String(format: "High pre-sleep stress (%.0f) — try breathwork before bed tonight", es)))
+        }
+
+        // Respiratory rate elevated
+        if let rr = metrics.respiratoryRate, rr > 20, (metrics.workoutMinutes ?? 0) == 0 {
+            alerts.append((2, String(format: "Respiratory rate elevated at %.1f br/min at rest", rr)))
+        }
+
+        return alerts
+            .sorted { $0.priority < $1.priority }
+            .map { $0.text }
+    }
+
+    // MARK: - Legacy alias (kept for compatibility)
 
     static func content(for metrics: DailyMetrics, guidance: DailyTrainingGuidance? = nil) -> (title: String, body: String) {
-        let score = Int(metrics.recoveryScore.rounded())
-        let name  = UserDefaults.standard.string(forKey: "userFirstName") ?? ""
-        let prefix = name.isEmpty ? "" : "\(name), "
-
-        // Build training suffix from guidance if available
-        let trainingSuffix: String = {
-            guard let g = guidance else { return "" }
-            let range = "\(g.targetStrainMin)–\(g.targetStrainMax)"
-            return " Recommended: \(g.activityLevel.title) (strain \(range))."
-        }()
-
-        switch metrics.recoveryScore {
-        case 67...100:
-            let sleepNote = metrics.sleepScore >= 75 ? "Sleep and HRV are strong." : ""
-            return (
-                "Recovery \(score) — \(guidance?.activityLevel.shortTitle ?? "Great day to train")",
-                ("\(prefix)Resting HR was low and recovery looks solid. " + sleepNote + trainingSuffix).trimmingCharacters(in: .whitespaces)
-            )
-        case 34..<67:
-            let hrNote: String
-            if let sHR = metrics.sleepingHR, sHR > 0 {
-                hrNote = String(format: "Sleeping HR was %.0f bpm.", sHR)
-            } else {
-                hrNote = ""
-            }
-            return (
-                "Recovery \(score) — \(guidance?.activityLevel.shortTitle ?? "Moderate day")",
-                ("\(prefix)Keep today's effort balanced. " + hrNote + trainingSuffix).trimmingCharacters(in: .whitespaces)
-            )
-        default:
-            let sleepNote: String
-            if let hours = metrics.sleepDurationHours {
-                sleepNote = String(format: "Sleep was %.1fh.", hours)
-            } else {
-                sleepNote = ""
-            }
-            return (
-                "Recovery \(score) — \(guidance?.activityLevel.shortTitle ?? "Rest day recommended")",
-                ("\(prefix)HRV dipped overnight. Prioritise recovery. " + sleepNote + trainingSuffix).trimmingCharacters(in: .whitespaces)
-            )
-        }
+        scoreContent(for: metrics, guidance: guidance)
     }
 }

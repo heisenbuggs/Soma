@@ -134,7 +134,7 @@ struct AyurvedicSleepDetailView: View {
                             Button { navigateDate(-1) } label: {
                                 Image(systemName: "chevron.left.circle.fill")
                                     .font(.title2)
-                                    .foregroundColor(currentNavIndex > 0 ? Color(hex: "2979FF") : Color(hex: "8E8E93").opacity(0.4))
+                                    .foregroundColor(currentNavIndex > 0 ? Color.somaBlue : Color.somaGray.opacity(0.4))
                             }
                             .disabled(currentNavIndex <= 0)
 
@@ -153,7 +153,7 @@ struct AyurvedicSleepDetailView: View {
                             Button { navigateDate(1) } label: {
                                 Image(systemName: "chevron.right.circle.fill")
                                     .font(.title2)
-                                    .foregroundColor(currentNavIndex < sortedNavigableDates.count - 1 ? Color(hex: "2979FF") : Color(hex: "8E8E93").opacity(0.4))
+                                    .foregroundColor(currentNavIndex < sortedNavigableDates.count - 1 ? Color.somaBlue : Color.somaGray.opacity(0.4))
                             }
                             .disabled(currentNavIndex >= sortedNavigableDates.count - 1)
                         }
@@ -176,7 +176,7 @@ struct AyurvedicSleepDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(Color(hex: "2979FF"))
+                        .foregroundColor(Color.somaBlue)
                 }
             }
         }
@@ -381,7 +381,7 @@ struct AyurvedicSleepDetailView: View {
     private func tipCard(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "lightbulb.fill")
-                .foregroundColor(Color(hex: "FFD600"))
+                .foregroundColor(Color.somaYellow)
                 .font(.body)
             Text(text)
                 .font(.subheadline)
@@ -390,11 +390,11 @@ struct AyurvedicSleepDetailView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(hex: "FFD600").opacity(0.08))
+        .background(Color.somaYellow.opacity(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .strokeBorder(Color(hex: "FFD600").opacity(0.25), lineWidth: 1)
+                .strokeBorder(Color.somaYellow.opacity(0.25), lineWidth: 1)
         )
     }
 
@@ -422,7 +422,7 @@ struct AyurvedicSleepDetailView: View {
         }()
 
         let accentColor = minutes > 60 || (napStartTime.map { Calendar.current.component(.hour, from: $0) >= 16 } ?? false)
-            ? Color(hex: "FF9100")
+            ? Color.somaOrange
             : Color(hex: "5C6BC0")
 
         return VStack(alignment: .leading, spacing: 10) {
@@ -439,7 +439,7 @@ struct AyurvedicSleepDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
             Text("Not included in Ayurvedic score — scored on night sleep only.")
                 .font(.caption)
-                .foregroundColor(Color(hex: "8E8E93"))
+                .foregroundColor(Color.somaGray)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -542,12 +542,12 @@ struct SleepTimelineView: View {
                         let ef = fraction(for: e)
                         // Start line
                         Rectangle()
-                            .fill(Color(hex: "9C27B0"))
+                            .fill(Color.somaPurple)
                             .frame(width: 2)
                             .offset(x: sf * geo.size.width)
                         // End line
                         Rectangle()
-                            .fill(Color(hex: "9C27B0"))
+                            .fill(Color.somaPurple)
                             .frame(width: 2)
                             .offset(x: ef * geo.size.width)
                     }
@@ -567,14 +567,14 @@ struct SleepTimelineView: View {
                         HStack(spacing: 0) {
                             Text(timeLabels[i])
                                 .font(.caption2)
-                                .foregroundColor(Color(hex: "8E8E93"))
+                                .foregroundColor(Color.somaGray)
                             Spacer()
                         }
                         .frame(width: (windowFractions[i + 1] - windowFractions[i]) * geo.size.width)
                     }
                     Text(timeLabels[4])
                         .font(.caption2)
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color.somaGray)
                 }
             }
             .frame(height: 14)
@@ -585,7 +585,7 @@ struct SleepTimelineView: View {
                     ForEach(0..<4, id: \.self) { i in
                         Text(weightLabels[i])
                             .font(.system(size: 9))
-                            .foregroundColor(Color(hex: "8E8E93").opacity(0.7))
+                            .foregroundColor(Color.somaGray.opacity(0.7))
                             .frame(width: (windowFractions[i + 1] - windowFractions[i]) * geo.size.width)
                     }
                 }

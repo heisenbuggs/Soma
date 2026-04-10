@@ -20,96 +20,96 @@ struct InsightsView: View {
         .onAppear { viewModel.generateInsights() }
     }
 
+    // MARK: - Insights List
+
     private var insightsList: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // Daily Training Guidance
-                if let guidance = viewModel.trainingGuidance {
-                    sectionHeader("Daily Guidance")
-                    guidanceCard(guidance)
-                }
+            VStack(alignment: .leading, spacing: 24) {
 
-                // Physiological insights
-                if !viewModel.insights.isEmpty {
-                    sectionHeader("Today")
-                    ForEach(viewModel.insights) { insight in
-                        insightCard(insight)
+                // Physiological insights — split by priority
+                let high   = viewModel.insights.filter { $0.priority == .high }
+                let medium = viewModel.insights.filter { $0.priority == .medium }
+                let low    = viewModel.insights.filter { $0.priority == .low }
+
+                if !high.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        sectionHeader("Needs Attention", count: high.count, color: Color.somaRed)
+                        ForEach(high) { insightCard($0) }
                     }
                 }
 
-                // Behavioral intelligence insights
+                if !medium.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        sectionHeader("Watch Today", count: medium.count, color: Color.somaYellow)
+                        ForEach(medium) { insightCard($0) }
+                    }
+                }
+
+                if !low.isEmpty {
+                    VStack(alignment: .leading, spacing: 10) {
+                        sectionHeader("Looking Good", count: low.count, color: Color.somaGreen)
+                        ForEach(low) { insightCard($0) }
+                    }
+                }
+
+                // Behavioral intelligence
                 if !viewModel.behaviorInsights.isEmpty {
-                    sectionHeader("Your Patterns")
-                    ForEach(viewModel.behaviorInsights.prefix(6)) { insight in
-                        behaviorInsightCard(insight)
+                    VStack(alignment: .leading, spacing: 10) {
+                        sectionHeader("Your Patterns", count: viewModel.behaviorInsights.prefix(6).count, color: Color.somaPurple)
+                        ForEach(viewModel.behaviorInsights.prefix(6)) { behaviorInsightCard($0) }
                     }
                 }
             }
-            .padding(.horizontal)
+            .padding(.horizontal, 16)
             .padding(.top, 8)
-            .padding(.bottom, 24)
+            .padding(.bottom, 32)
         }
         .scrollBounceBehavior(.basedOnSize)
     }
 
-    private func sectionHeader(_ title: String) -> some View {
-        Text(title.uppercased())
-            .font(.caption)
-            .fontWeight(.semibold)
-            .foregroundColor(Color(hex: "8E8E93"))
-            .padding(.top, 4)
-    }
+    // MARK: - Section Header
 
-    private func behaviorInsightCard(_ insight: BehaviorInsight) -> some View {
-        HStack(spacing: 0) {
-            RoundedRectangle(cornerRadius: 3)
-                .fill(insight.isNegativeImpact ? Color(hex: "FF1744") : Color(hex: "00C853"))
-                .frame(width: 4)
-                .padding(.vertical, 8)
-
-            HStack(spacing: 12) {
-                Image(systemName: insight.isNegativeImpact ? "exclamationmark.triangle.fill" : "checkmark.seal.fill")
-                    .font(.title2)
-                    .foregroundColor(insight.isNegativeImpact ? Color(hex: "FF1744") : Color(hex: "00C853"))
-                    .frame(width: 32)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(insight.behaviorName)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                    Text(insight.impactDescription)
-                        .font(.caption)
-                        .foregroundColor(Color(hex: "8E8E93"))
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("Based on \(insight.occurrences) observations")
-                        .font(.caption2)
-                        .foregroundColor(Color(hex: "8E8E93").opacity(0.7))
-                }
-                Spacer()
+    private func sectionHeader(_ title: String, count: Int? = nil, color: Color = Color.somaGray) -> some View {
+        HStack(spacing: 8) {
+            Text(title.uppercased())
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundColor(color)
+                .tracking(0.5)
+            if let count {
+                Text("\(count)")
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .foregroundColor(color)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(color.opacity(0.15))
+                    .clipShape(Capsule())
             }
-            .padding(12)
         }
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
+
+    // MARK: - Physiological Insight Card
 
     private func insightCard(_ insight: Insight) -> some View {
-        HStack(spacing: 0) {
-            // Priority indicator bar
-            RoundedRectangle(cornerRadius: 3)
-                .fill(priorityColor(insight.priority))
+        let accent = priorityColor(insight.priority)
+        return HStack(spacing: 0) {
+            Rectangle()
+                .fill(accent)
                 .frame(width: 4)
-                .padding(.vertical, 8)
 
             HStack(spacing: 12) {
-                Image(systemName: insight.icon)
-                    .font(.title2)
-                    .foregroundColor(priorityColor(insight.priority))
-                    .frame(width: 32)
+                ZStack {
+                    Circle()
+                        .fill(accent.opacity(0.15))
+                        .frame(width: 42, height: 42)
+                    Image(systemName: insight.icon)
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(accent)
+                }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    HStack {
+                    HStack(alignment: .firstTextBaseline) {
                         Text(insight.title)
                             .font(.subheadline)
                             .fontWeight(.semibold)
@@ -117,119 +117,106 @@ struct InsightsView: View {
                         Spacer()
                         Text(insight.date, format: .dateTime.month(.abbreviated).day())
                             .font(.caption2)
-                            .foregroundColor(Color(hex: "8E8E93"))
+                            .foregroundColor(.secondary)
                     }
                     Text(insight.description)
                         .font(.caption)
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                        .lineSpacing(2)
                 }
                 Spacer(minLength: 0)
             }
-            .padding(12)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
+        }
+        .background(Color.somaCard)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(accent.opacity(insight.priority == .high ? 0.3 : 0), lineWidth: 1)
+        )
+    }
+
+    // MARK: - Behavior Insight Card
+
+    private func behaviorInsightCard(_ insight: BehaviorInsight) -> some View {
+        let accent: Color = insight.isNegativeImpact ? Color.somaRed : Color.somaGreen
+        return HStack(spacing: 0) {
+            Rectangle()
+                .fill(accent)
+                .frame(width: 4)
+
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(accent.opacity(0.15))
+                        .frame(width: 42, height: 42)
+                    Image(systemName: insight.isNegativeImpact ? "exclamationmark.triangle.fill" : "checkmark.seal.fill")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundColor(accent)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(insight.behaviorName)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Text("\(insight.occurrences) observations")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    Text(insight.impactDescription)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .lineSpacing(2)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 12)
         }
         .background(Color.somaCard)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
     }
 
-    private func guidanceCard(_ guidance: DailyTrainingGuidance) -> some View {
-        let accent = Color(hex: guidance.activityLevel.colorHex)
-        return VStack(alignment: .leading, spacing: 12) {
-            // Level + readiness
-            HStack(spacing: 10) {
-                Image(systemName: guidance.activityLevel.icon)
-                    .font(.title3)
-                    .foregroundColor(accent)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(guidance.activityLevel.title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(accent)
-                    Text("Strain target: \(guidance.targetStrainMin)–\(guidance.targetStrainMax)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-                Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("Readiness")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    Text("\(Int(guidance.readinessScore.rounded()))")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(accent)
-                }
-            }
-
-            // Suggested workouts
-            if !guidance.suggestedWorkouts.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(guidance.suggestedWorkouts, id: \.self) { workout in
-                            Text(workout)
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .foregroundColor(accent)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(accent.opacity(0.12))
-                                .clipShape(Capsule())
-                        }
-                    }
-                }
-            }
-
-            // Explanation
-            if !guidance.explanation.isEmpty {
-                Text(guidance.explanation)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            // Fatigue flags
-            if !guidance.fatigueFlags.isEmpty {
-                HStack(spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .font(.caption2)
-                        .foregroundColor(Color(hex: "FFD600"))
-                    Text(guidance.fatigueFlags.joined(separator: " · "))
-                        .font(.caption2)
-                        .foregroundColor(Color(hex: "FFD600"))
-                }
-            }
-        }
-        .padding(14)
-        .background(accent.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(accent.opacity(0.25), lineWidth: 1)
-        )
-    }
+    // MARK: - Empty State
 
     private var emptyState: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 48))
-                .foregroundColor(Color(hex: "00C853"))
-            Text("All Looking Good")
-                .font(.title2)
-                .fontWeight(.semibold)
-                .foregroundColor(.primary)
-            Text("No notable insights for today. Keep up the great work!")
-                .font(.subheadline)
-                .foregroundColor(Color(hex: "8E8E93"))
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
+        VStack(spacing: 20) {
+            ZStack {
+                Circle()
+                    .fill(Color.somaGreen.opacity(0.12))
+                    .frame(width: 96, height: 96)
+                Image(systemName: "sparkles")
+                    .font(.system(size: 44))
+                    .foregroundColor(Color.somaGreen)
+            }
+            VStack(spacing: 8) {
+                Text("All Clear")
+                    .font(.title2)
+                    .fontWeight(.bold)
+                    .foregroundColor(.primary)
+                Text("No notable insights for today.\nYour metrics are in good shape.")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(3)
+            }
         }
+        .padding(.horizontal, 40)
     }
+
+    // MARK: - Helpers
 
     private func priorityColor(_ priority: InsightPriority) -> Color {
         switch priority {
-        case .high:   return Color(hex: "FF1744")
-        case .medium: return Color(hex: "FFD600")
-        case .low:    return Color(hex: "00C853")
+        case .high:   return Color.somaRed
+        case .medium: return Color.somaYellow
+        case .low:    return Color.somaGreen
         }
     }
 }

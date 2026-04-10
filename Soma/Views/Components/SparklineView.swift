@@ -44,7 +44,7 @@ struct SparklineView: View {
 }
 
 #Preview {
-    SparklineView(values: [72, 68, 75, 80, 65, 70, 78], color: Color(hex: "00C853"))
+    SparklineView(values: [72, 68, 75, 80, 65, 70, 78], color: Color.somaGreen)
         .frame(height: 40)
         .background(Color(hex: "1C1C1E"))
 }

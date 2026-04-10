@@ -19,7 +19,7 @@ struct CheckInView: View {
                             toggleRow(
                                 icon: "cup.and.saucer.fill",
                                 label: "Caffeine after 5 PM",
-                                color: Color(hex: "FFD600"),
+                                color: Color.somaYellow,
                                 binding: $viewModel.draft.caffeineAfter5PM
                             )
                         }
@@ -28,19 +28,19 @@ struct CheckInView: View {
                             toggleRow(
                                 icon: "fork.knife",
                                 label: "Late meal before bed",
-                                color: Color(hex: "FF9100"),
+                                color: Color.somaOrange,
                                 binding: $viewModel.draft.lateMealBeforeBed
                             )
                             toggleRow(
                                 icon: "iphone",
                                 label: "Screen use 1h before bed",
-                                color: Color(hex: "FF9100"),
+                                color: Color.somaOrange,
                                 binding: $viewModel.draft.screenBeforeBed
                             )
                             toggleRow(
                                 icon: "figure.run",
                                 label: "Workout within 2h of bed",
-                                color: Color(hex: "FF9100"),
+                                color: Color.somaOrange,
                                 binding: $viewModel.draft.lateWorkout
                             )
                         }
@@ -53,19 +53,19 @@ struct CheckInView: View {
                             toggleRow(
                                 icon: "brain.head.profile",
                                 label: "Meditated",
-                                color: Color(hex: "00C853"),
+                                color: Color.somaGreen,
                                 binding: $viewModel.draft.meditated
                             )
                             toggleRow(
                                 icon: "figure.flexibility",
                                 label: "Stretched",
-                                color: Color(hex: "00C853"),
+                                color: Color.somaGreen,
                                 binding: $viewModel.draft.stretched
                             )
                             toggleRow(
                                 icon: "snowflake",
                                 label: "Cold exposure",
-                                color: Color(hex: "2979FF"),
+                                color: Color.somaBlue,
                                 binding: $viewModel.draft.coldExposure
                             )
                         }
@@ -82,7 +82,7 @@ struct CheckInView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Skip") { dismiss() }
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color.somaGray)
                 }
             }
         }
@@ -101,14 +101,14 @@ struct CheckInView: View {
     private var headerBanner: some View {
         HStack(spacing: 10) {
             Image(systemName: "checkmark.circle.fill")
-                .foregroundColor(Color(hex: "00C853"))
+                .foregroundColor(Color.somaGreen)
             VStack(alignment: .leading, spacing: 2) {
                 Text("How was yesterday?")
                     .font(.headline)
                     .foregroundColor(.primary)
                 Text("Takes under 10 seconds")
                     .font(.caption)
-                    .foregroundColor(Color(hex: "8E8E93"))
+                    .foregroundColor(Color.somaGray)
             }
             Spacer()
         }
@@ -125,14 +125,14 @@ struct CheckInView: View {
             toggleRow(
                 icon: "wineglass.fill",
                 label: "Alcohol",
-                color: Color(hex: "FF1744"),
+                color: Color.somaRed,
                 binding: $viewModel.draft.alcoholConsumed
             )
             if viewModel.draft.alcoholConsumed {
                 HStack(spacing: 0) {
                     Text("Drinks:")
                         .font(.caption)
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color.somaGray)
                         .padding(.leading, 44)
                     Spacer()
                     Picker("Drinks", selection: $viewModel.draft.alcoholUnits) {
@@ -161,13 +161,13 @@ struct CheckInView: View {
                 Spacer()
             }
             HStack(spacing: 8) {
-                Text("Low").font(.caption2).foregroundColor(Color(hex: "8E8E93"))
+                Text("Low").font(.caption2).foregroundColor(Color.somaGray)
                 Slider(value: Binding(
                     get: { Double(viewModel.draft.stressLevel) },
                     set: { viewModel.draft.stressLevel = Int($0.rounded()) }
                 ), in: 1...5, step: 1)
                 .tint(stressColor)
-                Text("High").font(.caption2).foregroundColor(Color(hex: "8E8E93"))
+                Text("High").font(.caption2).foregroundColor(Color.somaGray)
             }
         }
         .padding(.horizontal, 4)
@@ -177,6 +177,7 @@ struct CheckInView: View {
 
     private var saveButton: some View {
         Button {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
             withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) {
                 saveAnimating = true
             }
@@ -202,7 +203,7 @@ struct CheckInView: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(saveAnimating && !viewModel.isSaving ? Color(hex: "00C853") : Color.white)
+            .background(saveAnimating && !viewModel.isSaving ? Color.somaGreen : Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .scaleEffect(saveAnimating ? 0.97 : 1.0)
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: saveAnimating)
@@ -218,7 +219,7 @@ struct CheckInView: View {
             Text(title.uppercased())
                 .font(.caption)
                 .fontWeight(.semibold)
-                .foregroundColor(Color(hex: "8E8E93"))
+                .foregroundColor(Color.somaGray)
                 .padding(.horizontal)
                 .padding(.bottom, 4)
 
@@ -246,6 +247,9 @@ struct CheckInView: View {
             Toggle("", isOn: binding)
                 .labelsHidden()
                 .tint(color)
+                .onChange(of: binding.wrappedValue) { _, _ in
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -257,9 +261,9 @@ struct CheckInView: View {
 
     private var stressColor: Color {
         switch viewModel.draft.stressLevel {
-        case 1, 2: return Color(hex: "00C853")
-        case 3:    return Color(hex: "FFD600")
-        default:   return Color(hex: "FF1744")
+        case 1, 2: return Color.somaGreen
+        case 3:    return Color.somaYellow
+        default:   return Color.somaRed
         }
     }
 

@@ -6,42 +6,53 @@ struct MetricCardView: View {
     let maxScore: Double
     let state: ColorState
     let sparklineValues: [Double]
-    /// Change vs. the prior 6-day average. Positive = improving, negative = declining.
     var weekDelta: Double? = nil
+
+    @State private var appeared = false
 
     private var progress: Double {
         guard maxScore > 0 else { return 0 }
         return score / maxScore
     }
 
+    private var isExcellent: Bool {
+        state.label == "Excellent" || state.label == "Minimal"
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
+
             // Header
             HStack {
                 Text(title)
                     .font(.caption)
-                    .foregroundColor(Color(hex: "8E8E93"))
+                    .fontWeight(.medium)
+                    .foregroundColor(.secondary)
                 Spacer()
                 Text(state.label)
                     .font(.caption2)
                     .fontWeight(.semibold)
                     .foregroundColor(state.color)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
                     .background(state.color.opacity(0.15))
                     .clipShape(Capsule())
             }
 
-            // Score + Ring + trend indicator
+            // Score + Ring + Delta
             HStack(alignment: .center, spacing: 12) {
                 ZStack {
-                    RingView(progress: progress, color: state.color, lineWidth: 6)
+                    RingView(progress: appeared ? progress : 0, color: state.color, lineWidth: 6)
+                        .animation(.spring(response: 1.0, dampingFraction: 0.7), value: appeared)
                     Text(scoreText)
                         .font(.title2)
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
+                        .contentTransition(.numericText())
+                        .animation(.spring(response: 0.5), value: score)
                 }
                 .frame(width: 64, height: 64)
+                .shadow(color: isExcellent ? state.color.opacity(0.4) : .clear, radius: 10, x: 0, y: 0)
 
                 if let delta = weekDelta, !delta.isNaN, abs(delta) >= 1 {
                     VStack(spacing: 2) {
@@ -68,44 +79,52 @@ struct MetricCardView: View {
         .padding(14)
         .background(Color.somaCard)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(state.color.opacity(0.35), lineWidth: 1)
+        )
+        .scaleEffect(appeared ? 1 : 0.92)
+        .opacity(appeared ? 1 : 0)
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                appeared = true
+            }
+        }
     }
 
     private var scoreText: String {
-        if score.isNaN || score.isInfinite {
-            return "--"
-        }
+        if score.isNaN || score.isInfinite { return "--" }
         return "\(Int(score.rounded()))"
     }
 
     private func trendColor(_ delta: Double) -> Color {
-        // For stress and strain, up is bad; for recovery and sleep, up is good.
-        // The card doesn't know its metric type, so use a neutral scheme:
-        // positive delta = green, negative = orange.
-        delta > 0 ? Color(hex: "00C853") : Color(hex: "FF9100")
+        delta > 0 ? Color.somaGreen : Color.somaOrange
     }
 }
 
-#Preview("With trend up") {
+#Preview("Excellent") {
     MetricCardView(
         title: "Recovery",
-        score: 78,
+        score: 88,
         maxScore: 100,
-        state: .green(label: "Recovered"),
-        sparklineValues: [60, 65, 72, 80, 75, 70, 78],
+        state: .green(label: "Excellent"),
+        sparklineValues: [60, 65, 72, 80, 75, 70, 88],
         weekDelta: 8
     )
     .frame(width: 180)
+    .padding()
     .background(Color.black)
 }
 
-#Preview {
+#Preview("Good") {
     MetricCardView(
-        title: "Recovery",
-        score: 78,
+        title: "Sleep",
+        score: 76,
         maxScore: 100,
-        state: .green(label: "Recovered"),
-        sparklineValues: [60, 65, 72, 80, 75, 70, 78]
+        state: .lightGreen(label: "Good"),
+        sparklineValues: [60, 65, 72, 80, 75, 70, 76]
     )
     .frame(width: 180)
+    .padding()
     .background(Color.black)
 }

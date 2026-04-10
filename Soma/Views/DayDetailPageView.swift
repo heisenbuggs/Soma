@@ -48,7 +48,7 @@ struct DayDetailPageView: View {
                             withAnimation { currentIndex -= 1 }
                         } label: {
                             Image(systemName: "chevron.left")
-                                .foregroundColor(currentIndex > 0 ? Color(hex: "2979FF") : Color(hex: "8E8E93"))
+                                .foregroundColor(currentIndex > 0 ? Color.somaBlue : Color.somaGray)
                         }
                         .disabled(currentIndex == 0)
 
@@ -57,7 +57,7 @@ struct DayDetailPageView: View {
                             withAnimation { currentIndex += 1 }
                         } label: {
                             Image(systemName: "chevron.right")
-                                .foregroundColor(currentIndex < sorted.count - 1 ? Color(hex: "2979FF") : Color(hex: "8E8E93"))
+                                .foregroundColor(currentIndex < sorted.count - 1 ? Color.somaBlue : Color.somaGray)
                         }
                         .disabled(currentIndex >= sorted.count - 1)
                     }
@@ -65,7 +65,7 @@ struct DayDetailPageView: View {
 
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(Color(hex: "2979FF"))
+                        .foregroundColor(Color.somaBlue)
                 }
             }
         }

@@ -28,10 +28,10 @@ enum DashboardMetric: String, Identifiable {
 
     var accentColor: Color {
         switch self {
-        case .recovery: return Color(hex: "00C853")
-        case .sleep:    return Color(hex: "2979FF")
-        case .strain:   return Color(hex: "FF9100")
-        case .stress:   return Color(hex: "FFD600")
+        case .recovery: return Color.somaGreen
+        case .sleep:    return Color.somaBlue
+        case .strain:   return Color.somaOrange
+        case .stress:   return Color.somaYellow
         }
     }
 
@@ -236,7 +236,7 @@ struct MetricDetailView: View {
     }
 
     private var sleepGoal: Double {
-        let stored = UserDefaults.standard.double(forKey: "baselineSleepHours")
+        let stored = UserDefaults.standard.double(forKey: UserDefaultsKeys.baselineSleepHours)
         return stored > 0 ? stored : 7.0
     }
 
@@ -278,7 +278,7 @@ struct MetricDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(Color(hex: "2979FF"))
+                        .foregroundColor(Color.somaBlue)
                 }
             }
             .task {
@@ -497,7 +497,7 @@ struct MetricDetailView: View {
 
                 Text("Based on heart rate elevation above your resting baseline. Lower HRV + higher HR = higher stress.")
                     .font(.caption)
-                    .foregroundColor(Color(hex: "8E8E93"))
+                    .foregroundColor(Color.somaGray)
             }
         }
         .padding(14)
@@ -616,7 +616,7 @@ struct MetricDetailView: View {
 
                 Text("Zone-weighted strain load per 30-min window. Only HR above 50% of your max contributes.")
                     .font(.caption)
-                    .foregroundColor(Color(hex: "8E8E93"))
+                    .foregroundColor(Color.somaGray)
             }
         }
         .padding(14)
@@ -629,11 +629,11 @@ struct MetricDetailView: View {
 
     private func workoutZoneChart(_ zones: [WorkoutZoneBreakdown]) -> some View {
         let zoneColors: [(Color, String)] = [
-            (Color(hex: "8E8E93"), "Z1"),
-            (Color(hex: "2979FF"), "Z2"),
-            (Color(hex: "00C853"), "Z3"),
-            (Color(hex: "FFD600"), "Z4"),
-            (Color(hex: "FF1744"), "Z5"),
+            (Color.somaGray, "Z1"),
+            (Color.somaBlue, "Z2"),
+            (Color.somaGreen, "Z3"),
+            (Color.somaYellow, "Z4"),
+            (Color.somaRed, "Z5"),
         ]
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -717,7 +717,7 @@ struct MetricDetailView: View {
             // Header
             HStack(spacing: 8) {
                 Image(systemName: "lightbulb.fill")
-                    .foregroundColor(Color(hex: "FFD600"))
+                    .foregroundColor(Color.somaYellow)
                 Text("\(metric.title) Score: \(score) — \(state.label)")
                     .font(.subheadline)
                     .fontWeight(.semibold)
@@ -729,14 +729,14 @@ struct MetricDetailView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "chart.line.uptrend.xyaxis")
                         .font(.caption)
-                        .foregroundColor(Color(hex: "FF9100"))
+                        .foregroundColor(Color.somaOrange)
                     Text(acr)
                         .font(.caption)
-                        .foregroundColor(Color(hex: "FF9100"))
+                        .foregroundColor(Color.somaOrange)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.horizontal, 8).padding(.vertical, 6)
-                .background(Color(hex: "FF9100").opacity(0.10))
+                .background(Color.somaOrange.opacity(0.10))
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
             }
 
@@ -745,7 +745,7 @@ struct MetricDetailView: View {
                     Text("Observations")
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color.somaGray)
                         .textCase(.uppercase)
                     ForEach(result.observations, id: \.self) { obs in
                         HStack(alignment: .top, spacing: 8) {
@@ -767,12 +767,12 @@ struct MetricDetailView: View {
                     Text("Suggested Actions")
                         .font(.caption)
                         .fontWeight(.semibold)
-                        .foregroundColor(Color(hex: "8E8E93"))
+                        .foregroundColor(Color.somaGray)
                         .textCase(.uppercase)
                     ForEach(result.actions, id: \.self) { action in
                         HStack(alignment: .top, spacing: 8) {
                             Circle()
-                                .fill(Color(hex: "2979FF"))
+                                .fill(Color.somaBlue)
                                 .frame(width: 5, height: 5)
                                 .padding(.top, 6)
                             Text(action)
@@ -786,11 +786,11 @@ struct MetricDetailView: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(hex: "FFD600").opacity(0.06))
+        .background(Color.somaYellow.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color(hex: "FFD600").opacity(0.2), lineWidth: 1)
+                .strokeBorder(Color.somaYellow.opacity(0.2), lineWidth: 1)
         )
         .padding(.horizontal)
     }
@@ -814,7 +814,7 @@ struct MetricDetailView: View {
                 .foregroundColor(.primary)
             Text(label)
                 .font(.caption2)
-                .foregroundColor(Color(hex: "8E8E93"))
+                .foregroundColor(Color.somaGray)
         }
         .frame(maxWidth: .infinity)
         .padding(12)
@@ -904,10 +904,10 @@ struct MetricDetailView: View {
     }
 
     private func sleepRegularityColor(_ sri: Double?) -> Color {
-        guard let s = sri else { return Color(hex: "8E8E93") }
-        if s >= 80 { return Color(hex: "00C853") }
-        if s >= 60 { return Color(hex: "FFD600") }
-        return Color(hex: "FF9100")
+        guard let s = sri else { return Color.somaGray }
+        if s >= 80 { return Color.somaGreen }
+        if s >= 60 { return Color.somaYellow }
+        return Color.somaOrange
     }
 
     private func sleepRegularityCaption(_ sri: Double?) -> String {
@@ -932,7 +932,7 @@ struct MetricDetailView: View {
         let data = sleepDebtData
         let totalDebt = data.map { $0.1 }.reduce(0, +)
         let maxDebt = data.map { $0.1 }.max() ?? 1
-        let accentColor = Color(hex: "2979FF")
+        let accentColor = Color.somaBlue
 
         return VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
@@ -946,7 +946,7 @@ struct MetricDetailView: View {
                     Text(formatHoursShort(totalDebt))
                         .font(.headline)
                         .fontWeight(.bold)
-                        .foregroundColor(totalDebt > 7 ? Color(hex: "FF9100") : accentColor)
+                        .foregroundColor(totalDebt > 7 ? Color.somaOrange : accentColor)
                     Text("cumulative debt")
                         .font(.caption2)
                         .foregroundColor(.secondary)
@@ -991,7 +991,7 @@ struct MetricDetailView: View {
 
                 Text("Daily sleep debt = your personalised sleep need minus actual sleep. Zero is ideal.")
                     .font(.caption)
-                    .foregroundColor(Color(hex: "8E8E93"))
+                    .foregroundColor(Color.somaGray)
             }
         }
         .padding(14)
@@ -1001,9 +1001,9 @@ struct MetricDetailView: View {
     }
 
     private func debtBarColor(_ debt: Double, max maxDebt: Double) -> Color {
-        if debt <= 0.25 { return Color(hex: "00C853") }
-        if debt <= 1.0  { return Color(hex: "FFD600") }
-        return Color(hex: "FF9100")
+        if debt <= 0.25 { return Color.somaGreen }
+        if debt <= 1.0  { return Color.somaYellow }
+        return Color.somaOrange
     }
 
     private func formatHoursShort(_ h: Double) -> String {
@@ -1085,7 +1085,18 @@ struct MetricDetailView: View {
                         ForEach(0..<7, id: \.self) { col in
                             let idx = row * 7 + col
                             if idx < cells.count, let date = cells[idx] {
-                                let score = history.first { cal.isDate($0.date, inSameDayAs: date) }?.sleepScore
+                                let entry = history.first { cal.isDate($0.date, inSameDayAs: date) }
+                                let score: Double? = {
+                                    guard let m = entry else { return nil }
+                                    if m.sleepScore > 5 { return m.sleepScore }
+                                    // Fall back to a duration-based proxy so cells show even when
+                                    // the full score wasn't computed (e.g. older backfilled data).
+                                    if let h = m.sleepDurationHours, h > 0.5 {
+                                        let goal = m.sleepNeedHours ?? 7.5
+                                        return min(100, max(5, h / goal * 75))
+                                    }
+                                    return m.sleepScore > 0 ? m.sleepScore : nil
+                                }()
                                 RoundedRectangle(cornerRadius: 3, style: .continuous)
                                     .fill(calendarCellColor(score))
                                     .frame(maxWidth: .infinity)
@@ -1112,7 +1123,7 @@ struct MetricDetailView: View {
 
             Text("Each cell shows your sleep score for that night. Last 6 weeks, aligned to calendar weeks.")
                 .font(.caption)
-                .foregroundColor(Color(hex: "8E8E93"))
+                .foregroundColor(Color.somaGray)
         }
         .padding(14)
         .background(Color.somaCard)
@@ -1122,17 +1133,17 @@ struct MetricDetailView: View {
 
     private func calendarCellColor(_ score: Double?) -> Color {
         guard let s = score else { return Color.secondary.opacity(0.12) }
-        if s >= 75 { return Color(hex: "00C853") }
-        if s >= 50 { return Color(hex: "2979FF") }
-        if s >= 25 { return Color(hex: "FF9100") }
-        return Color(hex: "FF1744")
+        if s >= 75 { return Color.somaGreen }
+        if s >= 50 { return Color.somaBlue }
+        if s >= 25 { return Color.somaOrange }
+        return Color.somaRed
     }
 
     private func calendarLegendColor(_ label: String) -> Color {
         switch label {
-        case "High":    return Color(hex: "00C853")
-        case "Mid":     return Color(hex: "2979FF")
-        case "Low":     return Color(hex: "FF9100")
+        case "High":    return Color.somaGreen
+        case "Mid":     return Color.somaBlue
+        case "Low":     return Color.somaOrange
         default:        return Color.secondary.opacity(0.12)
         }
     }

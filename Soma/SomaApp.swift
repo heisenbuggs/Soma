@@ -4,7 +4,7 @@ import AppIntents
 @main
 struct SomaApp: App {
     @StateObject private var healthKitManager = HealthKitManager()
-    @AppStorage("hasCompletedOnboarding") private var hasCompletedOnboarding = false
+    @AppStorage(UserDefaultsKeys.hasCompletedOnboarding) private var hasCompletedOnboarding = false
 
     init() {
         BackgroundTaskManager.shared.registerTasks()
@@ -39,7 +39,7 @@ struct SomaApp: App {
             VStack(spacing: 16) {
                 Image(systemName: "heart.slash.fill")
                     .font(.system(size: 56))
-                    .foregroundColor(Color(hex: "FF1744"))
+                    .foregroundColor(Color.somaRed)
                 Text("HealthKit Not Available")
                     .font(.title2)
                     .fontWeight(.bold)

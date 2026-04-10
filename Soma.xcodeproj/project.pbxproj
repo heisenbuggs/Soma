@@ -64,6 +64,9 @@
 		DE0500082F84F4BD009F2586 /* ReadinessHeroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0500072F84F4BD009F2586 /* ReadinessHeroView.swift */; };
 		AA300000000000000000040 /* SleepConsistencyCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000040 /* SleepConsistencyCalculator.swift */; };
 		AA300000000000000000041 /* MovementScoreCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000041 /* MovementScoreCalculator.swift */; };
+		AA300000000000000000042 /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000042 /* AppColors.swift */; };
+		AA300000000000000000043 /* UserDefaultsKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000043 /* UserDefaultsKeys.swift */; };
+		AA300000000000000000044 /* NotificationIDs.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000044 /* NotificationIDs.swift */; };
 		DE2C6BF02F69D0FD00BC222F /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE2C6B8B2F69D02F00BC222F /* WidgetKit.framework */; };
 		DE2C6BF12F69D0FD00BC222F /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE2C6B8D2F69D02F00BC222F /* SwiftUI.framework */; };
 		DE2C6C022F69D0FE00BC222F /* SomaWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DE2C6BEF2F69D0FD00BC222F /* SomaWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -164,6 +167,9 @@
 		DE0500072F84F4BD009F2586 /* ReadinessHeroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadinessHeroView.swift; sourceTree = "<group>"; };
 		AA100000000000000000040 /* SleepConsistencyCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepConsistencyCalculator.swift; sourceTree = "<group>"; };
 		AA100000000000000000041 /* MovementScoreCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementScoreCalculator.swift; sourceTree = "<group>"; };
+		AA100000000000000000042 /* AppColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppColors.swift; sourceTree = "<group>"; };
+		AA100000000000000000043 /* UserDefaultsKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsKeys.swift; sourceTree = "<group>"; };
+		AA100000000000000000044 /* NotificationIDs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationIDs.swift; sourceTree = "<group>"; };
 		DE2C6B8B2F69D02F00BC222F /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		DE2C6B8D2F69D02F00BC222F /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		DE2C6BEF2F69D0FD00BC222F /* SomaWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SomaWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -231,11 +237,22 @@
 				AA500000000000000000004 /* Calculators */,
 				AA500000000000000000005 /* ViewModels */,
 				AA500000000000000000006 /* Views */,
+				AA500000000000000000008 /* Constants */,
 				AA500000000000000000009 /* Resources */,
 				AA10000000000000000001B /* Info.plist */,
 				AA10000000000000000001C /* Soma.entitlements */,
 			);
 			path = Soma;
+			sourceTree = "<group>";
+		};
+		AA500000000000000000008 /* Constants */ = {
+			isa = PBXGroup;
+			children = (
+				AA100000000000000000042 /* AppColors.swift */,
+				AA100000000000000000043 /* UserDefaultsKeys.swift */,
+				AA100000000000000000044 /* NotificationIDs.swift */,
+			);
+			path = Constants;
 			sourceTree = "<group>";
 		};
 		AA500000000000000000002 /* Models */ = {
@@ -543,6 +560,9 @@
 				AA30000000000000000003B /* TrainingGuidanceEngine.swift in Sources */,
 				AA300000000000000000040 /* SleepConsistencyCalculator.swift in Sources */,
 				AA300000000000000000041 /* MovementScoreCalculator.swift in Sources */,
+				AA300000000000000000042 /* AppColors.swift in Sources */,
+				AA300000000000000000043 /* UserDefaultsKeys.swift in Sources */,
+				AA300000000000000000044 /* NotificationIDs.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

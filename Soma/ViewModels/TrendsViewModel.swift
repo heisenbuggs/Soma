@@ -33,6 +33,7 @@ final class TrendsViewModel: ObservableObject {
     @Published var isLoading = false
     @Published var selectedDataPoint: DailyMetrics?
     @Published var selectedMetrics: DailyMetrics?
+    @Published var weeklyGoalHistory: [(date: Date, actual: Double, goal: Double)] = []
 
     private let healthKit: HealthDataProviding
     private let store: MetricsStore
@@ -105,6 +106,15 @@ final class TrendsViewModel: ObservableObject {
         }
         vo2MaxTrend = linearSlope(allVO2.isEmpty ? vo2MaxHistory : allVO2)
             .map { $0 * 30 }   // convert per-day slope → per-30-day slope
+
+        // Weekly sleep goal tracking: last 7 days
+        let sleepGoalStored = UserDefaults.standard.double(forKey: UserDefaultsKeys.baselineSleepHours)
+        let defaultSleepGoal = sleepGoalStored > 0 ? sleepGoalStored : 7.0
+        weeklyGoalHistory = store.loadLast(7).compactMap { m in
+            guard let actual = m.sleepDurationHours else { return nil }
+            let goal = m.sleepNeedHours ?? defaultSleepGoal
+            return (date: m.date, actual: actual, goal: goal)
+        }
     }
 
     /// Simple ordinary-least-squares slope over (day-index, value) pairs.

@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 import HealthKit
+import UIKit
 
 @MainActor
 final class DashboardViewModel: ObservableObject {
@@ -44,7 +45,7 @@ final class DashboardViewModel: ObservableObject {
         self.checkInStore = checkInStore
         self.settings = settings
         // Restore lastRefreshed across app launches so the cache interval is respected.
-        let ts = UserDefaults.standard.double(forKey: "lastRefreshedTimestamp")
+        let ts = UserDefaults.standard.double(forKey: UserDefaultsKeys.lastRefreshedTimestamp)
         if ts > 0 { lastRefreshed = Date(timeIntervalSince1970: ts) }
     }
 
@@ -107,7 +108,8 @@ final class DashboardViewModel: ObservableObject {
             store.save(metrics)
             todayMetrics = metrics
             lastRefreshed = Date()
-            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: "lastRefreshedTimestamp")
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: UserDefaultsKeys.lastRefreshedTimestamp)
 
             InsightCache.shared.invalidatePhysio()
 
@@ -310,11 +312,17 @@ final class DashboardViewModel: ObservableObject {
         )
 
         // Per-workout HR zone breakdown (2.4)
+        // Index-match against fetchedWorkouts (same order as workoutIntervals) to get
+        // start time, actual duration, and calorie burn from the HKWorkout object.
         let workoutZoneDetails: [WorkoutZoneBreakdown]? = strainResult.details.isEmpty ? nil :
-            strainResult.details.map { d in
-                WorkoutZoneBreakdown(
+            strainResult.details.enumerated().map { idx, d in
+                let hkWorkout = fetchedWorkouts.indices.contains(idx) ? fetchedWorkouts[idx] : nil
+                return WorkoutZoneBreakdown(
                     activityName: d.activityName,
                     totalStrain: d.strain,
+                    startTime: hkWorkout?.startDate,
+                    durationMinutes: hkWorkout.map { $0.duration / 60.0 } ?? (d.zoneMinutes.values.reduce(0, +)),
+                    calories: hkWorkout?.totalEnergyBurned?.doubleValue(for: .kilocalorie()),
                     z1Minutes: d.zoneMinutes[.zone1] ?? 0,
                     z2Minutes: d.zoneMinutes[.zone2] ?? 0,
                     z3Minutes: d.zoneMinutes[.zone3] ?? 0,
@@ -349,6 +357,9 @@ final class DashboardViewModel: ObservableObject {
             sleepingHR: sleepingHR,
             sleepingHRV: sleepingHRV,
             sleepInterruptions: sleepData.interruptionCount,
+            deepSleepMinutes: sleepData.totalDuration > 0 ? sleepData.deepSleepDuration / 60.0 : nil,
+            remSleepMinutes: sleepData.totalDuration > 0 ? sleepData.remSleepDuration / 60.0 : nil,
+            coreSleepMinutes: sleepData.totalDuration > 0 ? sleepData.coreSleepDuration / 60.0 : nil,
             strainLoad: strainResult.total,
             workoutStrain: strainResult.workoutStrain,
             incidentalStrain: strainResult.incidentalStrain,
@@ -374,7 +385,12 @@ final class DashboardViewModel: ObservableObject {
 
     /// Returns whether an illness arc is active and how many consecutive elevated-temperature nights.
     /// An arc starts when wristTempDeviation > +0.5°C for 2 or more consecutive nights (most recent first).
+    /// Requires at least 7 days of stored history so Apple Watch has time to calibrate its
+    /// wrist-temp baseline — early readings before that window are unreliable.
     private func detectIllnessArc(from history: [DailyMetrics], today: DailyMetrics) -> (active: Bool, days: Int) {
+        // Need at least 6 prior days in the store (+ today = 7 total) before trusting the signal.
+        guard history.count >= 6 else { return (false, 0) }
+
         let all = (history + [today]).sorted { $0.date < $1.date }
         var consecutive = 0
         for m in all.reversed() {
@@ -395,15 +411,15 @@ final class DashboardViewModel: ObservableObject {
         guard weekday == 2 else { return }
 
         // Avoid regenerating if already done today.
-        let key = "weeklySummaryGenerated"
+        let key = UserDefaultsKeys.weeklySummaryGenerated
         let todayKey = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970
         if UserDefaults.standard.double(forKey: key) == todayKey { return }
 
         let last7 = store.loadLast(7)
         let checkIns = checkInStore.loadAll()
-        let last30 = store.loadLast(30)
-        let hrvHist = BaselineCalculator.extractHistory(from: last30, \.hrvAverage)
-        let rhrHist = BaselineCalculator.extractHistory(from: last30, \.restingHR)
+        let last30forBaseline = store.loadLast(30)
+        let hrvHist = BaselineCalculator.extractHistory(from: last30forBaseline, \.hrvAverage)
+        let rhrHist = BaselineCalculator.extractHistory(from: last30forBaseline, \.restingHR)
         let hrvBaseline = BaselineCalculator.computeHRVBaseline(from: hrvHist)
         let rhrBaseline = BaselineCalculator.computeRHRBaseline(from: rhrHist)
 
@@ -430,7 +446,7 @@ final class DashboardViewModel: ObservableObject {
         let hrvBaseline = BaselineCalculator.computeHRVBaseline(from: hrvHist)
         let rhrBaseline = BaselineCalculator.computeRHRBaseline(from: rhrHist)
 
-        let sleepGoalStored = UserDefaults.standard.double(forKey: "baselineSleepHours")
+        let sleepGoalStored = UserDefaults.standard.double(forKey: UserDefaultsKeys.baselineSleepHours)
         let sleepGoal = sleepGoalStored > 0 ? sleepGoalStored : 7.0
 
         let strainLoadHistory = store.loadLast(StrainCalculator.rollingCapacityDays).compactMap { $0.strainLoad }

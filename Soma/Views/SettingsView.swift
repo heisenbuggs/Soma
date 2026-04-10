@@ -2,9 +2,9 @@ import SwiftUI
 import WidgetKit
 
 final class UserSettings: ObservableObject {
-    @AppStorage("userFirstName") var firstName: String = ""
-    @AppStorage("userDateOfBirth") private var _dobTimestamp: Double = 0
-    @AppStorage("userMaxHR") private var _maxHR: Int = 0
+    @AppStorage(UserDefaultsKeys.userFirstName) var firstName: String = ""
+    @AppStorage(UserDefaultsKeys.userDateOfBirth) private var _dobTimestamp: Double = 0
+    @AppStorage(UserDefaultsKeys.userMaxHR) private var _maxHR: Int = 0
 
     var dateOfBirth: Date? {
         get { _dobTimestamp > 0 ? Date(timeIntervalSince1970: _dobTimestamp) : nil }
@@ -15,24 +15,22 @@ final class UserSettings: ObservableObject {
         guard let dob = dateOfBirth else { return 30 }
         return Calendar.current.dateComponents([.year], from: dob, to: Date()).year ?? 30
     }
-    @AppStorage("baselineSleepHours") var sleepGoalHours: Double = 7.0
-    @AppStorage("useMetricUnits") var useMetricUnits: Bool = true
-    
-    // MARK: - Cache Settings
-    @AppStorage("cacheEnabled") var cacheEnabled: Bool = false
+
+    @AppStorage(UserDefaultsKeys.baselineSleepHours) var sleepGoalHours: Double = 7.0
+    @AppStorage(UserDefaultsKeys.useMetricUnits) var useMetricUnits: Bool = true
+    @AppStorage(UserDefaultsKeys.cacheEnabled) var cacheEnabled: Bool = false
 
     // MARK: - Notification Settings
-    @AppStorage("notificationsEnabled") var notificationsEnabled: Bool = true
-    @AppStorage("recoveryNotificationHour") var recoveryNotificationHour: Int = 8
-    @AppStorage("recoveryNotificationMinute") var recoveryNotificationMinute: Int = 0
-    @AppStorage("bedtimeReminderEnabled") var bedtimeReminderEnabled: Bool = false
-    @AppStorage("bedtimeReminderMinutesBefore") var bedtimeReminderMinutesBefore: Int = 30
-    @AppStorage("checkinReminderEnabled") var checkinReminderEnabled: Bool = false
-    @AppStorage("checkinReminderHour") var checkinReminderHour: Int = 21
-    @AppStorage("checkinReminderMinute") var checkinReminderMinute: Int = 0
+    @AppStorage(UserDefaultsKeys.notificationsEnabled) var notificationsEnabled: Bool = true
+    @AppStorage(UserDefaultsKeys.recoveryNotificationHour) var recoveryNotificationHour: Int = 8
+    @AppStorage(UserDefaultsKeys.recoveryNotificationMinute) var recoveryNotificationMinute: Int = 0
+    @AppStorage(UserDefaultsKeys.bedtimeReminderEnabled) var bedtimeReminderEnabled: Bool = false
+    @AppStorage(UserDefaultsKeys.bedtimeReminderMinutesBefore) var bedtimeReminderMinutesBefore: Int = 30
+    @AppStorage(UserDefaultsKeys.checkinReminderEnabled) var checkinReminderEnabled: Bool = false
+    @AppStorage(UserDefaultsKeys.checkinReminderHour) var checkinReminderHour: Int = 21
+    @AppStorage(UserDefaultsKeys.checkinReminderMinute) var checkinReminderMinute: Int = 0
 
     // MARK: - Per-weekday wake times
-    // weekday index: 1=Sunday, 2=Monday, ..., 7=Saturday (matches Calendar.component(.weekday))
 
     func wakeHour(for weekday: Int) -> Int {
         UserDefaults.standard.object(forKey: "wakeHour_\(weekday)") as? Int ?? 6
@@ -61,7 +59,6 @@ final class UserSettings: ObservableObject {
         setWakeTime(hour: comps.hour ?? 6, minute: comps.minute ?? 30, for: weekday)
     }
 
-    /// Today's wake time
     var wakeTime: Date {
         let weekday = Calendar.current.component(.weekday, from: Date())
         return wakeTimeDate(for: weekday)
@@ -71,9 +68,7 @@ final class UserSettings: ObservableObject {
         get { _maxHR > 0 ? Double(_maxHR) : nil }
         set { _maxHR = Int(newValue ?? 0) }
     }
-    
-    // MARK: - Notification Time Helpers
-    
+
     var recoveryNotificationTime: Date {
         var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
         comps.hour = recoveryNotificationHour
@@ -81,14 +76,14 @@ final class UserSettings: ObservableObject {
         comps.second = 0
         return Calendar.current.date(from: comps) ?? Date()
     }
-    
+
     func setRecoveryNotificationTime(_ date: Date) {
         let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
         recoveryNotificationHour = comps.hour ?? 8
         recoveryNotificationMinute = comps.minute ?? 0
         objectWillChange.send()
     }
-    
+
     var checkinReminderTime: Date {
         var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
         comps.hour = checkinReminderHour
@@ -96,7 +91,7 @@ final class UserSettings: ObservableObject {
         comps.second = 0
         return Calendar.current.date(from: comps) ?? Date()
     }
-    
+
     func setCheckinReminderTime(_ date: Date) {
         let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
         checkinReminderHour = comps.hour ?? 21
@@ -109,6 +104,8 @@ final class UserSettings: ObservableObject {
     }
 }
 
+// MARK: - SettingsView
+
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var settings = UserSettings()
@@ -120,267 +117,34 @@ struct SettingsView: View {
             ZStack {
                 Color.somaBackground.ignoresSafeArea()
 
-                Form {
-                    Section("Profile") {
-                        HStack {
-                            Label("First Name", systemImage: "person.fill")
-                                .foregroundColor(.primary)
-                            Spacer()
-                            TextField("Your name", text: $settings.firstName)
-                                .multilineTextAlignment(.trailing)
-                                .foregroundColor(Color(hex: "8E8E93"))
-                        }
+                ScrollView {
+                    VStack(spacing: 24) {
+                        profileHeader
+                        sleepSection
+                        wakeTimeSection
+                        notificationsSection
+                        preferencesSection
+                        dataSection
+
+                        #if DEBUG
+                        debugSection
+                        #endif
+
+                        aboutSection
                     }
-                    .listRowBackground(Color.somaCard)
-
-                    Section("Personal") {
-                        DatePicker(
-                            selection: Binding(
-                                get: { settings.dateOfBirth ?? Calendar.current.date(byAdding: .year, value: -30, to: Date())! },
-                                set: { settings.dateOfBirth = $0 }
-                            ),
-                            in: ...Calendar.current.date(byAdding: .year, value: -13, to: Date())!,
-                            displayedComponents: .date
-                        ) {
-                            Label("Date of Birth", systemImage: "person.crop.circle")
-                                .foregroundColor(.primary)
-                        }
-
-                        HStack {
-                            Label("Age", systemImage: "calendar")
-                                .foregroundColor(.primary)
-                            Spacer()
-                            Text("\(settings.age) yrs")
-                                .foregroundColor(Color(hex: "8E8E93"))
-                        }
-
-                        HStack {
-                            Label("Max Heart Rate", systemImage: "heart.fill")
-                                .foregroundColor(.primary)
-                            Spacer()
-                            if settings.maxHeartRate == nil {
-                                Text("Auto (\(Int(settings.effectiveMaxHR)))")
-                                    .foregroundColor(Color(hex: "8E8E93"))
-                                    .font(.subheadline)
-                            } else {
-                                Text("\(Int(settings.effectiveMaxHR)) bpm")
-                                    .foregroundColor(.primary)
-                                    .font(.subheadline)
-                            }
-                        }
-
-                        if settings.maxHeartRate != nil {
-                            Button("Reset to Auto") {
-                                settings.maxHeartRate = nil
-                                customMaxHR = ""
-                            }
-                            .foregroundColor(Color(hex: "FF1744"))
-                        }
-
-                        HStack {
-                            Label("Custom Max HR", systemImage: "slider.horizontal.3")
-                                .foregroundColor(.primary)
-                            Spacer()
-                            TextField("e.g. 185", text: $customMaxHR)
-                                .keyboardType(.numberPad)
-                                .multilineTextAlignment(.trailing)
-                                .foregroundColor(Color(hex: "8E8E93"))
-                                .frame(width: 80)
-                                .onSubmit { applyCustomMaxHR() }
-                        }
-                    }
-                    .listRowBackground(Color.somaCard)
-
-                    Section("Sleep") {
-                        HStack {
-                            Label("Sleep Goal", systemImage: "moon.fill")
-                                .foregroundColor(.primary)
-                            Spacer()
-                            Text(String(format: "%.1fh", settings.sleepGoalHours))
-                                .foregroundColor(Color(hex: "8E8E93"))
-                            Stepper("", value: $settings.sleepGoalHours, in: 5.0...12.0, step: 0.5)
-                                .labelsHidden()
-                        }
-                    }
-                    .listRowBackground(Color.somaCard)
-
-                    Section("Wake Time") {
-                        ForEach(Array(zip(1...7, ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"])), id: \.0) { weekday, label in
-                            HStack {
-                                Text(label)
-                                    .foregroundColor(.primary)
-                                    .frame(width: 36, alignment: .leading)
-                                Spacer()
-                                DatePicker("", selection: Binding(
-                                    get: { settings.wakeTimeDate(for: weekday) },
-                                    set: { settings.setWakeTimeDate($0, for: weekday) }
-                                ), displayedComponents: .hourAndMinute)
-                                .labelsHidden()
-                            }
-                        }
-                    }
-                    .listRowBackground(Color.somaCard)
-
-                    Section("Notifications") {
-                        Toggle(isOn: $settings.notificationsEnabled) {
-                            Label("Enable Notifications", systemImage: "bell.fill")
-                                .foregroundColor(.primary)
-                        }
-                        .tint(Color(hex: "00C853"))
-                        .onChange(of: settings.notificationsEnabled) { _, enabled in
-                            if enabled {
-                                requestNotificationPermission()
-                            }
-                            updateNotificationSchedules()
-                        }
-                        
-                        if settings.notificationsEnabled {
-                            HStack {
-                                Label("Daily Recovery", systemImage: "heart.fill")
-                                    .foregroundColor(.primary)
-                                Spacer()
-                                DatePicker("", selection: Binding(
-                                    get: { settings.recoveryNotificationTime },
-                                    set: { 
-                                        settings.setRecoveryNotificationTime($0)
-                                        updateNotificationSchedules()
-                                    }
-                                ), displayedComponents: .hourAndMinute)
-                                .labelsHidden()
-                            }
-                            
-                            Toggle(isOn: $settings.bedtimeReminderEnabled) {
-                                Label("Bedtime Reminder", systemImage: "moon.fill")
-                                    .foregroundColor(.primary)
-                            }
-                            .tint(Color(hex: "00C853"))
-                            .onChange(of: settings.bedtimeReminderEnabled) { _, _ in
-                                updateNotificationSchedules()
-                            }
-                            
-                            if settings.bedtimeReminderEnabled {
-                                HStack {
-                                    Text("Remind me")
-                                        .foregroundColor(.secondary)
-                                        .padding(.leading, 32)
-                                    Spacer()
-                                    Picker("Minutes before bedtime", selection: $settings.bedtimeReminderMinutesBefore) {
-                                        Text("15 min").tag(15)
-                                        Text("30 min").tag(30)
-                                        Text("45 min").tag(45)
-                                        Text("60 min").tag(60)
-                                    }
-                                    .pickerStyle(.menu)
-                                    .onChange(of: settings.bedtimeReminderMinutesBefore) { _, _ in
-                                        updateNotificationSchedules()
-                                    }
-                                    Text("before bedtime")
-                                        .foregroundColor(.secondary)
-                                }
-                            }
-                            
-                            Toggle(isOn: $settings.checkinReminderEnabled) {
-                                Label("Check-in Reminder", systemImage: "checkmark.circle.fill")
-                                    .foregroundColor(.primary)
-                            }
-                            .tint(Color(hex: "00C853"))
-                            .onChange(of: settings.checkinReminderEnabled) { _, _ in
-                                updateNotificationSchedules()
-                            }
-                            
-                            if settings.checkinReminderEnabled {
-                                HStack {
-                                    Text("Daily reminder")
-                                        .foregroundColor(.secondary)
-                                        .padding(.leading, 32)
-                                    Spacer()
-                                    DatePicker("", selection: Binding(
-                                        get: { settings.checkinReminderTime },
-                                        set: { 
-                                            settings.setCheckinReminderTime($0)
-                                            updateNotificationSchedules()
-                                        }
-                                    ), displayedComponents: .hourAndMinute)
-                                    .labelsHidden()
-                                }
-                            }
-                        }
-                    }
-                    .listRowBackground(Color.somaCard)
-
-                    Section("Preferences") {
-                        Toggle(isOn: $settings.useMetricUnits) {
-                            Label("Metric Units", systemImage: "ruler.fill")
-                                .foregroundColor(.primary)
-                        }
-                        .tint(Color(hex: "00C853"))
-
-                        Toggle(isOn: $settings.cacheEnabled) {
-                            Label("Enable Data Cache", systemImage: "cylinder.fill")
-                                .foregroundColor(.primary)
-                        }
-                        .tint(Color(hex: "00C853"))
-
-                        if settings.cacheEnabled {
-                            Text("Cached data is valid for 1 hour.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        } else {
-                            Text("Data refreshes every 5 minutes. Pull down on the dashboard to fetch immediately.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .listRowBackground(Color.somaCard)
-
-                    Section("Data") {
-                        Button {
-                            showResetAlert = true
-                        } label: {
-                            Label("Reset Baselines", systemImage: "arrow.clockwise")
-                                .foregroundColor(Color(hex: "FF1744"))
-                        }
-                    }
-                    .listRowBackground(Color.somaCard)
-
-#if DEBUG
-                    Section("Debug") {
-                        Button("Test Widget Data") {
-                            testWidgetData()
-                        }
-                        .foregroundColor(.primary)
-                        
-                        Button("Refresh Widgets") {
-                            WidgetCenter.shared.reloadAllTimelines()
-                            print("✅ Widget timelines reloaded")
-                        }
-                        .foregroundColor(.primary)
-                    }
-                    .listRowBackground(Color.somaCard)
-#endif
-
-                    Section("About") {
-                        HStack {
-                            Text("Version").foregroundColor(.primary)
-                            Spacer()
-                            Text("1.0").foregroundColor(Color(hex: "8E8E93"))
-                        }
-                        HStack {
-                            Text("Privacy").foregroundColor(.primary)
-                            Spacer()
-                            Text("All data stays on device").foregroundColor(Color(hex: "8E8E93")).font(.caption)
-                        }
-                    }
-                    .listRowBackground(Color.somaCard)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 40)
                 }
-                .scrollContentBackground(.hidden)
+                .scrollBounceBehavior(.basedOnSize)
             }
             .navigationTitle("Settings")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(Color(hex: "2979FF"))
+                        .fontWeight(.semibold)
+                        .foregroundColor(Color.somaBlue)
                 }
             }
             .alert("Reset Baselines", isPresented: $showResetAlert) {
@@ -390,73 +154,435 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This will clear all stored metrics and force a fresh baseline calculation.")
+                Text("This will clear all stored metrics and force a fresh baseline calculation over the next 7 days.")
             }
         }
     }
+
+    // MARK: - Profile Header
+
+    private var profileHeader: some View {
+        VStack(spacing: 16) {
+            // Avatar
+            ZStack {
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.somaGreen, Color.somaBlue],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .frame(width: 72, height: 72)
+                Text(settings.firstName.isEmpty ? "?" : String(settings.firstName.prefix(1)).uppercased())
+                    .font(.system(size: 30, weight: .bold, design: .rounded))
+                    .foregroundColor(.white)
+            }
+
+            VStack(spacing: 12) {
+                // Name field
+                HStack {
+                    Image(systemName: "person.fill")
+                        .foregroundColor(.secondary)
+                        .frame(width: 20)
+                    TextField("Your first name", text: $settings.firstName)
+                        .font(.subheadline)
+                        .multilineTextAlignment(.leading)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(Color.somaCardElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                // Date of birth
+                HStack {
+                    Image(systemName: "calendar")
+                        .foregroundColor(.secondary)
+                        .frame(width: 20)
+                    DatePicker(
+                        "Date of Birth",
+                        selection: Binding(
+                            get: { settings.dateOfBirth ?? Calendar.current.date(byAdding: .year, value: -30, to: Date())! },
+                            set: { settings.dateOfBirth = $0 }
+                        ),
+                        in: ...Calendar.current.date(byAdding: .year, value: -13, to: Date())!,
+                        displayedComponents: .date
+                    )
+                    .font(.subheadline)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(Color.somaCardElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+
+                // Max HR
+                HStack {
+                    Image(systemName: "heart.fill")
+                        .foregroundColor(Color.somaRed)
+                        .frame(width: 20)
+                    Text("Max Heart Rate")
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    if settings.maxHeartRate == nil {
+                        Text("Auto · \(Int(settings.effectiveMaxHR)) bpm")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    TextField("e.g. 185", text: $customMaxHR)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .foregroundColor(settings.maxHeartRate != nil ? .primary : .secondary)
+                        .frame(width: 70)
+                        .onSubmit { applyCustomMaxHR() }
+                    if settings.maxHeartRate != nil {
+                        Button {
+                            settings.maxHeartRate = nil
+                            customMaxHR = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 12)
+                .background(Color.somaCardElevated)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            }
+        }
+        .padding(16)
+        .background(Color.somaCard)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+    }
+
+    // MARK: - Sleep Section
+
+    private var sleepSection: some View {
+        settingsCard(title: "Sleep", icon: "moon.zzz.fill", iconColor: Color.somaBlue) {
+            VStack(spacing: 0) {
+                // Sleep goal stepper
+                HStack {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Sleep Goal")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                        Text("Target duration each night")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    HStack(spacing: 12) {
+                        Button {
+                            if settings.sleepGoalHours > 5.0 {
+                                settings.sleepGoalHours = max(5.0, settings.sleepGoalHours - 0.5)
+                            }
+                        } label: {
+                            Image(systemName: "minus.circle.fill")
+                                .font(.title3)
+                                .foregroundColor(settings.sleepGoalHours <= 5.0 ? .secondary : Color.somaBlue)
+                        }
+                        Text(String(format: "%.1fh", settings.sleepGoalHours))
+                            .font(.headline)
+                            .fontWeight(.bold)
+                            .foregroundColor(Color.somaBlue)
+                            .frame(width: 44)
+                            .contentTransition(.numericText())
+                            .animation(.spring(response: 0.3), value: settings.sleepGoalHours)
+                        Button {
+                            if settings.sleepGoalHours < 12.0 {
+                                settings.sleepGoalHours = min(12.0, settings.sleepGoalHours + 0.5)
+                            }
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title3)
+                                .foregroundColor(settings.sleepGoalHours >= 12.0 ? .secondary : Color.somaBlue)
+                        }
+                    }
+                }
+                .padding(.vertical, 4)
+            }
+        }
+    }
+
+    // MARK: - Wake Time Section
+
+    private var wakeTimeSection: some View {
+        settingsCard(title: "Wake Times", icon: "alarm.fill", iconColor: Color.somaOrange) {
+            VStack(spacing: 0) {
+                let days: [(Int, String)] = [(1,"Sun"),(2,"Mon"),(3,"Tue"),(4,"Wed"),(5,"Thu"),(6,"Fri"),(7,"Sat")]
+                ForEach(days, id: \.0) { weekday, label in
+                    HStack {
+                        Text(label)
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                            .frame(width: 36, alignment: .leading)
+                        Spacer()
+                        DatePicker("", selection: Binding(
+                            get: { settings.wakeTimeDate(for: weekday) },
+                            set: { settings.setWakeTimeDate($0, for: weekday) }
+                        ), displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                    }
+                    .padding(.vertical, 2)
+                    if weekday < 7 {
+                        Divider().padding(.leading, 36)
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Notifications Section
+
+    private var notificationsSection: some View {
+        settingsCard(title: "Notifications", icon: "bell.fill", iconColor: Color.somaPurple) {
+            VStack(spacing: 0) {
+
+                // Master toggle
+                settingsToggle(label: "Enable Notifications", value: $settings.notificationsEnabled, tint: Color.somaGreen)
+                    .onChange(of: settings.notificationsEnabled) { _, enabled in
+                        if enabled { Task { await NotificationScheduler.shared.requestPermission() } }
+                        NotificationScheduler.shared.updateAllSchedules(settings: settings)
+                    }
+
+                if settings.notificationsEnabled {
+                    Divider()
+
+                    // Recovery notification time
+                    HStack {
+                        Image(systemName: "heart.fill")
+                            .foregroundColor(Color.somaGreen)
+                            .frame(width: 20)
+                        Text("Daily Recovery")
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                        Spacer()
+                        DatePicker("", selection: Binding(
+                            get: { settings.recoveryNotificationTime },
+                            set: {
+                                settings.setRecoveryNotificationTime($0)
+                                NotificationScheduler.shared.updateAllSchedules(settings: settings)
+                            }
+                        ), displayedComponents: .hourAndMinute)
+                        .labelsHidden()
+                    }
+                    .padding(.vertical, 2)
+
+                    Divider()
+
+                    // Bedtime reminder
+                    settingsToggle(label: "Bedtime Reminder", value: $settings.bedtimeReminderEnabled, tint: Color.somaBlue)
+                        .onChange(of: settings.bedtimeReminderEnabled) { _, _ in
+                            NotificationScheduler.shared.updateAllSchedules(settings: settings)
+                        }
+
+                    if settings.bedtimeReminderEnabled {
+                        HStack {
+                            Text("Remind me")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.leading, 28)
+                            Spacer()
+                            Picker("", selection: $settings.bedtimeReminderMinutesBefore) {
+                                Text("15 min").tag(15)
+                                Text("30 min").tag(30)
+                                Text("45 min").tag(45)
+                                Text("60 min").tag(60)
+                            }
+                            .pickerStyle(.menu)
+                            .tint(Color.somaBlue)
+                            .onChange(of: settings.bedtimeReminderMinutesBefore) { _, _ in
+                                NotificationScheduler.shared.updateAllSchedules(settings: settings)
+                            }
+                            Text("before bedtime")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    Divider()
+
+                    // Check-in reminder
+                    settingsToggle(label: "Check-In Reminder", value: $settings.checkinReminderEnabled, tint: Color.somaGreen)
+                        .onChange(of: settings.checkinReminderEnabled) { _, _ in
+                            NotificationScheduler.shared.updateAllSchedules(settings: settings)
+                        }
+
+                    if settings.checkinReminderEnabled {
+                        HStack {
+                            Text("Daily at")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.leading, 28)
+                            Spacer()
+                            DatePicker("", selection: Binding(
+                                get: { settings.checkinReminderTime },
+                                set: {
+                                    settings.setCheckinReminderTime($0)
+                                    NotificationScheduler.shared.updateAllSchedules(settings: settings)
+                                }
+                            ), displayedComponents: .hourAndMinute)
+                            .labelsHidden()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Preferences Section
+
+    private var preferencesSection: some View {
+        settingsCard(title: "Preferences", icon: "slider.horizontal.3", iconColor: Color.somaGray) {
+            VStack(spacing: 0) {
+                settingsToggle(label: "Metric Units", value: $settings.useMetricUnits, tint: Color.somaGreen)
+                Divider()
+                settingsToggle(label: "Enable Data Cache", value: $settings.cacheEnabled, tint: Color.somaGreen)
+                if settings.cacheEnabled {
+                    Text("Cached data is valid for 1 hour. Reduces battery usage.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 6)
+                } else {
+                    Text("Data refreshes every 5 minutes. Pull down on the dashboard to fetch immediately.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.top, 6)
+                }
+            }
+        }
+    }
+
+    // MARK: - Data Section
+
+    private var dataSection: some View {
+        settingsCard(title: "Data", icon: "externaldrive.fill", iconColor: Color.somaRed) {
+            Button {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                showResetAlert = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "arrow.clockwise")
+                        .font(.subheadline)
+                    Text("Reset Baselines & Clear Cache")
+                        .font(.subheadline)
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .foregroundColor(Color.somaRed)
+            }
+        }
+    }
+
+    // MARK: - About Section
+
+    private var aboutSection: some View {
+        settingsCard(title: "About", icon: "info.circle.fill", iconColor: Color.somaBlue) {
+            VStack(spacing: 0) {
+                HStack {
+                    Text("Version")
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Text("1.0")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+                Divider().padding(.vertical, 4)
+                HStack {
+                    Image(systemName: "lock.shield.fill")
+                        .foregroundColor(Color.somaGreen)
+                        .font(.caption)
+                    Text("All data stays on your device")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                }
+            }
+        }
+    }
+
+    // MARK: - Debug Section
+
+    #if DEBUG
+    private var debugSection: some View {
+        settingsCard(title: "Debug", icon: "ant.fill", iconColor: Color.somaYellow) {
+            VStack(spacing: 0) {
+                Button("Test Widget Data") { testWidgetData() }
+                    .font(.subheadline)
+                    .foregroundColor(.primary)
+                Divider().padding(.vertical, 4)
+                Button("Refresh Widgets") {
+                    WidgetCenter.shared.reloadAllTimelines()
+                }
+                .font(.subheadline)
+                .foregroundColor(.primary)
+            }
+        }
+    }
+    #endif
+
+    // MARK: - Reusable Components
+
+    private func settingsCard<Content: View>(
+        title: String,
+        icon: String,
+        iconColor: Color,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.body)
+                    .foregroundColor(iconColor)
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+            }
+            content()
+        }
+        .padding(16)
+        .background(Color.somaCard)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+    }
+
+    private func settingsToggle(label: String, value: Binding<Bool>, tint: Color) -> some View {
+        Toggle(isOn: value) {
+            Text(label)
+                .font(.subheadline)
+                .foregroundColor(.primary)
+        }
+        .tint(tint)
+        .padding(.vertical, 2)
+    }
+
+    // MARK: - Helpers
 
     private func applyCustomMaxHR() {
         if let value = Int(customMaxHR), value > 100, value < 250 {
             settings.maxHeartRate = Double(value)
         }
     }
-    
-    // MARK: - Notification Helpers
-    
-    private func requestNotificationPermission() {
-        Task {
-            await NotificationScheduler.shared.requestPermission()
-        }
-    }
-    
-    private func updateNotificationSchedules() {
-        NotificationScheduler.shared.updateAllSchedules(settings: settings)
-    }
-    
+
     #if DEBUG
     private func testWidgetData() {
         let store = MetricsStore()
-        
-        // Check if we have today's metrics
-        if let todayMetrics = store.load(for: Date()) {
-            print("✅ Widget Debug: Today's metrics found")
-            print("   Recovery: \(todayMetrics.recoveryScore)")
-            print("   Strain: \(todayMetrics.strainScore)")
-            print("   Sleep: \(todayMetrics.sleepScore)")
-            print("   Stress: \(todayMetrics.stressScore)")
-        } else {
-            print("❌ Widget Debug: No metrics found for today")
+        if let m = store.load(for: Date()) {
+            print("✅ Recovery: \(m.recoveryScore), Sleep: \(m.sleepScore)")
         }
-        
-        // Check App Group access
         if let groupDefaults = UserDefaults(suiteName: "group.com.prasjain.Soma") {
-            print("✅ Widget Debug: App Group accessible")
-            
-            // Check if widget snapshot exists
-            if let data = groupDefaults.data(forKey: "WidgetMetricsSnapshot") {
-                print("✅ Widget Debug: Widget snapshot data found (\(data.count) bytes)")
-            } else {
-                print("❌ Widget Debug: No widget snapshot data found")
-                
-                // Create test snapshot if we have metrics
-                if let todayMetrics = store.load(for: Date()) {
-                    let testSnapshot = WidgetMetricsSnapshot(
-                        recoveryScore: todayMetrics.recoveryScore,
-                        strainScore: todayMetrics.strainScore,
-                        sleepScore: todayMetrics.sleepScore,
-                        stressScore: todayMetrics.stressScore,
-                        date: todayMetrics.date
-                    )
-                    
-                    if let encoded = try? JSONEncoder().encode(testSnapshot) {
-                        groupDefaults.set(encoded, forKey: "WidgetMetricsSnapshot")
-                        print("✅ Widget Debug: Created widget snapshot")
-                        WidgetCenter.shared.reloadAllTimelines()
-                    }
-                }
+            if let m = MetricsStore().load(for: Date()),
+               let snap = try? JSONEncoder().encode(WidgetMetricsSnapshot(
+                   recoveryScore: m.recoveryScore, strainScore: m.strainScore,
+                   sleepScore: m.sleepScore, stressScore: m.stressScore, date: m.date)) {
+                groupDefaults.set(snap, forKey: "WidgetMetricsSnapshot")
+                WidgetCenter.shared.reloadAllTimelines()
+                print("✅ Widget snapshot written")
             }
-        } else {
-            print("❌ Widget Debug: Cannot access App Group - check entitlements")
         }
     }
     #endif
