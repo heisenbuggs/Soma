@@ -118,7 +118,7 @@ struct AyurvedicSleepCalculator {
     static func guidanceHex(for score: Double) -> String {
         switch score {
         case 8...10: return "00C853"
-        case 6..<8:  return "FFD600"
+        case 6..<8:  return "69F0AE"
         case 4..<6:  return "FFD600"
         default:     return "FF1744"
         }
