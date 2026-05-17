@@ -547,3 +547,11 @@ struct WorkoutDetailCard: View {
         .padding(.vertical, 8)
     }
 }
+
+#if DEBUG
+#Preview {
+    NavigationStack {
+        DayDetailView(metrics: .mock(), checkInStore: CheckInStore())
+    }
+}
+#endif

@@ -78,3 +78,14 @@ struct DayDetailPageView: View {
         return formatter.string(from: sorted[currentIndex].date)
     }
 }
+
+//#if DEBUG
+//#Preview {
+//    let history = DailyMetrics.mockHistory
+//    DayDetailPageView(
+//        allMetrics: history,
+//        initial: history[0],
+//        checkInStore: CheckInStore()
+//    )
+//}
+//#endif

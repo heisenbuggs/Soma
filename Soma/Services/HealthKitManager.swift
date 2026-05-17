@@ -621,27 +621,15 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
     // MARK: - Blood Oxygen (SpO2)
 
     /// Fetches average blood oxygen saturation for the given date.
-    /// Returns percentage (e.g., 95.5 for 95.5% oxygen saturation).
+    /// Returns percentage (e.g., 95.0 for 95% oxygen saturation).
+    /// Uses HKStatisticsQuery (discreteAverage) which applies HealthKit's internal
+    /// quality weighting, producing results consistent with what Apple Health displays.
     func fetchBloodOxygen(for date: Date) async throws -> Double? {
         let type = HKQuantityType(.oxygenSaturation)
         let predicate = dayPredicate(for: date)
-        
-        let samples: [HKQuantitySample] = try await withCheckedThrowingContinuation { continuation in
-            let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, results, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: (results as? [HKQuantitySample]) ?? [])
-                }
-            }
-            healthStore.execute(query)
-        }
-        
-        guard !samples.isEmpty else { return nil }
-        
-        // Convert to percentage (HealthKit stores as fraction 0.0-1.0)
-        let percentages = samples.map { $0.quantity.doubleValue(for: .percent()) * 100.0 }
-        return percentages.reduce(0, +) / Double(percentages.count)
+        // HealthKit stores oxygenSaturation as a fraction (0.0–1.0); .percent() returns that fraction.
+        let raw = try await fetchStatisticsAverage(type: type, predicate: predicate, unit: .percent())
+        return raw.map { $0 * 100.0 }
     }
 
     // MARK: - Exercise Minutes

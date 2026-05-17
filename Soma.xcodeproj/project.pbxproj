@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		AB3000000000000000000001 /* PreviewHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB1000000000000000000001 /* PreviewHelpers.swift */; };
 		AA300000000000000000001 /* SomaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000001 /* SomaApp.swift */; };
 		AA300000000000000000002 /* DailyMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000002 /* DailyMetrics.swift */; };
 		AA300000000000000000003 /* SleepData.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000003 /* SleepData.swift */; };
@@ -62,11 +63,13 @@
 		AA30000000000000000003B /* TrainingGuidanceEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000003B /* TrainingGuidanceEngine.swift */; };
 		DE0500062F84F4A8009F2586 /* WeeklySummaryEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0500052F84F4A8009F2586 /* WeeklySummaryEngine.swift */; };
 		DE0500082F84F4BD009F2586 /* ReadinessHeroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE0500072F84F4BD009F2586 /* ReadinessHeroView.swift */; };
+		9F0BAC62898B4577BECFD763 /* ReadinessDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25C7ADDA0F7645849587DE7F /* ReadinessDetailView.swift */; };
 		AA300000000000000000040 /* SleepConsistencyCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000040 /* SleepConsistencyCalculator.swift */; };
 		AA300000000000000000041 /* MovementScoreCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000041 /* MovementScoreCalculator.swift */; };
 		AA300000000000000000042 /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000042 /* AppColors.swift */; };
 		AA300000000000000000043 /* UserDefaultsKeys.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000043 /* UserDefaultsKeys.swift */; };
 		AA300000000000000000044 /* NotificationIDs.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000044 /* NotificationIDs.swift */; };
+		AA300000000000000000045 /* DataExportManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000045 /* DataExportManager.swift */; };
 		DE2C6BF02F69D0FD00BC222F /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE2C6B8B2F69D02F00BC222F /* WidgetKit.framework */; };
 		DE2C6BF12F69D0FD00BC222F /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = DE2C6B8D2F69D02F00BC222F /* SwiftUI.framework */; };
 		DE2C6C022F69D0FE00BC222F /* SomaWidgetsExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = DE2C6BEF2F69D0FD00BC222F /* SomaWidgetsExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
@@ -105,6 +108,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		AB1000000000000000000001 /* PreviewHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewHelpers.swift; sourceTree = "<group>"; };
 		AA100000000000000000001 /* SomaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SomaApp.swift; sourceTree = "<group>"; };
 		AA100000000000000000002 /* DailyMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyMetrics.swift; sourceTree = "<group>"; };
 		AA100000000000000000003 /* SleepData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepData.swift; sourceTree = "<group>"; };
@@ -165,11 +169,13 @@
 		AA10000000000000000003B /* TrainingGuidanceEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingGuidanceEngine.swift; sourceTree = "<group>"; };
 		DE0500052F84F4A8009F2586 /* WeeklySummaryEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WeeklySummaryEngine.swift; sourceTree = "<group>"; };
 		DE0500072F84F4BD009F2586 /* ReadinessHeroView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadinessHeroView.swift; sourceTree = "<group>"; };
+		25C7ADDA0F7645849587DE7F /* ReadinessDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReadinessDetailView.swift; sourceTree = "<group>"; };
 		AA100000000000000000040 /* SleepConsistencyCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepConsistencyCalculator.swift; sourceTree = "<group>"; };
 		AA100000000000000000041 /* MovementScoreCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementScoreCalculator.swift; sourceTree = "<group>"; };
 		AA100000000000000000042 /* AppColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppColors.swift; sourceTree = "<group>"; };
 		AA100000000000000000043 /* UserDefaultsKeys.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDefaultsKeys.swift; sourceTree = "<group>"; };
 		AA100000000000000000044 /* NotificationIDs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationIDs.swift; sourceTree = "<group>"; };
+		AA100000000000000000045 /* DataExportManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExportManager.swift; sourceTree = "<group>"; };
 		DE2C6B8B2F69D02F00BC222F /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		DE2C6B8D2F69D02F00BC222F /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
 		DE2C6BEF2F69D0FD00BC222F /* SomaWidgetsExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SomaWidgetsExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -239,10 +245,19 @@
 				AA500000000000000000006 /* Views */,
 				AA500000000000000000008 /* Constants */,
 				AA500000000000000000009 /* Resources */,
+				AB5000000000000000000001 /* Debug */,
 				AA10000000000000000001B /* Info.plist */,
 				AA10000000000000000001C /* Soma.entitlements */,
 			);
 			path = Soma;
+			sourceTree = "<group>";
+		};
+		AB5000000000000000000001 /* Debug */ = {
+			isa = PBXGroup;
+			children = (
+				AB1000000000000000000001 /* PreviewHelpers.swift */,
+			);
+			path = Debug;
 			sourceTree = "<group>";
 		};
 		AA500000000000000000008 /* Constants */ = {
@@ -277,6 +292,7 @@
 				AA100000000000000000036 /* BackgroundTaskManager.swift */,
 				AA100000000000000000037 /* InsightCache.swift */,
 				AA100000000000000000038 /* NotificationStore.swift */,
+				AA100000000000000000045 /* DataExportManager.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -327,6 +343,7 @@
 				AA100000000000000000034 /* AyurvedicSleepDetailView.swift */,
 				AA100000000000000000039 /* NotificationsView.swift */,
 				DE0500072F84F4BD009F2586 /* ReadinessHeroView.swift */,
+				25C7ADDA0F7645849587DE7F /* ReadinessDetailView.swift */,
 				AA500000000000000000007 /* Components */,
 			);
 			path = Views;
@@ -544,6 +561,8 @@
 				AA300000000000000000027 /* BehaviorEngine.swift in Sources */,
 				AA300000000000000000028 /* CheckInViewModel.swift in Sources */,
 				DE0500082F84F4BD009F2586 /* ReadinessHeroView.swift in Sources */,
+				9F0BAC62898B4577BECFD763 /* ReadinessDetailView.swift in Sources */,
+				AB3000000000000000000001 /* PreviewHelpers.swift in Sources */,
 				AA300000000000000000029 /* CheckInView.swift in Sources */,
 				AA30000000000000000002B /* NotificationScheduler.swift in Sources */,
 				AA30000000000000000002C /* DayDetailViewModel.swift in Sources */,
@@ -555,6 +574,7 @@
 				AA300000000000000000036 /* BackgroundTaskManager.swift in Sources */,
 				AA300000000000000000037 /* InsightCache.swift in Sources */,
 				AA300000000000000000038 /* NotificationStore.swift in Sources */,
+				AA300000000000000000045 /* DataExportManager.swift in Sources */,
 				AA300000000000000000039 /* NotificationsView.swift in Sources */,
 				AA30000000000000000003A /* DailyTrainingGuidance.swift in Sources */,
 				AA30000000000000000003B /* TrainingGuidanceEngine.swift in Sources */,

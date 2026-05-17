@@ -594,3 +594,24 @@ struct SleepTimelineView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview {
+    let cal = Calendar.current
+    let now = Date()
+    let sleepStart = cal.date(bySettingHour: 23, minute: 0, second: 0, of: cal.date(byAdding: .day, value: -1, to: now)!)
+    let sleepEnd   = cal.date(bySettingHour: 7,  minute: 0, second: 0, of: now)
+    return NavigationStack {
+        AyurvedicSleepDetailView(
+            score: 72,
+            sleepStart: sleepStart,
+            sleepEnd: sleepEnd,
+            eveningDate: cal.date(byAdding: .day, value: -1, to: now)!,
+            history: DailyMetrics.mockHistory,
+            napDurationMinutes: nil,
+            napStartTime: nil,
+            napEndTime: nil
+        )
+    }
+}
+#endif

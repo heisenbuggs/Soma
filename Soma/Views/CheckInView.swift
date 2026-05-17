@@ -277,3 +277,9 @@ struct CheckInView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview {
+    CheckInView(viewModel: CheckInViewModel(checkInStore: CheckInStore(), healthKit: PreviewHealthKit()))
+}
+#endif

@@ -202,31 +202,31 @@ final class DayDetailViewModel: ObservableObject {
         }
 
         // Sleep interruptions
-        if let n = metrics.sleepInterruptions, n >= 3 {
+        if let n = metrics.sleepInterruptions, n > 3 {
             tips.append("Sleep was fragmented with \(n) interruptions — poor sleep architecture.")
         }
 
+        // Night-sleep total (stage percentages exclude naps — Apple Health
+        // doesn't reliably stage daytime sleep).
+        let nightSleepMinutes = (metrics.deepSleepMinutes ?? 0)
+                              + (metrics.remSleepMinutes ?? 0)
+                              + (metrics.coreSleepMinutes ?? 0)
+
         // Deep sleep
-        if let deep = metrics.deepSleepMinutes {
-            let total = (metrics.sleepDurationHours ?? 0) * 60
-            if total > 0 {
-                let ratio = deep / total
-                if ratio < 0.12 {
-                    tips.append(String(format: "Deep sleep was only %.0f min (%.0f%% of total) — below the 20%% target.", deep, ratio * 100))
-                } else if ratio >= 0.20 {
-                    tips.append(String(format: "Deep sleep was strong at %.0f min (%.0f%% of total).", deep, ratio * 100))
-                }
+        if let deep = metrics.deepSleepMinutes, nightSleepMinutes > 0 {
+            let ratio = deep / nightSleepMinutes
+            if ratio < 0.12 {
+                tips.append(String(format: "Deep sleep was only %.0f min (%.0f%% of total) — below the 20%% target.", deep, ratio * 100))
+            } else if ratio >= 0.20 {
+                tips.append(String(format: "Deep sleep was strong at %.0f min (%.0f%% of total).", deep, ratio * 100))
             }
         }
 
         // REM sleep
-        if let rem = metrics.remSleepMinutes {
-            let total = (metrics.sleepDurationHours ?? 0) * 60
-            if total > 0 {
-                let ratio = rem / total
-                if ratio < 0.15 {
-                    tips.append(String(format: "REM sleep was low at %.0f min (%.0f%%) — may affect memory and mood.", rem, ratio * 100))
-                }
+        if let rem = metrics.remSleepMinutes, nightSleepMinutes > 0 {
+            let ratio = rem / nightSleepMinutes
+            if ratio < 0.15 {
+                tips.append(String(format: "REM sleep was low at %.0f min (%.0f%%) — may affect memory and mood.", rem, ratio * 100))
             }
         }
 
@@ -236,8 +236,8 @@ final class DayDetailViewModel: ObservableObject {
         }
 
         // SpO2
-        if let spo2 = metrics.bloodOxygen, spo2 < 95 {
-            tips.append(String(format: "Blood oxygen was low at %.1f%% — high-intensity training would not have been advisable.", spo2))
+        if let spo2 = metrics.bloodOxygen, spo2 < 92 {
+            tips.append(String(format: "Blood oxygen was critically low at %.1f%% — high-intensity training would not have been advisable.", spo2))
         }
 
         // Walking HR elevated

@@ -35,7 +35,7 @@ struct DailyMetrics: Identifiable, Codable {
     // Raw values
     var hrvAverage: Double?        // ms (daytime)
     var restingHR: Double?         // bpm
-    var sleepDurationHours: Double?
+    var sleepDurationHours: Double?   // night sleep + daytime nap combined (matches Apple Health total)
     var sleepNeedHours: Double?
     var activeCalories: Double?
     var stepCount: Double?

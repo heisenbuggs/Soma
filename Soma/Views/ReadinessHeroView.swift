@@ -12,10 +12,10 @@ struct ReadinessHeroView: View {
 
     private var headline: String {
         switch readinessScore {
-            case 85...100: return "Peak Performance — Go All In"
-            case 65..<85:  return "Strong Day — Train Hard"
+            case 80...100: return "Peak Performance — Go All In"
+            case 65..<80:  return "Strong Day — Train Hard"
             case 45..<65:  return "Moderate Day — Steady Training"
-            case 30..<45:  return "Low Readiness — Go Light"
+            case 25..<45:  return "Low Readiness — Go Light"
             default:       return "Recovery First — Rest Up"
         }
     }
@@ -40,21 +40,48 @@ struct ReadinessHeroView: View {
                         .padding(.vertical, 3)
                         .background(accent.opacity(0.15))
                         .clipShape(Capsule())
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundColor(Color.somaGray)
                 }
 
                 // Centered ring
                 ZStack {
-                    // Track
+                    // Dark track (full circle — shows the unfilled portion)
                     Circle()
-                        .stroke(accent.opacity(0.12), lineWidth: 16)
+                        .stroke(Color(white: 0.12), lineWidth: 16)
                         .frame(width: 130, height: 130)
 
-                    // Progress arc
+                    // Full spectrum gradient ring — always drawn; clipped to score length
                     Circle()
                         .trim(from: 0, to: min(1, readinessScore / 100))
                         .stroke(
                             AngularGradient(
-                                colors: [accent.opacity(0.5), accent],
+                                // With rotationEffect(-90°) + startAngle(-90°):
+                                //   arc trim t  →  gradient location 0.25 + t
+                                //   score 50%   →  location 0.75  = yellow  (key constraint)
+                                // Band widths: red 0-30 (30%), orange 30-50 (20%),
+                                //              yellow 50-65 (15%), light green 65-75 (10%), green 75-100
+                                stops: [
+                                    // Wrap region — visible for scores 75-100%
+                                    // score 75 → location 1.00 (light green), score 80 → 0.05 (green)
+                                    .init(color: Color.somaLightGreen, location: 0.00), // score ~75
+                                    .init(color: Color.somaLightGreen, location: 0.03), // score ~78
+                                    .init(color: Color.somaGreen,      location: 0.05), // score 80
+                                    .init(color: Color.somaGreen,      location: 0.22), // score ~97
+                                    // Red zone — scores 0–25
+                                    .init(color: Color.somaRed,        location: 0.25), // score 0
+                                    .init(color: Color.somaRed,        location: 0.45), // score 20
+                                    // Orange zone — scores 25–45
+                                    .init(color: Color.somaOrange,     location: 0.50), // score 25
+                                    .init(color: Color.somaOrange,     location: 0.65), // score 40
+                                    // Yellow zone — scores 45–65
+                                    .init(color: Color.somaYellow,     location: 0.70), // score 45
+                                    .init(color: Color.somaYellow,     location: 0.85), // score 60
+                                    // Light green zone — scores 65–80
+                                    .init(color: Color.somaLightGreen, location: 0.90), // score 65
+                                    .init(color: Color.somaLightGreen, location: 1.00), // score 75
+                                ],
                                 center: .center,
                                 startAngle: .degrees(-90),
                                 endAngle: .degrees(270)

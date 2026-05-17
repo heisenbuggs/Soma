@@ -61,11 +61,12 @@ struct MetricInsightGenerator {
     static func generate(
         for metric: DashboardMetric,
         metrics: DailyMetrics,
-        sleepGoal: Double
+        sleepGoal: Double,
+        history: [DailyMetrics] = []
     ) -> (observations: [String], actions: [String]) {
         switch metric {
         case .sleep:    return sleepInsights(metrics: metrics, sleepGoal: sleepGoal)
-        case .recovery: return recoveryInsights(metrics: metrics)
+        case .recovery: return recoveryInsights(metrics: metrics, history: history)
         case .strain:   return strainInsights(metrics: metrics)
         case .stress:   return stressInsights(metrics: metrics)
         }
@@ -113,34 +114,85 @@ struct MetricInsightGenerator {
         return (obs, acts)
     }
 
-    private static func recoveryInsights(metrics: DailyMetrics) -> (observations: [String], actions: [String]) {
+    private static func recoveryInsights(
+        metrics: DailyMetrics,
+        history: [DailyMetrics]
+    ) -> (observations: [String], actions: [String]) {
         var obs: [String] = []
         var acts: [String] = []
 
-        if metrics.recoveryScore < 50 {
-            obs.append("Recovery is below average — your body needs more rest")
+        // Compute baselines from prior days (exclude today so today's data doesn't skew baseline)
+        let priorDays = history.filter { !Calendar.current.isDateInToday($0.date) }
+        let hrvHist      = BaselineCalculator.extractHistory(from: priorDays, \.hrvAverage)
+        let rhrHist      = BaselineCalculator.extractHistory(from: priorDays, \.restingHR)
+        let hrvBaseline  = BaselineCalculator.computeHRVBaseline(from: hrvHist)
+        let rhrBaseline  = BaselineCalculator.computeRHRBaseline(from: rhrHist)
+
+        // Yesterday's strain affects the 10% strain-recovery component
+        let yesterdayStrain = priorDays.sorted { $0.date < $1.date }.last?.strainScore ?? 0
+
+        // ── HRV component (40% weight) ──────────────────────────────────────
+        if let hrv = metrics.hrvAverage {
+            if let base = hrvBaseline, base > 0 {
+                let ratio = hrv / base
+                if ratio < 0.85 {
+                    let pct = Int((1.0 - ratio) * 100)
+                    obs.append("HRV dropped \(pct)% below your baseline (\(String(format: "%.0f", hrv)) vs \(String(format: "%.0f", base)) ms) — this is the largest recovery driver at 40% weight")
+                    acts.append("Low HRV signals nervous system stress — rest, light movement, or breathwork today")
+                } else if ratio > 1.10 {
+                    let pct = Int((ratio - 1.0) * 100)
+                    obs.append("HRV is \(pct)% above baseline (\(String(format: "%.0f", hrv)) ms) — a strong recovery boost")
+                } else {
+                    obs.append("HRV is near your baseline (\(String(format: "%.0f", hrv)) ms) — neutral recovery impact")
+                }
+            } else {
+                obs.append("HRV: \(String(format: "%.0f", hrv)) ms (baseline still building — need 7+ days)")
+            }
+        }
+
+        // ── RHR component (25% weight) ──────────────────────────────────────
+        if let rhr = metrics.restingHR {
+            if let base = rhrBaseline {
+                let deviation = base - rhr   // positive = lower than baseline = good
+                if deviation < -3 {
+                    obs.append("Resting HR is \(Int(-deviation)) bpm above your usual \(String(format: "%.0f", base)) bpm — penalising recovery (25% weight)")
+                    acts.append("Elevated resting HR often signals dehydration, stress, or early illness — hydrate and rest")
+                } else if deviation > 3 {
+                    obs.append("Resting HR is \(Int(deviation)) bpm below your baseline — a positive recovery signal")
+                } else {
+                    obs.append("Resting HR (\(Int(rhr)) bpm) is near your baseline — neutral impact")
+                }
+            } else {
+                obs.append("Resting HR: \(Int(rhr)) bpm (baseline still building)")
+            }
+        }
+
+        // ── Sleep quality component (25% weight) ────────────────────────────
+        let sleepScore = metrics.sleepScore
+        if sleepScore < 50 {
+            obs.append("Sleep quality was poor (\(Int(sleepScore))/100) — dragging recovery down significantly (25% weight)")
+            acts.append("Poor sleep is a major recovery blocker — aim for an earlier bedtime and cooler room tonight")
+        } else if sleepScore < 70 {
+            obs.append("Sleep quality was below average (\(Int(sleepScore))/100) — a moderate drag on recovery")
+            acts.append("Improving tonight's sleep will directly lift tomorrow's recovery score")
+        } else {
+            obs.append("Sleep quality was good (\(Int(sleepScore))/100) — contributing positively")
+        }
+
+        // ── Strain recovery component (10% weight) ───────────────────────────
+        if yesterdayStrain > 15 {
+            obs.append("High strain yesterday (\(Int(yesterdayStrain))/100) reduced recovery capacity via the strain component (10% weight)")
+            acts.append("After high-strain days, easy active recovery helps — avoid another intense session today")
+        }
+
+        // Overall fallback
+        if obs.isEmpty {
+            obs.append("All key recovery parameters are within your normal range — looking good")
+            acts.append("Good day for moderate to high intensity training")
+        } else if acts.isEmpty && metrics.recoveryScore < 50 {
             acts.append("Reduce training intensity today and prioritize sleep tonight")
         }
 
-        if let hrv = metrics.hrvAverage, hrv < 30 {
-            obs.append("HRV was low, indicating accumulated fatigue")
-            acts.append("Take a rest day or limit activity to light movement")
-        }
-
-        if let rhr = metrics.restingHR, rhr > 65 {
-            obs.append("Resting heart rate was elevated at \(Int(rhr)) bpm")
-            acts.append("Hydrate well and avoid caffeine to lower resting HR")
-        }
-
-        if metrics.sleepScore < 60 {
-            obs.append("Poor sleep quality impacted today's recovery")
-            acts.append("Focus on improving tonight's sleep environment")
-        }
-
-        if obs.isEmpty {
-            obs.append("Recovery looks solid today")
-            acts.append("Good day for moderate to high intensity training")
-        }
         return (obs, acts)
     }
 
@@ -212,7 +264,7 @@ struct MetricInsightGenerator {
 
 struct MetricDetailView: View {
     let metric: DashboardMetric
-    let viewModel: DashboardViewModel
+    @ObservedObject var viewModel: DashboardViewModel
 
     @State private var selectedRange: TrendsViewModel.TimeRange = .week
     @State private var selectedDate: Date?
@@ -261,8 +313,12 @@ struct MetricDetailView: View {
                         if let m = selectedMetrics {
                             insightsPanel(for: m)
                         }
-                        // 3.2 — Sleep Regularity Dashboard (sleep metric only)
+                        // Sleep extras (sleep metric only)
                         if metric == .sleep {
+                            if !weeklyGoalHistory.isEmpty {
+                                WeeklyGoalCard(history: weeklyGoalHistory)
+                                    .padding(.horizontal)
+                            }
                             sleepRegularityPanel
                             sleepDebtChart
                             sleepCalendarGrid
@@ -396,10 +452,12 @@ struct MetricDetailView: View {
 
     // MARK: - Intraday Stress Chart
 
-    /// Buckets raw HR samples into 30-minute bins and derives a relative stress level.
+    /// Buckets daytime (8AM–8PM) HR samples into 30-minute bins and derives a relative stress level.
+    /// Filtered to the same 8AM–8PM window as the daily stress score so the two are consistent.
     /// Stress per bin = clamp((avgHR - rhrBaseline) / rhrBaseline, 0, 1) × 100
     private var intradayStressBuckets: [(Date, Double)] {
         guard !intradayHRData.isEmpty else { return [] }
+
         let rhrBaseline = history.compactMap { $0.restingHR }.suffix(7).reduce(0, +)
             / max(1, Double(history.compactMap { $0.restingHR }.suffix(7).count))
         let baseline = rhrBaseline > 0 ? rhrBaseline : 65.0
@@ -495,7 +553,7 @@ struct MetricDetailView: View {
                 .chartXSelection(value: $selectedStressDate)
                 .frame(height: 160)
 
-                Text("Based on heart rate elevation above your resting baseline. Lower HRV + higher HR = higher stress.")
+                Text("24-hour heart rate elevation above your resting baseline. The daily stress score reflects the daytime window.")
                     .font(.caption)
                     .foregroundColor(Color.somaGray)
             }
@@ -710,7 +768,7 @@ struct MetricDetailView: View {
     private func insightsPanel(for m: DailyMetrics) -> some View {
         let score = Int(metric.score(from: m).rounded())
         let state = metric.state(from: m)
-        let result = MetricInsightGenerator.generate(for: metric, metrics: m, sleepGoal: sleepGoal)
+        let result = MetricInsightGenerator.generate(for: metric, metrics: m, sleepGoal: sleepGoal, history: history)
         let acrNote = metric == .recovery ? MetricInsightGenerator.acrDescription(history: history) : nil
 
         return VStack(alignment: .leading, spacing: 14) {
@@ -827,6 +885,17 @@ struct MetricDetailView: View {
     /// All sleep metrics from the past 30 days (independent of the range picker — regularity is a long-term metric).
     private var last30History: [DailyMetrics] { viewModel.loadHistory(days: 30) }
 
+    /// Last 7 days of sleep-vs-goal data for WeeklyGoalCard.
+    private var weeklyGoalHistory: [(date: Date, actual: Double, goal: Double)] {
+        let stored = UserDefaults.standard.double(forKey: UserDefaultsKeys.baselineSleepHours)
+        let defaultGoal = stored > 0 ? stored : 7.0
+        return viewModel.loadHistory(days: 7).compactMap { m in
+            guard let actual = m.sleepDurationHours else { return nil }
+            let goal = m.sleepNeedHours ?? defaultGoal
+            return (date: m.date, actual: actual, goal: goal)
+        }
+    }
+
     // MARK: Sleep Regularity Index
 
     private var sleepRegularityIndex: Double? {
@@ -922,8 +991,9 @@ struct MetricDetailView: View {
     private var sleepDebtData: [(Date, Double)] {
         last30History.compactMap { m -> (Date, Double)? in
             guard let actual = m.sleepDurationHours else { return nil }
-            let goal = m.sleepNeedHours ?? sleepGoal
-            return (m.date, max(0, goal - actual))
+            // Use the fixed sleep goal — not sleepNeedHours, which already bakes in prior
+            // debt and would compound when used to compute debt again.
+            return (m.date, max(0, sleepGoal - actual))
         }
         .sorted { $0.0 < $1.0 }
     }
@@ -1017,23 +1087,23 @@ struct MetricDetailView: View {
     // MARK: GitHub-Style Sleep Score Calendar Grid
 
     /// Builds a 6-week (42-cell) grid aligned to calendar weeks.
-    /// Each row is a week starting on Sunday. Cells outside [today-41d, today] are empty.
+    /// Each row is a week starting on Sunday. The last row is always the current week,
+    /// so today is always visible. Future cells in the current week are shown as empty.
     private var calendarGridData: [Date?] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: Date())
 
-        // Find the Sunday that starts the week containing (today - 41 days).
-        guard let earliest = cal.date(byAdding: .day, value: -41, to: today) else { return [] }
-        let weekdayOfEarliest = cal.component(.weekday, from: earliest) // 1=Sun
-        let offsetToSunday = weekdayOfEarliest - 1
-        guard let gridStart = cal.date(byAdding: .day, value: -offsetToSunday, to: earliest) else { return [] }
+        // Anchor to the Sunday of the current week, then go back 5 full weeks.
+        // This guarantees today always falls within the 42-cell grid.
+        let weekdayOfToday = cal.component(.weekday, from: today) // 1=Sun … 7=Sat
+        let offsetToSunday = weekdayOfToday - 1
+        guard let sundayOfCurrentWeek = cal.date(byAdding: .day, value: -offsetToSunday, to: today),
+              let gridStart = cal.date(byAdding: .day, value: -35, to: sundayOfCurrentWeek) else { return [] }
 
         // 6 rows × 7 columns = 42 cells
         return (0..<42).map { offset -> Date? in
             guard let date = cal.date(byAdding: .day, value: offset, to: gridStart) else { return nil }
-            if date > today { return nil }                            // future: empty
-            let daysAgo = cal.dateComponents([.day], from: date, to: today).day ?? 99
-            if daysAgo > 41 { return nil }                           // before window: empty
+            if date > today { return nil }   // future cells in the current week: empty
             return date
         }
     }
@@ -1212,3 +1282,29 @@ struct MetricDetailView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview("Recovery") {
+    NavigationStack {
+        MetricDetailView(metric: .recovery, viewModel: .preview)
+    }
+}
+
+#Preview("Sleep") {
+    NavigationStack {
+        MetricDetailView(metric: .sleep, viewModel: .preview)
+    }
+}
+
+#Preview("Strain") {
+    NavigationStack {
+        MetricDetailView(metric: .strain, viewModel: .preview)
+    }
+}
+
+#Preview("Stress") {
+    NavigationStack {
+        MetricDetailView(metric: .stress, viewModel: .preview)
+    }
+}
+#endif

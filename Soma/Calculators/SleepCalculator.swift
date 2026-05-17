@@ -5,8 +5,9 @@ struct SleepCalculator {
     // MARK: - Sleep Score
 
     // Optimal stage targets (as fraction of total sleep)
-    static let optimalDeepRatio: Double = 0.20   // 20%
-    static let optimalREMRatio: Double  = 0.22   // 22%
+    // Healthy range: deep 15–25%, REM 20–25%. Scores reach 100 at the lower bound of the optimal range.
+    static let optimalDeepRatio: Double = 0.20   // 20% — centre of 15–25% healthy range
+    static let optimalREMRatio: Double  = 0.20   // 20% — lower bound of 20–25% healthy range
     static let optimalCoreRatio: Double = 0.50   // 50%
 
     /// Calculates sleep score 0–100.
@@ -27,20 +28,30 @@ struct SleepCalculator {
         hrvBaseline: Double? = nil,
         sleepingHRBaseline: Double? = nil
     ) -> Double {
-        let totalHours = sleep.totalDuration / 3600.0
+        let nightHours = sleep.totalDuration / 3600.0
+        let napHours = sleep.napDurationSeconds / 3600.0
+        let totalHours = nightHours + napHours
         guard totalHours > 0, sleepNeed > 0 else { return 0 }
 
-        // 1. Duration
+        // 1. Duration — naps count toward sleep need
         let durationScore = min(100.0, totalHours / sleepNeed * 100.0)
 
-        // 2. Stage quality
-        let deepRatio  = sleep.deepSleepDuration / sleep.totalDuration
-        let remRatio   = sleep.remSleepDuration  / sleep.totalDuration
-        let coreRatio  = sleep.coreSleepDuration / sleep.totalDuration
-        let deepScore  = min(100.0, deepRatio / optimalDeepRatio  * 100.0)
-        let remScore   = min(100.0, remRatio  / optimalREMRatio   * 100.0)
-        let coreScore  = min(100.0, coreRatio / optimalCoreRatio  * 100.0)
-        let stageScore = 0.40 * deepScore + 0.40 * remScore + 0.20 * coreScore
+        // 2. Stage quality — ratios use night sleep only as denominator. Apple
+        // Health rarely logs deep/REM during daytime naps, so blending naps in
+        // would artificially deflate the stage mix.
+        let stageScore: Double
+        if sleep.totalDuration > 0 {
+            let deepRatio  = sleep.deepSleepDuration / sleep.totalDuration
+            let remRatio   = sleep.remSleepDuration  / sleep.totalDuration
+            let coreRatio  = sleep.coreSleepDuration / sleep.totalDuration
+            let deepScore  = min(100.0, deepRatio / optimalDeepRatio  * 100.0)
+            let remScore   = min(100.0, remRatio  / optimalREMRatio   * 100.0)
+            let coreScore  = min(100.0, coreRatio / optimalCoreRatio  * 100.0)
+            stageScore = 0.40 * deepScore + 0.40 * remScore + 0.20 * coreScore
+        } else {
+            // Nap-only day — no night architecture to evaluate.
+            stageScore = 0
+        }
 
         // 3. HRV during sleep (higher = better; ratio vs baseline)
         let hrvScore = computeSleepingHRVScore(sleepingHRV: sleepingHRV, baseline: hrvBaseline)

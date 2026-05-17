@@ -7,7 +7,7 @@
 		<key>Soma.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>0</integer>
+			<integer>1</integer>
 		</dict>
 		<key>SomaWidgetExtension.xcscheme_^#shared#^_</key>
 		<dict>
@@ -17,7 +17,20 @@
 		<key>SomaWidgetsExtension.xcscheme_^#shared#^_</key>
 		<dict>
 			<key>orderHint</key>
-			<integer>1</integer>
+			<integer>0</integer>
+		</dict>
+	</dict>
+	<key>SuppressBuildableAutocreation</key>
+	<dict>
+		<key>AA000000000000000000001</key>
+		<dict>
+			<key>primary</key>
+			<true/>
+		</dict>
+		<key>DE2C6BEE2F69D0FD00BC222F</key>
+		<dict>
+			<key>primary</key>
+			<true/>
 		</dict>
 	</dict>
 </dict>

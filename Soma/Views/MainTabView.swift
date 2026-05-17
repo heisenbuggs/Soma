@@ -88,3 +88,9 @@ struct MainTabView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview {
+    MainTabView(healthKitManager: HealthKitManager())
+}
+#endif

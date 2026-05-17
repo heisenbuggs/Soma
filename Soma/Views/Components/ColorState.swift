@@ -30,14 +30,14 @@ enum ColorState {
     }
 
     // MARK: - Recovery
-    // 85–100 Excellent | 70–84 Good | 50–69 Moderate | 30–49 Low | 0–29 Very Low
+    // 80–100 Excellent | 65–79 Good | 45–64 Moderate | 25–44 Low | 0–24 Very Low
 
     static func recovery(score: Double) -> ColorState {
         switch score {
-        case 85...100: return .green(label: "Excellent")
-        case 70..<85:  return .lightGreen(label: "Good")
-        case 50..<70:  return .yellow(label: "Moderate")
-        case 30..<50:  return .orange(label: "Low")
+        case 80...100: return .green(label: "Excellent")
+        case 65..<80:  return .lightGreen(label: "Good")
+        case 45..<65:  return .yellow(label: "Moderate")
+        case 25..<45:  return .orange(label: "Low")
         default:       return .red(label: "Very Low")
         }
     }

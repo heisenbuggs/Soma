@@ -220,3 +220,9 @@ struct InsightsView: View {
         }
     }
 }
+
+#if DEBUG
+#Preview {
+    InsightsView(viewModel: InsightsViewModel(store: MetricsStore(), checkInStore: CheckInStore()))
+}
+#endif

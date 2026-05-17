@@ -202,7 +202,8 @@ final class DashboardViewModel: ObservableObject {
         // Sleep need: 3-day rolling debt window only — debt resets after 3 days.
         let last3 = store.loadLast(3)
         let recentActuals: [(Double, Double)] = last3.compactMap { m in
-            guard let a = m.sleepDurationHours else { return nil }
+            // Exclude days with no sleep recorded (0.0 means missing data, not actual 0h sleep)
+            guard let a = m.sleepDurationHours, a > 0 else { return nil }
             return (sleepGoal, a)
         }
         let sleepNeed = SleepCalculator.calculateSleepNeed(
@@ -346,7 +347,7 @@ final class DashboardViewModel: ObservableObject {
             stressScore: stressScore,
             hrvAverage: todayHRV,
             restingHR: rhrValue,
-            sleepDurationHours: sleepData.totalDurationHours,
+            sleepDurationHours: sleepData.totalDurationHours + sleepData.napDurationSeconds / 3600.0,
             sleepNeedHours: sleepNeed,
             activeCalories: activeCalories,
             stepCount: stepCount,

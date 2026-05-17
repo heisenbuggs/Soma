@@ -229,10 +229,10 @@ struct TrainingGuidanceEngine {
 
     private static func levelFor(readiness: Double) -> ActivityLevel {
         switch readiness {
-        case 85...100: return .peak
-        case 65..<85:  return .hard
+        case 80...100: return .peak
+        case 65..<80:  return .hard
         case 45..<65:  return .moderate
-        case 30..<45:  return .light
+        case 25..<45:  return .light
         default:       return .rest
         }
     }

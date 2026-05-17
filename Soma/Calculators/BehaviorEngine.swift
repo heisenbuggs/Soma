@@ -155,7 +155,7 @@ struct BehaviorEngine {
         }
 
         // Fragmented sleep
-        if let interruptions = todayMetrics.sleepInterruptions, interruptions >= 3 {
+        if let interruptions = todayMetrics.sleepInterruptions, interruptions > 3 {
             tips.append("Sleep was fragmented (\(interruptions) interruptions). Limit fluids after 7 PM and keep your room cool and dark.")
         }
 
@@ -176,8 +176,8 @@ struct BehaviorEngine {
         }
 
         // Blood oxygen low
-        if let spo2 = todayMetrics.bloodOxygen, spo2 < 95 {
-            tips.append("SpO2 is \(String(format: "%.1f", spo2))% — skip intense training today and ensure good room ventilation while sleeping.")
+        if let spo2 = todayMetrics.bloodOxygen, spo2 < 92 {
+            tips.append("SpO2 is \(String(format: "%.1f", spo2))% — critically low. Skip intense training today and seek medical attention if this persists.")
         }
 
         // Walking HR elevated

@@ -108,3 +108,9 @@ struct NotificationsView: View {
         return date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
     }
 }
+
+#if DEBUG
+#Preview {
+    NotificationsView()
+}
+#endif
