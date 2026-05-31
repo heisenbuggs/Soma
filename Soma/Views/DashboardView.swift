@@ -12,6 +12,7 @@ struct DashboardView: View {
     @State private var activeMetric: DashboardMetric?
     @State private var showAyurvedicDetail = false
     @State private var showWeeklySummary = false
+    @State private var showSomaAge = false
 
     private let columns = [
         GridItem(.flexible(), spacing: 12),
@@ -55,6 +56,10 @@ struct DashboardView: View {
 
                         // Ayurvedic Sleep Points widget
                         ayurvedicSleepWidget
+                            .padding(.horizontal)
+
+                        // Soma Age (biological age)
+                        somaAgeWidget
                             .padding(.horizontal)
 
                         // How to Improve Today
@@ -161,11 +166,62 @@ struct DashboardView: View {
                     WeeklySummarySheet(summary: summary)
                 }
             }
+            .sheet(isPresented: $showSomaAge) {
+                SomaAgeDetailView(
+                    result: viewModel.somaAge,
+                    calibration: viewModel.somaAgeCalibration,
+                    chronologicalAge: viewModel.chronologicalAge,
+                    trend: viewModel.somaAgeTrend()
+                )
+            }
         }
         .onAppear {
             viewModel.loadCached()
             viewModel.refresh(force: true)
         }
+    }
+
+    // MARK: - Soma Age Widget
+
+    private var somaAgeWidget: some View {
+        Button { showSomaAge = true } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "figure.run.circle.fill")
+                    .font(.title2)
+                    .foregroundColor(Color.somaBlue)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Soma Age")
+                        .font(.subheadline).fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    if let result = viewModel.somaAge {
+                        Text(SomaAgeFormat.deltaPhrase(result.delta))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        let c = viewModel.somaAgeCalibration
+                        Text("Calibrating — \(Int(c.progress * 100))% · \(c.daysRemaining) days left")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                Spacer()
+                if let result = viewModel.somaAge {
+                    Text(SomaAgeFormat.age(result.biologicalAge))
+                        .font(.title).fontWeight(.bold)
+                        .foregroundColor(SomaAgeFormat.deltaColor(result.delta))
+                } else {
+                    Text("\(Int(viewModel.somaAgeCalibration.progress * 100))%")
+                        .font(.title3).fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                }
+                Image(systemName: "chevron.right")
+                    .font(.caption).foregroundColor(.somaGray)
+            }
+            .padding()
+            .background(Color.somaCard)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Ayurvedic Sleep Points Widget

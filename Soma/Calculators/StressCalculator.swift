@@ -56,6 +56,39 @@ extension StressCalculator {
         return samples.filter { $0.0 >= eightAM && $0.0 <= eightPM }
     }
 
+    /// Removes heart-rate samples that reflect physical activity rather than
+    /// autonomic stress, so movement is not misread as stress.
+    ///
+    /// Why this matters: daytime HR is naturally elevated above resting HR by any
+    /// movement — a walk, stairs, standing up. Averaging raw daytime HR and comparing
+    /// it to the (sleep-derived) resting baseline made an active day look "stressed."
+    /// Validated stress trackers (WHOOP, Garmin) measure autonomic stress only during
+    /// low-movement periods. This filter approximates that by excluding:
+    ///   1. Samples inside a workout window, plus a post-exercise `cooldownMinutes`
+    ///      tail where HR stays elevated.
+    ///   2. Samples at or above `effortThresholdRatio` × maxHR — locomotion/exertion,
+    ///      not sedentary autonomic tone. (Same 50%-of-maxHR "effort" line the strain
+    ///      model uses.)
+    ///
+    /// Callers should treat an empty result as "no reliable sedentary signal" and let
+    /// the HR-elevation stress component fall back to neutral.
+    static func filterSedentary(
+        _ samples: [(Date, Double)],
+        workoutIntervals: [(start: Date, end: Date)],
+        maxHR: Double,
+        cooldownMinutes: Double = 15,
+        effortThresholdRatio: Double = 0.5
+    ) -> [(Date, Double)] {
+        let cooldown = cooldownMinutes * 60.0
+        return samples.filter { (time, hr) in
+            if maxHR > 0, hr >= effortThresholdRatio * maxHR { return false }
+            for w in workoutIntervals {
+                if time >= w.start && time <= w.end.addingTimeInterval(cooldown) { return false }
+            }
+            return true
+        }
+    }
+
     /// Filters heart rate samples to the evening pre-sleep window (8PM – 11PM).
     /// Used to detect elevated autonomic arousal before bed, which can impair sleep quality.
     static func filterEvening(_ samples: [(Date, Double)], on date: Date) -> [(Date, Double)] {

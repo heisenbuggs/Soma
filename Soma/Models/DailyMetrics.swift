@@ -106,6 +106,10 @@ struct DailyMetrics: Identifiable, Codable {
     /// Combined movement quality score (0–100): step count + stand hours + walking HR efficiency.
     var movementScore: Double?
 
+    /// Estimated Soma (biological) age on this day, persisted so it can be trended.
+    /// Nil while the feature is still calibrating.
+    var somaAge: Double?
+
     init(
         id: UUID = UUID(),
         date: Date,
@@ -148,7 +152,8 @@ struct DailyMetrics: Identifiable, Codable {
         readinessScore: Double? = nil,
         vo2MaxTrend: Double? = nil,
         workoutZoneDetails: [WorkoutZoneBreakdown]? = nil,
-        movementScore: Double? = nil
+        movementScore: Double? = nil,
+        somaAge: Double? = nil
     ) {
         self.id = id
         self.date = date
@@ -192,6 +197,7 @@ struct DailyMetrics: Identifiable, Codable {
         self.vo2MaxTrend = vo2MaxTrend
         self.workoutZoneDetails = workoutZoneDetails
         self.movementScore = movementScore
+        self.somaAge = somaAge
     }
 }
 

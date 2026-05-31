@@ -16,6 +16,8 @@
 		AA300000000000000000006 /* MetricsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000006 /* MetricsStore.swift */; };
 		AA300000000000000000007 /* BaselineCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000007 /* BaselineCalculator.swift */; };
 		AA300000000000000000008 /* RecoveryCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000008 /* RecoveryCalculator.swift */; };
+		AA3000000000000000000BB /* MenstrualCycleCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000BB /* MenstrualCycleCalculator.swift */; };
+		AA3000000000000000000DD /* SomaAgeCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000DD /* SomaAgeCalculator.swift */; };
 		AA300000000000000000009 /* StrainCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000009 /* StrainCalculator.swift */; };
 		AA30000000000000000000A /* SleepCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000A /* SleepCalculator.swift */; };
 		AA30000000000000000000B /* StressCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10000000000000000000B /* StressCalculator.swift */; };
@@ -38,6 +40,9 @@
 		AA300000000000000000022 /* StrainCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000022 /* StrainCalculatorTests.swift */; };
 		AA300000000000000000023 /* SleepCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000023 /* SleepCalculatorTests.swift */; };
 		AA300000000000000000024 /* StressCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000024 /* StressCalculatorTests.swift */; };
+		AA3000000000000000000AA /* MovementScoreCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000AA /* MovementScoreCalculatorTests.swift */; };
+		AA3000000000000000000CC /* MenstrualCycleCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000CC /* MenstrualCycleCalculatorTests.swift */; };
+		AA3000000000000000000EE /* SomaAgeCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000EE /* SomaAgeCalculatorTests.swift */; };
 		AA300000000000000000025 /* DailyCheckIn.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000025 /* DailyCheckIn.swift */; };
 		AA300000000000000000026 /* CheckInStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000026 /* CheckInStore.swift */; };
 		AA300000000000000000027 /* BehaviorEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000027 /* BehaviorEngine.swift */; };
@@ -54,6 +59,7 @@
 		AA300000000000000000032 /* DayDetailPageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000032 /* DayDetailPageView.swift */; };
 		AA300000000000000000033 /* AyurvedicSleepCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000033 /* AyurvedicSleepCalculator.swift */; };
 		AA300000000000000000034 /* AyurvedicSleepDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000034 /* AyurvedicSleepDetailView.swift */; };
+		AA3000000000000000000FF /* SomaAgeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA1000000000000000000FF /* SomaAgeDetailView.swift */; };
 		AA300000000000000000035 /* AyurvedicSleepCalculatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000035 /* AyurvedicSleepCalculatorTests.swift */; };
 		AA300000000000000000036 /* BackgroundTaskManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000036 /* BackgroundTaskManager.swift */; };
 		AA300000000000000000037 /* InsightCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA100000000000000000037 /* InsightCache.swift */; };
@@ -117,6 +123,8 @@
 		AA100000000000000000006 /* MetricsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MetricsStore.swift; sourceTree = "<group>"; };
 		AA100000000000000000007 /* BaselineCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BaselineCalculator.swift; sourceTree = "<group>"; };
 		AA100000000000000000008 /* RecoveryCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecoveryCalculator.swift; sourceTree = "<group>"; };
+		AA1000000000000000000BB /* MenstrualCycleCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenstrualCycleCalculator.swift; sourceTree = "<group>"; };
+		AA1000000000000000000DD /* SomaAgeCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SomaAgeCalculator.swift; sourceTree = "<group>"; };
 		AA100000000000000000009 /* StrainCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrainCalculator.swift; sourceTree = "<group>"; };
 		AA10000000000000000000A /* SleepCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepCalculator.swift; sourceTree = "<group>"; };
 		AA10000000000000000000B /* StressCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StressCalculator.swift; sourceTree = "<group>"; };
@@ -144,6 +152,9 @@
 		AA100000000000000000022 /* StrainCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrainCalculatorTests.swift; sourceTree = "<group>"; };
 		AA100000000000000000023 /* SleepCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SleepCalculatorTests.swift; sourceTree = "<group>"; };
 		AA100000000000000000024 /* StressCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StressCalculatorTests.swift; sourceTree = "<group>"; };
+		AA1000000000000000000AA /* MovementScoreCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MovementScoreCalculatorTests.swift; sourceTree = "<group>"; };
+		AA1000000000000000000CC /* MenstrualCycleCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenstrualCycleCalculatorTests.swift; sourceTree = "<group>"; };
+		AA1000000000000000000EE /* SomaAgeCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SomaAgeCalculatorTests.swift; sourceTree = "<group>"; };
 		AA100000000000000000025 /* DailyCheckIn.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyCheckIn.swift; sourceTree = "<group>"; };
 		AA100000000000000000026 /* CheckInStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInStore.swift; sourceTree = "<group>"; };
 		AA100000000000000000027 /* BehaviorEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BehaviorEngine.swift; sourceTree = "<group>"; };
@@ -160,6 +171,7 @@
 		AA100000000000000000032 /* DayDetailPageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DayDetailPageView.swift; sourceTree = "<group>"; };
 		AA100000000000000000033 /* AyurvedicSleepCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyurvedicSleepCalculator.swift; sourceTree = "<group>"; };
 		AA100000000000000000034 /* AyurvedicSleepDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyurvedicSleepDetailView.swift; sourceTree = "<group>"; };
+		AA1000000000000000000FF /* SomaAgeDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SomaAgeDetailView.swift; sourceTree = "<group>"; };
 		AA100000000000000000035 /* AyurvedicSleepCalculatorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyurvedicSleepCalculatorTests.swift; sourceTree = "<group>"; };
 		AA100000000000000000036 /* BackgroundTaskManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundTaskManager.swift; sourceTree = "<group>"; };
 		AA100000000000000000037 /* InsightCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsightCache.swift; sourceTree = "<group>"; };
@@ -303,6 +315,8 @@
 				DE0500052F84F4A8009F2586 /* WeeklySummaryEngine.swift */,
 				AA100000000000000000007 /* BaselineCalculator.swift */,
 				AA100000000000000000008 /* RecoveryCalculator.swift */,
+				AA1000000000000000000BB /* MenstrualCycleCalculator.swift */,
+				AA1000000000000000000DD /* SomaAgeCalculator.swift */,
 				AA100000000000000000009 /* StrainCalculator.swift */,
 				AA10000000000000000000A /* SleepCalculator.swift */,
 				AA10000000000000000000B /* StressCalculator.swift */,
@@ -341,6 +355,7 @@
 				AA100000000000000000031 /* MetricDetailView.swift */,
 				AA100000000000000000032 /* DayDetailPageView.swift */,
 				AA100000000000000000034 /* AyurvedicSleepDetailView.swift */,
+				AA1000000000000000000FF /* SomaAgeDetailView.swift */,
 				AA100000000000000000039 /* NotificationsView.swift */,
 				DE0500072F84F4BD009F2586 /* ReadinessHeroView.swift */,
 				25C7ADDA0F7645849587DE7F /* ReadinessDetailView.swift */,
@@ -376,6 +391,9 @@
 				AA100000000000000000022 /* StrainCalculatorTests.swift */,
 				AA100000000000000000023 /* SleepCalculatorTests.swift */,
 				AA100000000000000000024 /* StressCalculatorTests.swift */,
+				AA1000000000000000000AA /* MovementScoreCalculatorTests.swift */,
+				AA1000000000000000000CC /* MenstrualCycleCalculatorTests.swift */,
+				AA1000000000000000000EE /* SomaAgeCalculatorTests.swift */,
 				AA10000000000000000002A /* BehaviorEngineTests.swift */,
 				AA10000000000000000002E /* WorkoutStrainTests.swift */,
 				AA10000000000000000002F /* BedtimeTests.swift */,
@@ -539,6 +557,8 @@
 				AA300000000000000000006 /* MetricsStore.swift in Sources */,
 				AA300000000000000000007 /* BaselineCalculator.swift in Sources */,
 				AA300000000000000000008 /* RecoveryCalculator.swift in Sources */,
+				AA3000000000000000000BB /* MenstrualCycleCalculator.swift in Sources */,
+				AA3000000000000000000DD /* SomaAgeCalculator.swift in Sources */,
 				AA300000000000000000009 /* StrainCalculator.swift in Sources */,
 				AA30000000000000000000A /* SleepCalculator.swift in Sources */,
 				AA30000000000000000000B /* StressCalculator.swift in Sources */,
@@ -571,6 +591,7 @@
 				AA300000000000000000032 /* DayDetailPageView.swift in Sources */,
 				AA300000000000000000033 /* AyurvedicSleepCalculator.swift in Sources */,
 				AA300000000000000000034 /* AyurvedicSleepDetailView.swift in Sources */,
+				AA3000000000000000000FF /* SomaAgeDetailView.swift in Sources */,
 				AA300000000000000000036 /* BackgroundTaskManager.swift in Sources */,
 				AA300000000000000000037 /* InsightCache.swift in Sources */,
 				AA300000000000000000038 /* NotificationStore.swift in Sources */,
@@ -595,6 +616,9 @@
 				AA300000000000000000022 /* StrainCalculatorTests.swift in Sources */,
 				AA300000000000000000023 /* SleepCalculatorTests.swift in Sources */,
 				AA300000000000000000024 /* StressCalculatorTests.swift in Sources */,
+				AA3000000000000000000AA /* MovementScoreCalculatorTests.swift in Sources */,
+				AA3000000000000000000CC /* MenstrualCycleCalculatorTests.swift in Sources */,
+				AA3000000000000000000EE /* SomaAgeCalculatorTests.swift in Sources */,
 				AA30000000000000000002A /* BehaviorEngineTests.swift in Sources */,
 				AA30000000000000000002E /* WorkoutStrainTests.swift in Sources */,
 				AA30000000000000000002F /* BedtimeTests.swift in Sources */,

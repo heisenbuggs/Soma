@@ -144,6 +144,35 @@ final class SleepCalculatorTests: XCTestCase {
         XCTAssertEqual(score, 62.6, accuracy: 0.5)
     }
 
+    // MARK: - Age-adjusted deep-sleep target
+
+    func test_optimalDeepRatio_decreasesWithAge() {
+        XCTAssertEqual(SleepCalculator.optimalDeepRatio(forAge: nil), 0.20, accuracy: 0.0001)
+        XCTAssertEqual(SleepCalculator.optimalDeepRatio(forAge: 30), 0.20, accuracy: 0.0001)
+        XCTAssertEqual(SleepCalculator.optimalDeepRatio(forAge: 50), 0.16, accuracy: 0.0001)
+        XCTAssertEqual(SleepCalculator.optimalDeepRatio(forAge: 80), 0.10, accuracy: 0.0001) // floored
+        XCTAssertEqual(SleepCalculator.optimalDeepRatio(forAge: 120), 0.10, accuracy: 0.0001)
+    }
+
+    func test_calculateScore_olderUserNotPenalizedForNormalDeepDecline() {
+        // 13% deep is age-appropriate for an older adult but below the 20% young target.
+        let total = 8.0 * 3600
+        let sleep = SleepData(
+            totalDuration: total,
+            deepSleepDuration: total * 0.13,
+            remSleepDuration:  total * 0.20,
+            coreSleepDuration: total * 0.50,
+            awakeDuration: 0,
+            inBedDuration: 0,
+            sleepStartTime: nil,
+            sleepEndTime: nil,
+            interruptionCount: 0
+        )
+        let young = SleepCalculator.calculateScore(sleep: sleep, sleepNeed: 8, age: 25)
+        let older = SleepCalculator.calculateScore(sleep: sleep, sleepNeed: 8, age: 65)
+        XCTAssertGreaterThan(older, young, "Older user should not be penalized for normal deep-sleep decline")
+    }
+
     func test_calculateScore_clamped0To100() {
         let total = 20.0 * 3600
         let sleep = SleepData(

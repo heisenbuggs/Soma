@@ -65,10 +65,11 @@ final class BehaviorEngineTests: XCTestCase {
         var checkIns: [DailyCheckIn] = []
         var metrics: [DailyMetrics] = []
 
+        // Both groups must clear minObservations (5) — use a 5/5 split.
         for i in 0..<10 {
             let checkDate = cal.date(byAdding: .day, value: -(i * 2 + 1), to: Date())!
             let nextDate  = cal.date(byAdding: .day, value: 1, to: checkDate)!
-            let isAlcohol = i < 6  // 6 with alcohol, 4 without
+            let isAlcohol = i < 5  // 5 with alcohol, 5 without
             checkIns.append(makeCheckIn(date: checkDate, alcohol: isAlcohol))
             let recovery = isAlcohol ? 40.0 : 80.0
             metrics.append(makeMetrics(date: nextDate, recovery: recovery, sleep: 70))
@@ -159,6 +160,7 @@ final class BehaviorEngineTests: XCTestCase {
 
     func test_impactDescription_negativeRecovery() {
         let insight = BehaviorInsight(
+            id: UUID(),
             behaviorName: "Alcohol",
             metricName: "Recovery Score",
             averageWith: 45,
@@ -168,13 +170,14 @@ final class BehaviorEngineTests: XCTestCase {
         )
         let desc = insight.impactDescription
         XCTAssertTrue(desc.contains("Alcohol"))
-        XCTAssertTrue(desc.contains("reduces"))
+        XCTAssertTrue(desc.contains("lower"))
         XCTAssertTrue(desc.contains("Recovery Score"))
         XCTAssertTrue(desc.contains("30 points"))
     }
 
     func test_impactDescription_positiveHRV() {
         let insight = BehaviorInsight(
+            id: UUID(),
             behaviorName: "Meditation",
             metricName: "HRV",
             averageWith: 65,
@@ -184,7 +187,7 @@ final class BehaviorEngineTests: XCTestCase {
         )
         let desc = insight.impactDescription
         XCTAssertTrue(desc.contains("Meditation"))
-        XCTAssertTrue(desc.contains("increases"))
+        XCTAssertTrue(desc.contains("higher"))
         XCTAssertTrue(desc.contains("HRV"))
         XCTAssertTrue(desc.contains("ms"))
     }
@@ -193,6 +196,7 @@ final class BehaviorEngineTests: XCTestCase {
 
     func test_coachingTips_harmfulInsightAppearsFirst() {
         let harmful = BehaviorInsight(
+            id: UUID(),
             behaviorName: "Alcohol",
             metricName: "Recovery Score",
             averageWith: 45, averageWithout: 75,
@@ -223,6 +227,7 @@ final class BehaviorEngineTests: XCTestCase {
     func test_coachingTips_maxThreeTips() {
         let insights = (0..<6).map { i in
             BehaviorInsight(
+                id: UUID(),
                 behaviorName: "Behavior \(i)",
                 metricName: "Recovery Score",
                 averageWith: 40, averageWithout: 80,
@@ -279,7 +284,7 @@ final class BehaviorEngineTests: XCTestCase {
             recentCheckIns: [],
             insights: []
         )
-        let hasInterruptionTip = tips.contains { $0.contains("interrupted") }
+        let hasInterruptionTip = tips.contains { $0.contains("interruptions") }
         XCTAssertTrue(hasInterruptionTip, "Should mention sleep interruptions")
     }
 }

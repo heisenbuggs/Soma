@@ -6,9 +6,20 @@ struct SleepCalculator {
 
     // Optimal stage targets (as fraction of total sleep)
     // Healthy range: deep 15–25%, REM 20–25%. Scores reach 100 at the lower bound of the optimal range.
-    static let optimalDeepRatio: Double = 0.20   // 20% — centre of 15–25% healthy range
+    static let optimalDeepRatio: Double = 0.20   // 20% — centre of 15–25% healthy range (young adult)
     static let optimalREMRatio: Double  = 0.20   // 20% — lower bound of 20–25% healthy range
     static let optimalCoreRatio: Double = 0.50   // 50%
+
+    /// Age-adjusted deep-sleep target. Slow-wave (deep) sleep declines steadily with
+    /// age — a healthy 60-year-old physiologically cannot reach the 20% a 25-year-old
+    /// does, so holding everyone to 20% would unfairly penalize older users for normal
+    /// aging. Targets 20% up to age 30, then eases ~0.2 pp/yr, floored at 10%.
+    /// Returns the baseline 20% when age is unknown.
+    static func optimalDeepRatio(forAge age: Int?) -> Double {
+        guard let age, age > 30 else { return optimalDeepRatio }
+        let reduced = optimalDeepRatio - Double(age - 30) * 0.002
+        return max(0.10, reduced)
+    }
 
     /// Calculates sleep score 0–100.
     ///
@@ -26,7 +37,8 @@ struct SleepCalculator {
         sleepingHRV: Double? = nil,
         sleepingHR: Double? = nil,
         hrvBaseline: Double? = nil,
-        sleepingHRBaseline: Double? = nil
+        sleepingHRBaseline: Double? = nil,
+        age: Int? = nil
     ) -> Double {
         let nightHours = sleep.totalDuration / 3600.0
         let napHours = sleep.napDurationSeconds / 3600.0
@@ -44,7 +56,8 @@ struct SleepCalculator {
             let deepRatio  = sleep.deepSleepDuration / sleep.totalDuration
             let remRatio   = sleep.remSleepDuration  / sleep.totalDuration
             let coreRatio  = sleep.coreSleepDuration / sleep.totalDuration
-            let deepScore  = min(100.0, deepRatio / optimalDeepRatio  * 100.0)
+            let deepTarget = optimalDeepRatio(forAge: age)
+            let deepScore  = min(100.0, deepRatio / deepTarget  * 100.0)
             let remScore   = min(100.0, remRatio  / optimalREMRatio   * 100.0)
             let coreScore  = min(100.0, coreRatio / optimalCoreRatio  * 100.0)
             stageScore = 0.40 * deepScore + 0.40 * remScore + 0.20 * coreScore

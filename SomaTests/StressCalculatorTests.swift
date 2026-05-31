@@ -123,4 +123,41 @@ final class StressCalculatorTests: XCTestCase {
         let samples: [(Date, Double)] = [(Date(), 70), (Date(), 80), (Date(), 90)]
         XCTAssertEqual(StressCalculator.average(samples)!, 80, accuracy: 0.01)
     }
+
+    // MARK: - Sedentary Filter (activity is not stress)
+
+    private func at(_ hour: Int, _ minute: Int = 0) -> Date {
+        let date = Calendar.current.startOfDay(for: Date())
+        return Calendar.current.date(bySettingHour: hour, minute: minute, second: 0, of: date)!
+    }
+
+    func test_filterSedentary_dropsHighEffortSamples() {
+        let maxHR = 190.0
+        // 60 bpm = calm (kept), 170 bpm ≈ 89% maxHR = effort (dropped).
+        let samples: [(Date, Double)] = [(at(10), 60), (at(11), 170)]
+        let filtered = StressCalculator.filterSedentary(samples, workoutIntervals: [], maxHR: maxHR)
+        XCTAssertEqual(filtered.count, 1)
+        XCTAssertEqual(filtered.first?.1, 60)
+    }
+
+    func test_filterSedentary_dropsSamplesInsideWorkoutAndCooldown() {
+        let maxHR = 190.0
+        let workout = (start: at(9), end: at(10))
+        // 70 bpm samples (all calm by HR) but timing varies.
+        let samples: [(Date, Double)] = [
+            (at(8, 30), 70),   // before workout → kept
+            (at(9, 30), 70),   // inside workout → dropped
+            (at(10, 10), 70),  // within 15-min cooldown → dropped
+            (at(10, 30), 70),  // after cooldown → kept
+        ]
+        let filtered = StressCalculator.filterSedentary(samples, workoutIntervals: [workout], maxHR: maxHR)
+        XCTAssertEqual(filtered.map { $0.0 }, [at(8, 30), at(10, 30)])
+    }
+
+    func test_filterSedentary_allActive_returnsEmpty() {
+        let maxHR = 190.0
+        let samples: [(Date, Double)] = [(at(10), 180), (at(11), 175)]
+        let filtered = StressCalculator.filterSedentary(samples, workoutIntervals: [], maxHR: maxHR)
+        XCTAssertTrue(filtered.isEmpty)
+    }
 }

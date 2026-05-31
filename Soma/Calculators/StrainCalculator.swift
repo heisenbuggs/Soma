@@ -45,12 +45,13 @@ struct StrainCalculator {
     ///
     /// StrainLoad = Σ (minutesInZone × zoneWeight)
     ///
-    /// Zones are based on MaxHR percentage thresholds:
-    ///   Zone 1 (50–60%): weight 0  — recovery intensity, no strain contribution
-    ///   Zone 2 (60–70%): weight 1
-    ///   Zone 3 (70–80%): weight 2
-    ///   Zone 4 (80–90%): weight 3
-    ///   Zone 5 (90–100%): weight 4
+    /// Zones are based on MaxHR percentage thresholds, with convex (TRIMP-inspired)
+    /// weights so high-intensity work is valued for its disproportionate physiological cost:
+    ///   Zone 1 (50–60%): weight 0    — recovery intensity, no strain contribution
+    ///   Zone 2 (60–70%): weight 0.8
+    ///   Zone 3 (70–80%): weight 1.7
+    ///   Zone 4 (80–90%): weight 2.9
+    ///   Zone 5 (90–100%): weight 4.6
     ///
     /// Gap capping: HealthKit HR samples are sparse outside workouts (every 5–10 min).
     /// Each inter-sample interval is capped at 1 minute so a long gap between passive
@@ -126,9 +127,17 @@ struct StrainCalculator {
 
     // MARK: - Max HR Estimation
 
-    /// Calculates max HR using the standard age-based formula: 220 − age.
+    /// Estimates max HR using the Tanaka formula: 208 − 0.7 × age.
+    ///
+    /// Preferred over the classic 220 − age (Haskell), which has a standard error
+    /// of ±10–12 bpm and systematically overestimates max HR in younger adults and
+    /// underestimates it in older adults. Because every HR-zone threshold (and the
+    /// 50%-passive filter) is derived from max HR, that bias would shift the entire
+    /// strain calculation. Tanaka tracks measured max HR far more closely across the
+    /// adult age range. Users with a measured/observed max should override this in
+    /// Settings (`maxHeartRate`).
     static func estimatedMaxHR(age: Int) -> Double {
-        Double(220 - age)
+        208.0 - 0.7 * Double(age)
     }
 
     // MARK: - Workout-Aware Strain

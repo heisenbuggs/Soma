@@ -25,6 +25,13 @@ final class DashboardViewModel: ObservableObject {
     // MARK: - Weekly Summary (3.4)
     @Published var weeklySummary: WeeklySummaryEngine.WeeklySummary?
 
+    // MARK: - Soma Age (biological age; calibrates over 21 days)
+    /// Estimated Soma (biological) age, or nil while still calibrating.
+    @Published var somaAge: SomaAgeCalculator.Result?
+    /// Calibration progress / data-quality state for the Soma Age feature.
+    @Published var somaAgeCalibration: SomaAgeCalculator.CalibrationStatus =
+        SomaAgeCalculator.calibrationStatus(daysOfData: 0, sleepNights: 0, recoveryDays: 0)
+
     private let healthKit: HealthDataProviding
     private let store: MetricsStore
     private let checkInStore: CheckInStore
@@ -38,6 +45,14 @@ final class DashboardViewModel: ObservableObject {
 
     var cacheEnabled: Bool { settings.cacheEnabled }
     var maxHR: Double { settings.maxHeartRate ?? StrainCalculator.estimatedMaxHR(age: settings.age) }
+    var chronologicalAge: Int { settings.age }
+
+    /// Persisted (date, biological age) points for the Soma Age trend chart, oldest→newest.
+    func somaAgeTrend(days: Int = 365) -> [(date: Date, age: Double)] {
+        store.loadLast(days)
+            .compactMap { m in m.somaAge.map { (m.date, $0) } }
+            .sorted { $0.date < $1.date }
+    }
 
     init(healthKit: HealthDataProviding, store: MetricsStore, checkInStore: CheckInStore, settings: UserSettings) {
         self.healthKit = healthKit
@@ -62,6 +77,7 @@ final class DashboardViewModel: ObservableObject {
             updateSparklines()
             updateCoachingTips()
         }
+        updateSomaAge()
         backfillHistoricalDataIfNeeded()
     }
 
@@ -128,11 +144,76 @@ final class DashboardViewModel: ObservableObject {
 
             updateSparklines()
             updateCoachingTips()
+            updateSomaAge()
 
         } catch {
             if !(error is CancellationError) {
                 errorMessage = error.localizedDescription
             }
+        }
+    }
+
+    // MARK: - Soma Age
+
+    /// Recomputes Soma (biological) age from up to ~90 days of history. Stays in
+    /// calibration until 21 days + 14 sleep nights + 10 recovery days are present.
+    /// HRV prefers the overnight reading; consistency metrics are derived from the
+    /// variability of recovery/strain over the window.
+    private func updateSomaAge() {
+        let history = store.loadLast(90)
+        let daysOfData   = history.count
+        let sleepNights  = history.filter { ($0.sleepDurationHours ?? 0) > 0 }.count
+        let recoveryDays = history.filter { $0.recoveryScore > 0 }.count
+
+        somaAgeCalibration = SomaAgeCalculator.calibrationStatus(
+            daysOfData: daysOfData, sleepNights: sleepNights, recoveryDays: recoveryDays
+        )
+
+        func avg(_ values: [Double]) -> Double? {
+            values.isEmpty ? nil : values.reduce(0, +) / Double(values.count)
+        }
+        // Consistency = 100 − normalized variability (lower spread = more consistent).
+        func consistency(_ values: [Double], spread: Double) -> Double? {
+            guard values.count >= 3 else { return nil }
+            let mean = values.reduce(0, +) / Double(values.count)
+            let variance = values.reduce(0) { $0 + ($1 - mean) * ($1 - mean) } / Double(values.count)
+            let sd = variance.squareRoot()
+            return BaselineCalculator.clamp((1 - sd / spread) * 100, min: 0, max: 100)
+        }
+
+        let sleepDurations = history.compactMap { d in (d.sleepDurationHours ?? 0) > 0 ? d.sleepDurationHours : nil }
+        let avgDebt = avg(history.compactMap { d -> Double? in
+            guard let need = d.sleepNeedHours, let actual = d.sleepDurationHours, actual > 0 else { return nil }
+            return max(0, need - actual)
+        })
+        // Weekly exercise minutes = average daily exercise × 7.
+        let avgExerciseDaily = avg(history.compactMap { $0.exerciseMinutes })
+
+        let input = SomaAgeCalculator.Input(
+            chronologicalAge: settings.age,
+            hrv: avg(history.compactMap { $0.sleepingHRV ?? $0.hrvAverage }),
+            restingHR: avg(history.compactMap { $0.restingHR }),
+            respiratoryRate: avg(history.compactMap { $0.respiratoryRate }),
+            sleepDurationHours: avg(sleepDurations),
+            sleepDebtHours: avgDebt,
+            // sleepEfficiency: in-bed time isn't persisted in DailyMetrics yet — omitted.
+            vo2Max: avg(history.compactMap { $0.vo2Max }),
+            dailySteps: avg(history.compactMap { d in (d.stepCount ?? 0) > 0 ? d.stepCount : nil }),
+            exerciseMinutesPerWeek: avgExerciseDaily.map { $0 * 7 },
+            strainScore: avg(history.compactMap { $0.strainScore > 0 ? $0.strainScore : nil }),
+            sleepConsistency: avg(history.compactMap { $0.sleepConsistencyScore }),
+            recoveryConsistency: consistency(history.map { $0.recoveryScore }.filter { $0 > 0 }, spread: 25),
+            activityConsistency: consistency(history.map { $0.strainScore }.filter { $0 > 0 }, spread: 30),
+            daysOfData: daysOfData,
+            sleepNights: sleepNights,
+            recoveryDays: recoveryDays
+        )
+        somaAge = SomaAgeCalculator.calculate(input: input)
+
+        // Persist today's figure so a biological-age trend builds over time.
+        if let result = somaAge, var today = store.load(for: Date()), today.somaAge != result.biologicalAge {
+            today.somaAge = result.biologicalAge
+            store.save(today)
         }
     }
 
@@ -169,6 +250,15 @@ final class DashboardViewModel: ObservableObject {
 
         // Fetch workouts independently so a failure here doesn't zero out all scores
         let fetchedWorkouts = (try? await healthKit.fetchWorkouts(for: date)) ?? []
+
+        // FUTURE (when the app supports women): offset benign late-luteal physiology so
+        // normal cyclic HRV/RHR shifts aren't misread as poor recovery. The logic is
+        // ready in MenstrualCycleCalculator — wire it back by fetching period-start dates
+        // from HealthKit and passing `recoveryAdjustment:` into the RecoveryInput below:
+        //   let periodStarts = (try? await healthKit.fetchMenstrualPeriodStarts(days: 120)) ?? []
+        //   let cycleInfo = MenstrualCycleCalculator.cycleInfo(periodStartDates: periodStarts, asOf: date)
+        //   let cycleRecoveryAdjustment = MenstrualCycleCalculator.recoveryAdjustment(for: cycleInfo)
+        // (also re-add the HealthKit read + fetch — see HealthKitManager).
 
         // Fetch sleeping-window signals (sequential — need sleep window first)
         var sleepingHR:  Double? = nil
@@ -219,7 +309,8 @@ final class DashboardViewModel: ObservableObject {
             sleepingHRV: sleepingHRV,
             sleepingHR: sleepingHR,
             hrvBaseline: hrvBaseline,
-            sleepingHRBaseline: sleepingHRBaseline
+            sleepingHRBaseline: sleepingHRBaseline,
+            age: settings.age
         )
 
         // Workouts → workout-aware strain + workout minutes
@@ -262,7 +353,9 @@ final class DashboardViewModel: ObservableObject {
             rhrBaseline: rhrBaseline,
             sleepScore: sleepScore,
             yesterdayStrain: yesterdayStrain_0_21,
-            acr: acr
+            acr: acr,
+            hrvHistory: hrvHist.sorted { $0.0 < $1.0 }.map { $0.1 }
+            // FUTURE (women): recoveryAdjustment: cycleRecoveryAdjustment — see above.
         ))
 
         // Daytime stress (8AM – 8PM) + mindful minutes bonus
@@ -276,7 +369,15 @@ final class DashboardViewModel: ObservableObject {
             if todayCheckIn?.meditated == true { return 15 }
             return nil
         }()
-        let daytimeSamples = StressCalculator.filterDaytime(hrData, on: date)
+        // Exclude workout windows + activity-elevated samples so movement isn't
+        // misread as autonomic stress. HR elevation is then measured from calm
+        // periods only, matching how dedicated stress trackers work.
+        let workoutWindows = fetchedWorkouts.map { (start: $0.startDate, end: $0.endDate) }
+        let daytimeSamples = StressCalculator.filterSedentary(
+            StressCalculator.filterDaytime(hrData, on: date),
+            workoutIntervals: workoutWindows,
+            maxHR: maxHR
+        )
         let stressScore = StressCalculator.calculate(
             daytimeHRV: todayHRV,
             daytimeAvgHR: StressCalculator.average(daytimeSamples),
@@ -286,7 +387,11 @@ final class DashboardViewModel: ObservableObject {
         )
 
         // Evening stress (8PM – 11PM) — HR elevation only since HRV isn't windowed separately
-        let eveningSamples   = StressCalculator.filterEvening(hrData, on: date)
+        let eveningSamples = StressCalculator.filterSedentary(
+            StressCalculator.filterEvening(hrData, on: date),
+            workoutIntervals: workoutWindows,
+            maxHR: maxHR
+        )
         let eveningStressScore = StressCalculator.calculateEveningStress(
             eveningAvgHR: StressCalculator.average(eveningSamples),
             rhrBaseline: rhrBaseline

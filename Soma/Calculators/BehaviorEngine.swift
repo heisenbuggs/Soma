@@ -15,7 +15,9 @@ struct BehaviorInsight: Identifiable, Codable {
 
     var impactDescription: String {
         let absVal = abs(delta)
-        let direction = delta > 0 ? "increases" : "reduces"
+        // Associative framing, not causal: these are observed correlations from a
+        // small number of self-logged days, not proven cause-and-effect.
+        let direction = delta > 0 ? "higher" : "lower"
         let unit: String
         switch metricName {
         case "HRV", "Sleeping HRV":       unit = "ms"
@@ -23,7 +25,7 @@ struct BehaviorInsight: Identifiable, Codable {
         default:                           unit = "points"
         }
         let formatted = absVal >= 1 ? String(format: "%.0f", absVal) : String(format: "%.1f", absVal)
-        return "\(behaviorName) \(direction) your \(metricName) by \(formatted) \(unit)."
+        return "After \(behaviorName), your \(metricName) tends to be \(formatted) \(unit) \(direction)."
     }
 }
 

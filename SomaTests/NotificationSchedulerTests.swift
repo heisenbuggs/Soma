@@ -1,6 +1,7 @@
 import XCTest
 @testable import Soma
 
+@MainActor
 final class NotificationSchedulerTests: XCTestCase {
 
     // MARK: - Notification Content
@@ -19,10 +20,11 @@ final class NotificationSchedulerTests: XCTestCase {
         XCTAssertTrue(title.lowercased().contains("moderate"))
     }
 
-    func test_content_lowRecovery_titleSaysRest() {
+    func test_content_lowRecovery_titleSaysLow() {
+        // Title vocabulary comes from ColorState.recovery: 25–44 → "Low".
         let metrics = makeMetrics(recovery: 25, sleep: 50)
         let (title, _) = NotificationScheduler.content(for: metrics)
-        XCTAssertTrue(title.lowercased().contains("rest"))
+        XCTAssertTrue(title.lowercased().contains("low"))
     }
 
     func test_content_lowRecovery_bodyIncludesSleepDuration() {
@@ -55,27 +57,25 @@ final class NotificationSchedulerTests: XCTestCase {
         XCTAssertFalse(body.isEmpty)
     }
 
-    func test_content_scoresBoundary_67IsHigh() {
-        let metricsHigh = makeMetrics(recovery: 67, sleep: 80)
-        let (title, _) = NotificationScheduler.content(for: metricsHigh)
-        XCTAssertFalse(title.lowercased().contains("moderate"))
+    // ColorState.recovery boundaries: 45 (Low→Moderate) and 65 (Moderate→Good).
+
+    func test_content_boundary_65IsGood() {
+        let (title, _) = NotificationScheduler.content(for: makeMetrics(recovery: 65, sleep: 80))
+        XCTAssertTrue(title.contains("Good"))
     }
 
-    func test_content_scoresBoundary_66IsModerate() {
-        let metricsModerate = makeMetrics(recovery: 66, sleep: 70)
-        let (title, _) = NotificationScheduler.content(for: metricsModerate)
+    func test_content_boundary_64IsModerate() {
+        let (title, _) = NotificationScheduler.content(for: makeMetrics(recovery: 64, sleep: 70))
         XCTAssertTrue(title.lowercased().contains("moderate"))
     }
 
-    func test_content_scoresBoundary_33IsLow() {
-        let metricsLow = makeMetrics(recovery: 33, sleep: 55)
-        let (title, _) = NotificationScheduler.content(for: metricsLow)
-        XCTAssertTrue(title.lowercased().contains("rest"))
+    func test_content_boundary_44IsLow() {
+        let (title, _) = NotificationScheduler.content(for: makeMetrics(recovery: 44, sleep: 55))
+        XCTAssertTrue(title.contains("Low"))
     }
 
-    func test_content_scoresBoundary_34IsModerate() {
-        let metricsModerate = makeMetrics(recovery: 34, sleep: 65)
-        let (title, _) = NotificationScheduler.content(for: metricsModerate)
+    func test_content_boundary_45IsModerate() {
+        let (title, _) = NotificationScheduler.content(for: makeMetrics(recovery: 45, sleep: 65))
         XCTAssertTrue(title.lowercased().contains("moderate"))
     }
 

@@ -29,6 +29,10 @@ protocol HealthDataProviding {
     func fetchStandHours(for date: Date) async throws -> Int
     func fetchWalkingHRAverage(for date: Date) async throws -> Double?
     func fetchMindfulMinutes(for date: Date) async throws -> Double
+    // FUTURE (women): `func fetchMenstrualPeriodStarts(days: Int) async throws -> [Date]`
+    // feeds MenstrualCycleCalculator. Not declared while the app is men-only so we don't
+    // request menstrual health permissions. Re-add with a default no-op extension so
+    // mock/preview providers don't need changes.
 }
 
 // MARK: - HealthKitManager
@@ -57,6 +61,8 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
             HKQuantityType(.walkingHeartRateAverage),
             HKCategoryType(.appleStandHour),
             HKCategoryType(.mindfulSession),
+            // FUTURE (women): add HKCategoryType(.menstrualFlow) to power
+            // MenstrualCycleCalculator. Omitted while the app is men-only.
         ]
         if #available(iOS 17, *) {
             types.insert(HKQuantityType(.appleSleepingWristTemperature))
@@ -503,6 +509,11 @@ final class HealthKitManager: ObservableObject, HealthDataProviding {
         let samples = try await fetchSamples(type: type, predicate: predicate)
         return samples.compactMap { $0 as? HKWorkout }
     }
+
+    // FUTURE (women): `fetchMenstrualPeriodStarts(days:)` went here — query
+    // HKCategoryType(.menstrualFlow), keep samples whose metadata flags
+    // HKMetadataKeyMenstrualCycleStart, and return their start dates for
+    // MenstrualCycleCalculator. Removed while the app is men-only.
 
     // MARK: - Helpers
 

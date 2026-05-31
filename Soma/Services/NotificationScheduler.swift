@@ -241,6 +241,12 @@ final class NotificationScheduler {
         var parts: [String] = []
         parts.append("\(prefix)Recovery \(recoveryScore) (\(recoveryLabel)).")
         parts.append("Sleep score: \(sleepScore).")
+        if let dur = metrics.sleepDurationHours, dur > 0 {
+            parts.append(String(format: "Slept %.1fh.", dur))
+        }
+        if let sleepingHR = metrics.sleepingHR {
+            parts.append("Sleeping HR \(Int(sleepingHR.rounded())) bpm.")
+        }
         if let r = readiness {
             parts.append("Readiness: \(r).")
         }

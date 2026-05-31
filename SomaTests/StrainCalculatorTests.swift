@@ -61,11 +61,11 @@ final class StrainCalculatorTests: XCTestCase {
     }
 
     func test_calculate_zone5Activity_correctLoad() {
-        // 90 min at 170 bpm (91.9% of 185 → zone5, weight 4) → load = 90 × 4 = 360
+        // 90 min at 170 bpm (91.9% of 185 → zone5, weight 4.6) → load = 90 × 4.6 = 414
         // Samples are 1-minute apart so the 1-minute gap cap has no effect here.
         let samples = makeConstantHRSamples(hr: 170, durationMinutes: 90)
         let load = StrainCalculator.calculate(samples: samples, maxHR: maxHR)
-        XCTAssertEqual(load, 360.0, accuracy: 1.0)
+        XCTAssertEqual(load, 414.0, accuracy: 1.0)
     }
 
     // MARK: - Score function
@@ -119,16 +119,16 @@ final class StrainCalculatorTests: XCTestCase {
     // MARK: - Gap capping
 
     func test_calculate_largeGapCappedToOneMinute() {
-        // Two samples 60 minutes apart at zone-4 HR (weight 3).
-        // Without capping: load = 60 × 3 = 180.
-        // With capping:    load = 1 × 3 = 3.
+        // Two samples 60 minutes apart at zone-4 HR (weight 2.9).
+        // Without capping: load = 60 × 2.9 = 174.
+        // With capping:    load = 1 × 2.9 = 2.9.
         let base = Date(timeIntervalSince1970: 0)
         let samples: [(Date, Double)] = [
             (base, 155),
             (base.addingTimeInterval(3600), 155)  // 60-min gap
         ]
         let load = StrainCalculator.calculate(samples: samples, maxHR: maxHR)
-        XCTAssertEqual(load, 3.0, accuracy: 0.01)
+        XCTAssertEqual(load, 2.9, accuracy: 0.01)
     }
 
     func test_calculate_passiveHRSkipped() {
@@ -142,12 +142,14 @@ final class StrainCalculatorTests: XCTestCase {
     // MARK: - Max HR estimation
 
     func test_estimatedMaxHR_30YearOld() {
-        XCTAssertEqual(StrainCalculator.estimatedMaxHR(age: 30), 190)
+        // Tanaka: 208 − 0.7 × 30 = 187
+        XCTAssertEqual(StrainCalculator.estimatedMaxHR(age: 30), 187, accuracy: 0.0001)
     }
 
     func test_estimatedMaxHR_formula() {
+        // Tanaka formula: 208 − 0.7 × age
         for age in [20, 35, 45, 60] {
-            XCTAssertEqual(StrainCalculator.estimatedMaxHR(age: age), Double(220 - age))
+            XCTAssertEqual(StrainCalculator.estimatedMaxHR(age: age), 208.0 - 0.7 * Double(age), accuracy: 0.0001)
         }
     }
 

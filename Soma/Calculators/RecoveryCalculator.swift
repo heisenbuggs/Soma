@@ -8,13 +8,21 @@ struct RecoveryInput {
     var sleepScore: Double        // 0–100
     var yesterdayStrain: Double   // 0–21
     var acr: Double? = nil        // Acute-to-Chronic Ratio; penalty applied when > 1.3
+    /// Recent HRV values (oldest → newest) for the personal log-domain z-score.
+    /// When supplied (≥ minDaysRequired), the HRV component uses a z-score against the
+    /// individual's own variability instead of a fixed ±50% ratio band.
+    var hrvHistory: [Double]? = nil
+    /// Signed point adjustment applied after the weighted components (before clamping).
+    /// Used to offset benign physiology the raw signals can't distinguish — e.g. normal
+    /// late-luteal HRV suppression / RHR elevation (see MenstrualCycleCalculator).
+    var recoveryAdjustment: Double = 0
 }
 
 struct RecoveryCalculator {
 
     /// Calculates recovery score 0–100.
     static func calculate(input: RecoveryInput) -> Double {
-        let hrv = computeHRVComponent(todayHRV: input.todayHRV, baseline: input.hrvBaseline)
+        let hrv = computeHRVComponent(todayHRV: input.todayHRV, baseline: input.hrvBaseline, history: input.hrvHistory)
         let rhr = computeRHRComponent(todayRHR: input.todayRestingHR, baseline: input.rhrBaseline)
         let sleep = clamp(input.sleepScore, 0, 100)
         let strainRecovery = clamp((1.0 - input.yesterdayStrain / 21.0), 0, 1) * 100
@@ -28,6 +36,10 @@ struct RecoveryCalculator {
             let penalty = (excess / 0.7) * 10.0
             recovery -= penalty
         }
+
+        // Offset benign physiology (e.g. normal late-luteal HRV/RHR shifts) so it isn't
+        // misread as poor recovery. Zero unless a caller supplies an adjustment.
+        recovery += input.recoveryAdjustment
 
         return clamp(recovery, 0, 100)
     }
@@ -67,8 +79,18 @@ struct RecoveryCalculator {
 
     // MARK: - Private
 
-    private static func computeHRVComponent(todayHRV: Double?, baseline: Double?) -> Double {
-        guard let hrv = todayHRV, let base = baseline, base > 0 else { return 50 }
+    private static func computeHRVComponent(todayHRV: Double?, baseline: Double?, history: [Double]?) -> Double {
+        guard let hrv = todayHRV else { return 50 }
+
+        // Preferred: personal z-score in log space. HRV is log-normal, and a deviation
+        // only means something relative to the individual's own day-to-day variability.
+        if let history, let z = BaselineCalculator.hrvZScore(today: hrv, values: history) {
+            // z = 0 (at personal baseline) → 50; +2 SD → 100, −2 SD → 0.
+            return clamp(50 + z * 25.0, 0, 100)
+        }
+
+        // Fallback (insufficient history): simple ratio vs the scalar baseline.
+        guard let base = baseline, base > 0 else { return 50 }
         let ratio = hrv / base
         // clamp ratio [0.5, 1.5] → [0, 100]
         return BaselineCalculator.normalizeRatio(ratio, low: 0.5, high: 1.5)
