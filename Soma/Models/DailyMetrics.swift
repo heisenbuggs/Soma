@@ -36,7 +36,8 @@ struct DailyMetrics: Identifiable, Codable {
     var hrvAverage: Double?        // ms (daytime)
     var restingHR: Double?         // bpm
     var sleepDurationHours: Double?   // night sleep + daytime nap combined (matches Apple Health total)
-    var sleepNeedHours: Double?
+    var sleepNeedHours: Double?       // forward-looking need for the NEXT night (base goal + debt + strain)
+    var sleepGoalHours: Double?       // the plain nightly goal that applied this night (no debt/strain)
     var activeCalories: Double?
     var stepCount: Double?
     var vo2Max: Double?
@@ -121,6 +122,7 @@ struct DailyMetrics: Identifiable, Codable {
         restingHR: Double? = nil,
         sleepDurationHours: Double? = nil,
         sleepNeedHours: Double? = nil,
+        sleepGoalHours: Double? = nil,
         activeCalories: Double? = nil,
         stepCount: Double? = nil,
         vo2Max: Double? = nil,
@@ -165,6 +167,7 @@ struct DailyMetrics: Identifiable, Codable {
         self.restingHR = restingHR
         self.sleepDurationHours = sleepDurationHours
         self.sleepNeedHours = sleepNeedHours
+        self.sleepGoalHours = sleepGoalHours
         self.activeCalories = activeCalories
         self.stepCount = stepCount
         self.vo2Max = vo2Max

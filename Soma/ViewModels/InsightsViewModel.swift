@@ -235,7 +235,9 @@ final class InsightsViewModel: ObservableObject {
         }
 
         // MARK: Sleep interruptions
-        if let interruptions = today.sleepInterruptions, interruptions >= 3 {
+        // Only flag fragmentation when the night was broken up more than 4 times —
+        // a handful of brief awakenings is normal and shouldn't read as "fragmented".
+        if let interruptions = today.sleepInterruptions, interruptions > 4 {
             results.append(Insight(
                 icon: "moon.zzz.fill",
                 title: "Fragmented Sleep",

@@ -1,6 +1,11 @@
 import SwiftUI
 import Charts
 
+// MARK: - READINESS DETAIL
+// The popup that opens from the Today readiness hero. Premium dark-first V2 UI:
+// jet-black canvas, glowing spectrum ring, premium cards with colored accents.
+// "How was today's readiness built, and what's driving it?"
+
 struct ReadinessDetailView: View {
     let guidance: DailyTrainingGuidance
     let viewModel: DashboardViewModel
@@ -49,9 +54,9 @@ struct ReadinessDetailView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.somaBackground.ignoresSafeArea()
+                SomaGradient.canvas(tint: state.color)
                 ScrollView {
-                    VStack(spacing: 20) {
+                    VStack(spacing: Space.lg) {
                         if viewModel.isBaselineBuilding {
                             baselineBanner
                         }
@@ -61,9 +66,10 @@ struct ReadinessDetailView: View {
                         signalsCard
                         trendCard
                         trainingCard
+                        Color.clear.frame(height: 12)
                     }
-                    .padding(.top, 8)
-                    .padding(.bottom, 32)
+                    .padding(.horizontal, Space.md)
+                    .padding(.top, Space.sm)
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .scrollIndicators(.hidden)
@@ -73,7 +79,7 @@ struct ReadinessDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
-                        .foregroundColor(Color.somaBlue)
+                        .foregroundStyle(Color.somaBlue)
                 }
             }
         }
@@ -85,80 +91,73 @@ struct ReadinessDetailView: View {
         VStack(spacing: 16) {
             ZStack {
                 Circle()
-                    .stroke(Color(white: 0.12), lineWidth: 20)
+                    .stroke(Color.white.opacity(0.06), lineWidth: 18)
                     .frame(width: 170, height: 170)
+
+                // Soft glow behind the filled arc
+                Circle()
+                    .trim(from: 0, to: min(1, score / 100))
+                    .stroke(state.color, style: StrokeStyle(lineWidth: 18, lineCap: .round))
+                    .frame(width: 170, height: 170)
+                    .rotationEffect(.degrees(-90))
+                    .blur(radius: 16)
+                    .opacity(0.5)
 
                 Circle()
                     .trim(from: 0, to: min(1, score / 100))
-                    .stroke(
-                        AngularGradient(
-                            // With rotationEffect(-90°) + startAngle(-90°):
-                            //   arc trim t  →  gradient location 0.25 + t
-                            //   score 50%   →  location 0.75  = yellow  (key constraint)
-                            // Band widths: red 0-30 (30%), orange 30-50 (20%),
-                            //              yellow 50-65 (15%), light green 65-75 (10%), green 75-100
-                            stops: [
-                                // Wrap region — visible for scores 75-100%
-                                // score 75 → location 1.00 (light green), score 80 → 0.05 (green)
-                                .init(color: Color.somaLightGreen, location: 0.00), // score ~75
-                                .init(color: Color.somaLightGreen, location: 0.03), // score ~78
-                                .init(color: Color.somaGreen,      location: 0.05), // score 80
-                                .init(color: Color.somaGreen,      location: 0.22), // score ~97
-                                // Red zone — scores 0–25
-                                .init(color: Color.somaRed,        location: 0.25), // score 0
-                                .init(color: Color.somaRed,        location: 0.45), // score 20
-                                // Orange zone — scores 25–45
-                                .init(color: Color.somaOrange,     location: 0.50), // score 25
-                                .init(color: Color.somaOrange,     location: 0.65), // score 40
-                                // Yellow zone — scores 45–65
-                                .init(color: Color.somaYellow,     location: 0.70), // score 45
-                                .init(color: Color.somaYellow,     location: 0.85), // score 60
-                                // Light green zone — scores 65–80
-                                .init(color: Color.somaLightGreen, location: 0.90), // score 65
-                                .init(color: Color.somaLightGreen, location: 1.00), // score 75
-                            ],
-                            center: .center,
-                            startAngle: .degrees(-90),
-                            endAngle: .degrees(270)
-                        ),
-                        style: StrokeStyle(lineWidth: 20, lineCap: .round)
-                    )
+                    .stroke(spectrumGradient, style: StrokeStyle(lineWidth: 18, lineCap: .round))
                     .frame(width: 170, height: 170)
                     .rotationEffect(.degrees(-90))
                     .animation(.easeOut(duration: 1.2), value: score)
 
                 VStack(spacing: 2) {
+                    Text("READINESS")
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .tracking(1.5)
+                        .foregroundStyle(Color.somaTextTertiary)
                     Text("\(Int(score.rounded()))")
                         .font(.system(size: 54, weight: .bold, design: .rounded))
-                        .foregroundColor(.primary)
+                        .foregroundStyle(.white)
                         .contentTransition(.numericText())
-                    Text("READINESS")
-                        .font(.system(size: 9, weight: .semibold, design: .rounded))
-                        .foregroundColor(.secondary)
-                        .tracking(1.5)
+                        .monospacedDigit()
+                    StatePill(text: state.label, color: state.color, filled: true)
+                        .padding(.top, 2)
                 }
             }
 
             Text(headline)
-                .font(.headline)
-                .fontWeight(.semibold)
-                .foregroundColor(.primary)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.somaTextSecondary)
                 .multilineTextAlignment(.center)
-
-            Text(state.label)
-                .font(.caption)
-                .fontWeight(.semibold)
-                .foregroundColor(state.color)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 4)
-                .background(state.color.opacity(0.15))
-                .clipShape(Capsule())
         }
-        .padding(20)
         .frame(maxWidth: .infinity)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.horizontal)
+        .padding(.vertical, Space.md)
+        .premiumCard(cornerRadius: Radius.xl, padding: Space.md, glow: state.color)
+    }
+
+    /// Full red→orange→yellow→light-green→green spectrum mapped onto the arc so the
+    /// fill color tracks the score band. With rotationEffect(-90°)+startAngle(-90°),
+    /// arc trim t → gradient location 0.25 + t (score 50% → location 0.75 = yellow).
+    private var spectrumGradient: AngularGradient {
+        AngularGradient(
+            stops: [
+                .init(color: Color.somaLightGreen, location: 0.00), // score ~75
+                .init(color: Color.somaLightGreen, location: 0.03), // score ~78
+                .init(color: Color.somaGreen,      location: 0.05), // score 80
+                .init(color: Color.somaGreen,      location: 0.22), // score ~97
+                .init(color: Color.somaRed,        location: 0.25), // score 0
+                .init(color: Color.somaRed,        location: 0.45), // score 20
+                .init(color: Color.somaOrange,     location: 0.50), // score 25
+                .init(color: Color.somaOrange,     location: 0.65), // score 40
+                .init(color: Color.somaYellow,     location: 0.70), // score 45
+                .init(color: Color.somaYellow,     location: 0.85), // score 60
+                .init(color: Color.somaLightGreen, location: 0.90), // score 65
+                .init(color: Color.somaLightGreen, location: 1.00), // score 75
+            ],
+            center: .center,
+            startAngle: .degrees(-90),
+            endAngle: .degrees(270)
+        )
     }
 
     private var headline: String {
@@ -186,7 +185,7 @@ struct ReadinessDetailView: View {
                 color: ColorState.recovery(score: factors.recoveryScore).color
             )
 
-            Divider()
+            rowDivider
 
             componentRow(
                 icon: "moon.zzz.fill",
@@ -198,7 +197,7 @@ struct ReadinessDetailView: View {
             )
 
             if let ratio = factors.hrvRatio {
-                Divider()
+                rowDivider
                 componentRow(
                     icon: "waveform.path.ecg",
                     label: "HRV Ratio",
@@ -208,81 +207,75 @@ struct ReadinessDetailView: View {
                     color: Color.somaPurple
                 )
             } else {
-                Divider()
+                rowDivider
                 HStack(spacing: 12) {
                     Image(systemName: "waveform.path.ecg")
-                        .foregroundColor(Color.somaGray)
+                        .foregroundStyle(Color.somaTextTertiary)
                         .frame(width: 20)
                     Text("HRV baseline not yet built — weight redistributed to Recovery & Sleep")
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(Color.somaTextSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
-            Divider()
+            rowDivider
 
             HStack {
                 Text("Base Score")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.white)
                 Spacer()
                 Text(String(format: "%.1f", baseScore))
-                    .font(.subheadline)
-                    .fontWeight(.bold)
-                    .foregroundColor(.primary)
+                    .font(.subheadline.weight(.bold))
+                    .foregroundStyle(.white)
             }
 
             if totalPenalty < 0 {
                 HStack {
                     Text("Penalties")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
+                        .foregroundStyle(Color.somaTextSecondary)
                     Spacer()
                     Text("\(totalPenalty) pts")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(Color.somaRed)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.somaRed)
                 }
 
                 HStack {
                     Text("Final Score")
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundColor(.primary)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(.white)
                     Spacer()
                     Text(String(format: "%.0f", max(0, baseScore + Double(totalPenalty))))
-                        .font(.subheadline)
-                        .fontWeight(.bold)
-                        .foregroundColor(state.color)
+                        .font(.subheadline.weight(.bold))
+                        .foregroundStyle(state.color)
                 }
             }
         }
-        .padding(14)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.horizontal)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .premiumCard(cornerRadius: Radius.lg)
     }
 
     private func componentRow(icon: String, label: String, value: String, weight: String, contribution: Double, color: Color) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .foregroundColor(color)
-                .frame(width: 20)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 30, height: 30)
+                .background(Circle().fill(color.opacity(0.16)))
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.subheadline)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.white)
                 Text(value + " · " + weight)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(Color.somaTextSecondary)
             }
             Spacer()
             Text(String(format: "+%.1f pts", contribution))
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(color)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(color)
         }
     }
 
@@ -319,34 +312,27 @@ struct ReadinessDetailView: View {
                 )
             }
         }
-        .padding(14)
-        .background(Color.somaOrange.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.somaOrange.opacity(0.25), lineWidth: 1)
-        )
-        .padding(.horizontal)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accentCard(Color.somaOrange, cornerRadius: Radius.lg)
     }
 
     private func penaltyRow(icon: String, label: String, detail: String, points: Int) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .foregroundColor(Color.somaOrange)
+                .foregroundStyle(Color.somaOrange)
                 .frame(width: 20)
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.subheadline)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.white)
                 Text(detail)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(Color.somaTextSecondary)
             }
             Spacer()
             Text("\(points) pts")
-                .font(.subheadline)
-                .fontWeight(.bold)
-                .foregroundColor(Color.somaRed)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(Color.somaRed)
         }
     }
 
@@ -365,7 +351,7 @@ struct ReadinessDetailView: View {
                     : "Within normal range — neutral"
                 signalRow(icon: "waveform.path.ecg", label: "HRV vs Baseline",
                           value: String(format: "%@%d%%", pct >= 0 ? "+" : "", pct), note: note, color: color)
-                Divider()
+                rowDivider
             }
 
             if let delta = factors.rhrDelta {
@@ -375,7 +361,7 @@ struct ReadinessDetailView: View {
                          : "Near baseline — no penalty"
                 signalRow(icon: "heart.fill", label: "Resting HR vs Baseline",
                           value: String(format: "%@%.0f bpm", delta >= 0 ? "+" : "", delta), note: note, color: color)
-                Divider()
+                rowDivider
             }
 
             let debtColor: Color = factors.sleepDebtHours <= 0.25 ? .somaGreen
@@ -385,7 +371,7 @@ struct ReadinessDetailView: View {
                          : "No debt — good"
             signalRow(icon: "bed.double.fill", label: "Sleep Debt",
                       value: String(format: "%.1fh", factors.sleepDebtHours), note: debtNote, color: debtColor)
-            Divider()
+            rowDivider
 
             let strainColor: Color = factors.yesterdayStrain <= 50 ? .somaGreen
                                    : factors.yesterdayStrain <= 80 ? .somaYellow : .somaRed
@@ -397,7 +383,7 @@ struct ReadinessDetailView: View {
                       note: strainNote, color: strainColor)
 
             if let acr = factors.acrRatio {
-                Divider()
+                rowDivider
                 let acrColor: Color = acr > 1.3 ? .somaOrange : acr < 0.8 ? .somaBlue : .somaGreen
                 let acrNote = acr > 1.3 ? "Training spike (>1.3) — activity capped to Light"
                             : acr < 0.8 ? "Training load has been low recently"
@@ -406,32 +392,30 @@ struct ReadinessDetailView: View {
                           value: String(format: "%.2f", acr), note: acrNote, color: acrColor)
             }
         }
-        .padding(14)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.horizontal)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .premiumCard(cornerRadius: Radius.lg)
     }
 
     private func signalRow(icon: String, label: String, value: String, note: String, color: Color) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
-                .foregroundColor(color)
-                .frame(width: 20)
-                .padding(.top, 2)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(width: 28, height: 28)
+                .background(Circle().fill(color.opacity(0.16)))
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.subheadline)
-                    .foregroundColor(.primary)
+                    .foregroundStyle(.white)
                 Text(note)
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(Color.somaTextSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 8)
             Text(value)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-                .foregroundColor(color)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(color)
         }
     }
 
@@ -488,116 +472,99 @@ struct ReadinessDetailView: View {
             .chartYAxis { AxisMarks(position: .leading) }
             .frame(height: 190)
         }
-        .padding(14)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.horizontal)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .premiumCard(cornerRadius: Radius.lg)
     }
 
-    // MARK: - Training Guidance Card (matches Dashboard)
+    // MARK: - Training Guidance Card
 
     private var trainingCard: some View {
         let accent = Color(hex: guidance.activityLevel.colorHex)
 
         return VStack(alignment: .leading, spacing: 12) {
-            // Header row
-            HStack(spacing: 10) {
+            HStack(spacing: 11) {
                 Image(systemName: guidance.activityLevel.icon)
-                    .font(.title3)
-                    .foregroundColor(accent)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Training Guidance")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(accent)
+                    .frame(width: 32, height: 32)
+                    .background(Circle().fill(accent.opacity(0.16)))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("TRAINING GUIDANCE").eyebrow()
                     Text(guidance.activityLevel.title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(accent)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
                 }
                 Spacer()
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text("Readiness")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text("READINESS").eyebrow()
                     Text("\(Int(score.rounded()))")
-                        .font(.headline)
-                        .fontWeight(.bold)
-                        .foregroundColor(accent)
+                        .font(.system(size: 18, weight: .bold, design: .rounded))
+                        .foregroundStyle(accent)
                 }
             }
 
-            // Strain target range
             HStack(spacing: 6) {
                 Image(systemName: "target")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.somaTextTertiary)
                 Text("Target strain: \(guidance.targetStrainMin)–\(guidance.targetStrainMax)")
                     .font(.caption)
-                    .foregroundColor(.secondary)
+                    .foregroundStyle(Color.somaTextSecondary)
             }
 
-            // Suggested workouts
             if !guidance.suggestedWorkouts.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
+                    HStack(spacing: 7) {
                         ForEach(guidance.suggestedWorkouts, id: \.self) { w in
                             Text(w)
-                                .font(.caption2)
-                                .fontWeight(.medium)
-                                .foregroundColor(accent)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(accent.opacity(0.12))
-                                .clipShape(Capsule())
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(Color.somaTextSecondary)
+                                .padding(.horizontal, 11).padding(.vertical, 6)
+                                .background(Capsule().fill(Color.white.opacity(0.06)))
                         }
                     }
                 }
             }
 
-            // Explanation
             if !guidance.explanation.isEmpty {
                 Text(guidance.explanation)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.somaTextTertiary)
+                    .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(14)
-        .background(accent.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(accent.opacity(0.25), lineWidth: 1)
-        )
-        .padding(.horizontal)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accentCard(accent, cornerRadius: Radius.lg)
     }
 
     // MARK: - Baseline Banner
 
     private var baselineBanner: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             Image(systemName: "clock.badge.fill")
-                .foregroundColor(Color.somaYellow)
+                .foregroundStyle(Color.somaYellow)
             Text("Building baseline — scores improve after 7 days of Apple Watch data.")
-                .font(.caption)
-                .foregroundColor(Color.somaYellow)
+                .font(.footnote)
+                .foregroundStyle(Color.somaYellow)
         }
-        .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.somaYellow.opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .padding(.horizontal)
+        .accentCard(Color.somaYellow, cornerRadius: Radius.md, padding: 14)
     }
 
     // MARK: - Shared Helpers
 
+    private var rowDivider: some View {
+        Divider().overlay(Color.somaHairline)
+    }
+
     private func sectionHeader(icon: String, title: String, color: Color) -> some View {
         HStack(spacing: 8) {
             Image(systemName: icon)
-                .foregroundColor(color)
+                .foregroundStyle(color)
             Text(title)
-                .font(.headline)
-                .foregroundColor(.primary)
+                .font(.system(size: 17, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
         }
     }
 }

@@ -99,10 +99,8 @@ final class NotificationScheduler {
             }
 
             // Calculate bedtime based on tomorrow's wake time and sleep goal
-            let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date()
-            let tomorrowWeekday = Calendar.current.component(.weekday, from: tomorrow)
-            let tomorrowWakeTime = settings.wakeTimeDate(for: tomorrowWeekday)
-            
+            let tomorrowWakeTime = settings.tomorrowWakeTime
+
             let sleepDuration = settings.sleepGoalHours * 3600 // in seconds
             let reminderOffset = TimeInterval(settings.bedtimeReminderMinutesBefore * 60)
             

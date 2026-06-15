@@ -15,6 +15,7 @@ struct MainTabView: View {
     @StateObject private var insightsVM:    InsightsViewModel
     
     @State private var showCheckInFromShortcut = false
+    @State private var selectedTab = 2
 
     init(healthKitManager: HealthKitManager) {
         self.healthKitManager = healthKitManager
@@ -41,33 +42,51 @@ struct MainTabView: View {
     }
 
     var body: some View {
-        TabView {
-            DashboardView(
+        TabView(selection: $selectedTab) {
+            VitalsView(viewModel: dashboardVM)
+            .tabItem {
+                Label("Vitals", systemImage: "waveform.path.ecg")
+            }
+            .tag(0)
+
+            TrendsRedesignView(viewModel: trendsVM)
+            .tabItem {
+                Label("Trends", systemImage: "chart.xyaxis.line")
+            }
+            .tag(1)
+
+            TodayView(
                 viewModel: dashboardVM,
+                insightsVM: insightsVM,
                 checkInStore: checkInStore,
                 healthKit: healthKitManager
             )
             .tabItem {
-                Label("Dashboard", systemImage: "heart.text.square.fill")
+                Label("Today", systemImage: "circle.hexagongrid.fill")
             }
+            .tag(2)
 
-            TrendsView(viewModel: trendsVM)
+            CoachView(viewModel: dashboardVM, insightsVM: insightsVM)
             .tabItem {
-                Label("Trends", systemImage: "chart.xyaxis.line")
+                Label("Coach", systemImage: "brain.head.profile")
             }
-
-            InsightsView(viewModel: insightsVM)
-            .tabItem {
-                Label("Insights", systemImage: "brain.head.profile")
-            }
+            .tag(3)
 
             NotificationsView()
             .tabItem {
-                Label("Notifications", systemImage: "bell.fill")
+                Label("Alerts", systemImage: "bell.fill")
             }
+            .tag(4)
         }
         .tint(Color.somaBlue)
+        .preferredColorScheme(.dark)
         .onAppear {
+            // Premium dark-first chrome: jet-black, translucent tab bar.
+            let appearance = UITabBarAppearance()
+            appearance.configureWithOpaqueBackground()
+            appearance.backgroundColor = UIColor.black
+            UITabBar.appearance().standardAppearance = appearance
+            UITabBar.appearance().scrollEdgeAppearance = appearance
             // Initialize notification schedules on app launch
             NotificationScheduler.shared.updateAllSchedules(settings: settings)
             

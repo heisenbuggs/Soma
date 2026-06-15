@@ -7,7 +7,7 @@ struct NotificationsView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.somaBackground.ignoresSafeArea()
+                SomaGradient.canvas(tint: .somaPurple)
 
                 if groups.isEmpty {
                     emptyState
@@ -15,7 +15,7 @@ struct NotificationsView: View {
                     notificationList
                 }
             }
-            .navigationTitle("Notifications")
+            .navigationTitle("Alerts")
             .navigationBarTitleDisplayMode(.large)
         }
         .onAppear { groups = NotificationStore.shared.groupedByDate() }
@@ -47,37 +47,29 @@ struct NotificationsView: View {
     }
 
     private func notificationCard(_ record: NotificationRecord) -> some View {
-        HStack(spacing: 0) {
-            RoundedRectangle(cornerRadius: 3)
-                .fill(Color.somaBlue)
-                .frame(width: 4)
-                .padding(.vertical, 8)
+        HStack(spacing: 12) {
+            Image(systemName: "bell.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.somaBlue)
+                .frame(width: 38, height: 38)
+                .background(Circle().fill(Color.somaBlue.opacity(0.16)))
 
-            HStack(spacing: 12) {
-                Image(systemName: "bell.fill")
-                    .font(.title3)
-                    .foregroundColor(Color.somaBlue)
-                    .frame(width: 28)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(record.title)
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                    Text(record.body)
-                        .font(.caption)
-                        .foregroundColor(Color.somaGray)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(record.timestamp, format: .dateTime.hour().minute())
-                        .font(.caption2)
-                        .foregroundColor(Color.somaGray.opacity(0.7))
-                }
-                Spacer()
+            VStack(alignment: .leading, spacing: 4) {
+                Text(record.title)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                Text(record.body)
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.somaTextSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(record.timestamp, format: .dateTime.hour().minute())
+                    .font(.caption2)
+                    .foregroundStyle(Color.somaTextTertiary)
             }
-            .padding(12)
+            Spacer(minLength: 0)
         }
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accentCard(Color.somaBlue, cornerRadius: Radius.md, padding: 14)
     }
 
     // MARK: - Empty State

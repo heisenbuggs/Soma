@@ -126,9 +126,9 @@ struct AyurvedicSleepDetailView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.somaBackground.ignoresSafeArea()
+                SomaGradient.canvas(tint: scoreColor)
                 ScrollView {
-                    VStack(spacing: 20) {
+                    VStack(spacing: 18) {
                         // Date navigation
                         HStack {
                             Button { navigateDate(-1) } label: {
@@ -217,14 +217,26 @@ struct AyurvedicSleepDetailView: View {
 
     private var historyChart: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Range picker
-            Picker("Range", selection: $selectedRange) {
-                ForEach(TrendsViewModel.TimeRange.allCases, id: \.self) {
-                    Text($0.rawValue).tag($0)
+            // Range picker — premium pill chips
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(TrendsViewModel.TimeRange.allCases, id: \.self) { range in
+                        let on = range == selectedRange
+                        Button {
+                            Haptics.select()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { selectedRange = range }
+                            selectedDate = nil
+                        } label: {
+                            Text(range.rawValue)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(on ? .black : Color.somaTextSecondary)
+                                .padding(.horizontal, 14).padding(.vertical, 9)
+                                .background(Capsule().fill(on ? AnyShapeStyle(scoreColor) : AnyShapeStyle(Color.white.opacity(0.06))))
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
             }
-            .pickerStyle(.segmented)
-            .onChange(of: selectedRange) { _, _ in selectedDate = nil }
 
             // Chart header
             HStack {
@@ -288,8 +300,10 @@ struct AyurvedicSleepDetailView: View {
             }
         }
         .padding(14)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(SomaGradient.card)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.somaHairline, lineWidth: 1))
+        .shadow(color: .black.opacity(0.4), radius: 14, x: 0, y: 8)
     }
 
     // MARK: - Timeline Card
@@ -312,8 +326,10 @@ struct AyurvedicSleepDetailView: View {
                 .frame(height: 72)
         }
         .padding(14)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(SomaGradient.card)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.somaHairline, lineWidth: 1))
+        .shadow(color: .black.opacity(0.4), radius: 14, x: 0, y: 8)
     }
 
     // MARK: - Breakdown Card
@@ -372,8 +388,10 @@ struct AyurvedicSleepDetailView: View {
             }
         }
         .padding(14)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(SomaGradient.card)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.somaHairline, lineWidth: 1))
+        .shadow(color: .black.opacity(0.4), radius: 14, x: 0, y: 8)
     }
 
     // MARK: - Tip Card

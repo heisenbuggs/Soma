@@ -156,8 +156,8 @@ struct BehaviorEngine {
             tips.append("Your sleeping HR was \(Int(sleepingHR)) bpm — elevated vs resting. Avoid alcohol and heavy meals within 3h of bed.")
         }
 
-        // Fragmented sleep
-        if let interruptions = todayMetrics.sleepInterruptions, interruptions > 3 {
+        // Fragmented sleep — more than 4 awakenings (a few brief ones are normal)
+        if let interruptions = todayMetrics.sleepInterruptions, interruptions > 4 {
             tips.append("Sleep was fragmented (\(interruptions) interruptions). Limit fluids after 7 PM and keep your room cool and dark.")
         }
 

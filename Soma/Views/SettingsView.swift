@@ -64,6 +64,21 @@ final class UserSettings: ObservableObject {
         return wakeTimeDate(for: weekday)
     }
 
+    /// Tomorrow's wake time as an absolute `Date` — tomorrow's calendar day at
+    /// the wake hour/minute configured for tomorrow's weekday. Use this to
+    /// compute tonight's bedtime: subtract the sleep need from the *next*
+    /// wake-up, not today's (which would place bedtime in this morning's hours).
+    var tomorrowWakeTime: Date {
+        let cal = Calendar.current
+        let tomorrow = cal.date(byAdding: .day, value: 1, to: Date()) ?? Date()
+        let weekday = cal.component(.weekday, from: tomorrow)
+        var comps = cal.dateComponents([.year, .month, .day], from: tomorrow)
+        comps.hour   = wakeHour(for: weekday)
+        comps.minute = wakeMinute(for: weekday)
+        comps.second = 0
+        return cal.date(from: comps) ?? Date()
+    }
+
     var maxHeartRate: Double? {
         get { _maxHR > 0 ? Double(_maxHR) : nil }
         set { _maxHR = Int(newValue ?? 0) }
@@ -112,39 +127,40 @@ struct SettingsView: View {
     @State private var showResetAlert = false
     @State private var customMaxHR: String = ""
 
+    private let weekdays: [(Int, String)] =
+        [(1,"Sunday"),(2,"Monday"),(3,"Tuesday"),(4,"Wednesday"),(5,"Thursday"),(6,"Friday"),(7,"Saturday")]
+
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.somaBackground.ignoresSafeArea()
+                SomaGradient.canvas(tint: .somaBlue)
 
                 ScrollView {
-                    VStack(spacing: 24) {
+                    VStack(spacing: Space.lg) {
                         profileHeader
                         sleepSection
                         wakeTimeSection
                         notificationsSection
                         preferencesSection
                         dataSection
-
                         #if DEBUG
                         debugSection
                         #endif
-
                         aboutSection
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 40)
+                    .padding(.horizontal, Space.md)
+                    .padding(.top, Space.sm)
+                    .padding(.bottom, 44)
                 }
-                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
             }
             .navigationTitle("Settings")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Done") { dismiss() }
                         .fontWeight(.semibold)
-                        .foregroundColor(Color.somaBlue)
+                        .foregroundStyle(Color.somaBlue)
                 }
             }
             .alert("Reset Baselines", isPresented: $showResetAlert) {
@@ -162,267 +178,155 @@ struct SettingsView: View {
     // MARK: - Profile Header
 
     private var profileHeader: some View {
-        VStack(spacing: 16) {
-            // Avatar
+        VStack(spacing: 18) {
             ZStack {
                 Circle()
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.somaGreen, Color.somaBlue],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .frame(width: 72, height: 72)
+                    .fill(LinearGradient(colors: [.somaGreen, .somaBlue],
+                                         startPoint: .topLeading, endPoint: .bottomTrailing))
+                    .frame(width: 84, height: 84)
+                    .shadow(color: Color.somaBlue.opacity(0.45), radius: 16, x: 0, y: 8)
                 Text(settings.firstName.isEmpty ? "?" : String(settings.firstName.prefix(1)).uppercased())
-                    .font(.system(size: 30, weight: .bold, design: .rounded))
-                    .foregroundColor(.white)
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
             }
 
-            VStack(spacing: 12) {
-                // Name field
-                HStack {
-                    Image(systemName: "person.fill")
-                        .foregroundColor(.secondary)
-                        .frame(width: 20)
-                    TextField("Your first name", text: $settings.firstName)
-                        .font(.subheadline)
-                        .multilineTextAlignment(.leading)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(Color.somaCardElevated)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            TextField("", text: $settings.firstName, prompt: Text("Your name").foregroundColor(.somaTextTertiary))
+                .multilineTextAlignment(.center)
+                .font(.system(size: 22, weight: .semibold, design: .rounded))
+                .foregroundStyle(.white)
 
-                // Date of birth
-                HStack {
-                    Image(systemName: "calendar")
-                        .foregroundColor(.secondary)
-                        .frame(width: 20)
-                    DatePicker(
-                        "Date of Birth",
-                        selection: Binding(
-                            get: { settings.dateOfBirth ?? Calendar.current.date(byAdding: .year, value: -30, to: Date())! },
-                            set: { settings.dateOfBirth = $0 }
-                        ),
+            VStack(spacing: 0) {
+                settingRow("Date of Birth", icon: "calendar", tint: .somaBlue) {
+                    DatePicker("", selection: Binding(
+                        get: { settings.dateOfBirth ?? Calendar.current.date(byAdding: .year, value: -30, to: Date())! },
+                        set: { settings.dateOfBirth = $0 }),
                         in: ...Calendar.current.date(byAdding: .year, value: -13, to: Date())!,
-                        displayedComponents: .date
-                    )
-                    .font(.subheadline)
+                        displayedComponents: .date)
+                    .labelsHidden()
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(Color.somaCardElevated)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-
-                // Max HR
-                HStack {
-                    Image(systemName: "heart.fill")
-                        .foregroundColor(Color.somaRed)
-                        .frame(width: 20)
-                    Text("Max Heart Rate")
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
-                    Spacer()
-                    if settings.maxHeartRate == nil {
-                        Text("Auto · \(Int(settings.effectiveMaxHR)) bpm")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    TextField("e.g. 185", text: $customMaxHR)
-                        .keyboardType(.numberPad)
-                        .multilineTextAlignment(.trailing)
-                        .foregroundColor(settings.maxHeartRate != nil ? .primary : .secondary)
-                        .frame(width: 70)
-                        .onSubmit { applyCustomMaxHR() }
-                    if settings.maxHeartRate != nil {
-                        Button {
-                            settings.maxHeartRate = nil
-                            customMaxHR = ""
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .foregroundColor(.secondary)
+                hairline
+                settingRow("Max Heart Rate", subtitle: settings.maxHeartRate == nil ? "Auto · \(Int(settings.effectiveMaxHR)) bpm" : nil,
+                           icon: "heart.fill", tint: .somaRed) {
+                    HStack(spacing: 6) {
+                        TextField("e.g. 185", text: $customMaxHR)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .foregroundStyle(settings.maxHeartRate != nil ? .white : Color.somaTextTertiary)
+                            .frame(width: 64)
+                            .onSubmit { applyCustomMaxHR() }
+                        if settings.maxHeartRate != nil {
+                            Button {
+                                settings.maxHeartRate = nil
+                                customMaxHR = ""
+                            } label: {
+                                Image(systemName: "xmark.circle.fill").foregroundStyle(Color.somaTextTertiary)
+                            }
                         }
                     }
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(Color.somaCardElevated)
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
+            .padding(.top, 2)
         }
-        .padding(16)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .frame(maxWidth: .infinity)
+        .premiumCard(cornerRadius: Radius.xl, padding: 20)
     }
 
-    // MARK: - Sleep Section
+    // MARK: - Sleep
 
     private var sleepSection: some View {
-        settingsCard(title: "Sleep", icon: "moon.zzz.fill", iconColor: Color.somaBlue) {
-            VStack(spacing: 0) {
-                // Sleep goal stepper
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Sleep Goal")
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-                        Text("Target duration each night")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+        card("Sleep", icon: "moon.zzz.fill", tint: .somaBlue) {
+            settingRow("Sleep Goal", subtitle: "Target duration each night") {
+                HStack(spacing: 14) {
+                    stepperButton("minus", enabled: settings.sleepGoalHours > 5.0) {
+                        settings.sleepGoalHours = max(5.0, settings.sleepGoalHours - 0.5)
                     }
-                    Spacer()
-                    HStack(spacing: 12) {
-                        Button {
-                            if settings.sleepGoalHours > 5.0 {
-                                settings.sleepGoalHours = max(5.0, settings.sleepGoalHours - 0.5)
-                            }
-                        } label: {
-                            Image(systemName: "minus.circle.fill")
-                                .font(.title3)
-                                .foregroundColor(settings.sleepGoalHours <= 5.0 ? .secondary : Color.somaBlue)
-                        }
-                        Text(String(format: "%.1fh", settings.sleepGoalHours))
-                            .font(.headline)
-                            .fontWeight(.bold)
-                            .foregroundColor(Color.somaBlue)
-                            .frame(width: 44)
-                            .contentTransition(.numericText())
-                            .animation(.spring(response: 0.3), value: settings.sleepGoalHours)
-                        Button {
-                            if settings.sleepGoalHours < 12.0 {
-                                settings.sleepGoalHours = min(12.0, settings.sleepGoalHours + 0.5)
-                            }
-                        } label: {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.title3)
-                                .foregroundColor(settings.sleepGoalHours >= 12.0 ? .secondary : Color.somaBlue)
-                        }
+                    Text(String(format: "%.1fh", settings.sleepGoalHours))
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .foregroundStyle(Color.somaBlue)
+                        .frame(width: 48)
+                        .contentTransition(.numericText())
+                        .animation(.spring(response: 0.3), value: settings.sleepGoalHours)
+                    stepperButton("plus", enabled: settings.sleepGoalHours < 12.0) {
+                        settings.sleepGoalHours = min(12.0, settings.sleepGoalHours + 0.5)
                     }
                 }
-                .padding(.vertical, 4)
             }
         }
     }
 
-    // MARK: - Wake Time Section
+    // MARK: - Wake Times
 
     private var wakeTimeSection: some View {
-        settingsCard(title: "Wake Times", icon: "alarm.fill", iconColor: Color.somaOrange) {
+        card("Wake Times", icon: "alarm.fill", tint: .somaOrange) {
             VStack(spacing: 0) {
-                let days: [(Int, String)] = [(1,"Sun"),(2,"Mon"),(3,"Tue"),(4,"Wed"),(5,"Thu"),(6,"Fri"),(7,"Sat")]
-                ForEach(days, id: \.0) { weekday, label in
-                    HStack {
-                        Text(label)
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-                            .frame(width: 36, alignment: .leading)
-                        Spacer()
+                ForEach(weekdays, id: \.0) { weekday, label in
+                    settingRow(label) {
                         DatePicker("", selection: Binding(
                             get: { settings.wakeTimeDate(for: weekday) },
-                            set: { settings.setWakeTimeDate($0, for: weekday) }
-                        ), displayedComponents: .hourAndMinute)
+                            set: { settings.setWakeTimeDate($0, for: weekday) }),
+                            displayedComponents: .hourAndMinute)
                         .labelsHidden()
                     }
-                    .padding(.vertical, 2)
-                    if weekday < 7 {
-                        Divider().padding(.leading, 36)
-                    }
+                    if weekday < 7 { hairline }
                 }
             }
         }
     }
 
-    // MARK: - Notifications Section
+    // MARK: - Notifications
 
     private var notificationsSection: some View {
-        settingsCard(title: "Notifications", icon: "bell.fill", iconColor: Color.somaPurple) {
+        card("Notifications", icon: "bell.fill", tint: .somaPurple) {
             VStack(spacing: 0) {
-
-                // Master toggle
-                settingsToggle(label: "Enable Notifications", value: $settings.notificationsEnabled, tint: Color.somaGreen)
+                toggleRow("Enable Notifications", isOn: $settings.notificationsEnabled, tint: .somaGreen)
                     .onChange(of: settings.notificationsEnabled) { _, enabled in
                         if enabled { Task { await NotificationScheduler.shared.requestPermission() } }
                         NotificationScheduler.shared.updateAllSchedules(settings: settings)
                     }
 
                 if settings.notificationsEnabled {
-                    Divider()
-
-                    // Recovery notification time
-                    HStack {
-                        Image(systemName: "heart.fill")
-                            .foregroundColor(Color.somaGreen)
-                            .frame(width: 20)
-                        Text("Daily Recovery")
-                            .font(.subheadline)
-                            .foregroundColor(.primary)
-                        Spacer()
+                    hairline
+                    settingRow("Daily Recovery", icon: "heart.fill", tint: .somaGreen) {
                         DatePicker("", selection: Binding(
                             get: { settings.recoveryNotificationTime },
                             set: {
                                 settings.setRecoveryNotificationTime($0)
                                 NotificationScheduler.shared.updateAllSchedules(settings: settings)
-                            }
-                        ), displayedComponents: .hourAndMinute)
+                            }), displayedComponents: .hourAndMinute)
                         .labelsHidden()
                     }
-                    .padding(.vertical, 2)
 
-                    Divider()
-
-                    // Bedtime reminder
-                    settingsToggle(label: "Bedtime Reminder", value: $settings.bedtimeReminderEnabled, tint: Color.somaBlue)
+                    hairline
+                    toggleRow("Bedtime Reminder", isOn: $settings.bedtimeReminderEnabled, tint: .somaBlue)
                         .onChange(of: settings.bedtimeReminderEnabled) { _, _ in
                             NotificationScheduler.shared.updateAllSchedules(settings: settings)
                         }
-
                     if settings.bedtimeReminderEnabled {
-                        HStack {
-                            Text("Remind me")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .padding(.leading, 28)
-                            Spacer()
+                        settingRow("Remind me before") {
                             Picker("", selection: $settings.bedtimeReminderMinutesBefore) {
-                                Text("15 min").tag(15)
-                                Text("30 min").tag(30)
-                                Text("45 min").tag(45)
-                                Text("60 min").tag(60)
+                                Text("15 min").tag(15); Text("30 min").tag(30)
+                                Text("45 min").tag(45); Text("60 min").tag(60)
                             }
-                            .pickerStyle(.menu)
-                            .tint(Color.somaBlue)
+                            .pickerStyle(.menu).tint(Color.somaBlue)
                             .onChange(of: settings.bedtimeReminderMinutesBefore) { _, _ in
                                 NotificationScheduler.shared.updateAllSchedules(settings: settings)
                             }
-                            Text("before bedtime")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
                         }
                     }
 
-                    Divider()
-
-                    // Check-in reminder
-                    settingsToggle(label: "Check-In Reminder", value: $settings.checkinReminderEnabled, tint: Color.somaGreen)
+                    hairline
+                    toggleRow("Check-In Reminder", isOn: $settings.checkinReminderEnabled, tint: .somaGreen)
                         .onChange(of: settings.checkinReminderEnabled) { _, _ in
                             NotificationScheduler.shared.updateAllSchedules(settings: settings)
                         }
-
                     if settings.checkinReminderEnabled {
-                        HStack {
-                            Text("Daily at")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .padding(.leading, 28)
-                            Spacer()
+                        settingRow("Daily at") {
                             DatePicker("", selection: Binding(
                                 get: { settings.checkinReminderTime },
                                 set: {
                                     settings.setCheckinReminderTime($0)
                                     NotificationScheduler.shared.updateAllSchedules(settings: settings)
-                                }
-                            ), displayedComponents: .hourAndMinute)
+                                }), displayedComponents: .hourAndMinute)
                             .labelsHidden()
                         }
                     }
@@ -431,133 +335,151 @@ struct SettingsView: View {
         }
     }
 
-    // MARK: - Preferences Section
+    // MARK: - Preferences
 
     private var preferencesSection: some View {
-        settingsCard(title: "Preferences", icon: "slider.horizontal.3", iconColor: Color.somaGray) {
-            VStack(spacing: 0) {
-                settingsToggle(label: "Metric Units", value: $settings.useMetricUnits, tint: Color.somaGreen)
-                Divider()
-                settingsToggle(label: "Enable Data Cache", value: $settings.cacheEnabled, tint: Color.somaGreen)
-                if settings.cacheEnabled {
-                    Text("Cached data is valid for 1 hour. Reduces battery usage.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.top, 6)
-                } else {
-                    Text("Data refreshes every 5 minutes. Pull down on the dashboard to fetch immediately.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.top, 6)
-                }
+        card("Preferences", icon: "slider.horizontal.3", tint: .somaGray) {
+            VStack(alignment: .leading, spacing: 0) {
+                toggleRow("Metric Units", isOn: $settings.useMetricUnits, tint: .somaGreen)
+                hairline
+                toggleRow("Enable Data Cache", isOn: $settings.cacheEnabled, tint: .somaGreen)
+                Text(settings.cacheEnabled
+                     ? "Cached data is valid for 1 hour. Reduces battery usage."
+                     : "Data refreshes every 5 minutes. Pull to refresh to fetch immediately.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.somaTextTertiary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 8)
             }
         }
     }
 
-    // MARK: - Data Section
+    // MARK: - Data
 
     private var dataSection: some View {
-        settingsCard(title: "Data", icon: "externaldrive.fill", iconColor: Color.somaRed) {
+        card("Data", icon: "externaldrive.fill", tint: .somaRed) {
             Button {
-                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                Haptics.tap()
                 showResetAlert = true
             } label: {
                 HStack(spacing: 10) {
-                    Image(systemName: "arrow.clockwise")
-                        .font(.subheadline)
-                    Text("Reset Baselines & Clear Cache")
-                        .font(.subheadline)
+                    Image(systemName: "arrow.clockwise").font(.system(size: 15, weight: .semibold))
+                    Text("Reset Baselines & Clear Cache").font(.system(size: 15, weight: .medium))
                     Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(Color.somaTextTertiary)
                 }
-                .foregroundColor(Color.somaRed)
+                .foregroundStyle(Color.somaRed)
+                .padding(.vertical, 2)
             }
         }
     }
 
-    // MARK: - About Section
+    // MARK: - About
 
     private var aboutSection: some View {
-        settingsCard(title: "About", icon: "info.circle.fill", iconColor: Color.somaBlue) {
+        card("About", icon: "info.circle.fill", tint: .somaBlue) {
             VStack(spacing: 0) {
-                HStack {
-                    Text("Version")
-                        .font(.subheadline)
-                        .foregroundColor(.primary)
-                    Spacer()
-                    Text("1.0")
-                        .font(.subheadline)
-                        .foregroundColor(.secondary)
+                settingRow("Version") {
+                    Text("1.0").font(.system(size: 15)).foregroundStyle(Color.somaTextSecondary)
                 }
-                Divider().padding(.vertical, 4)
-                HStack {
-                    Image(systemName: "lock.shield.fill")
-                        .foregroundColor(Color.somaGreen)
-                        .font(.caption)
+                hairline
+                HStack(spacing: 8) {
+                    Image(systemName: "lock.shield.fill").font(.caption).foregroundStyle(Color.somaGreen)
                     Text("All data stays on your device")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 13)).foregroundStyle(Color.somaTextSecondary)
                     Spacer()
                 }
+                .padding(.vertical, 12)
             }
         }
     }
 
-    // MARK: - Debug Section
+    // MARK: - Debug
 
     #if DEBUG
     private var debugSection: some View {
-        settingsCard(title: "Debug", icon: "ant.fill", iconColor: Color.somaYellow) {
+        card("Debug", icon: "ant.fill", tint: .somaYellow) {
             VStack(spacing: 0) {
-                Button("Test Widget Data") { testWidgetData() }
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
-                Divider().padding(.vertical, 4)
-                Button("Refresh Widgets") {
-                    WidgetCenter.shared.reloadAllTimelines()
+                Button { testWidgetData() } label: {
+                    settingRow("Test Widget Data") { Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(Color.somaTextTertiary) }
                 }
-                .font(.subheadline)
-                .foregroundColor(.primary)
+                .foregroundStyle(.white)
+                hairline
+                Button { WidgetCenter.shared.reloadAllTimelines() } label: {
+                    settingRow("Refresh Widgets") { Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(Color.somaTextTertiary) }
+                }
+                .foregroundStyle(.white)
             }
         }
     }
     #endif
 
-    // MARK: - Reusable Components
+    // MARK: - Reusable building blocks
 
-    private func settingsCard<Content: View>(
-        title: String,
-        icon: String,
-        iconColor: Color,
-        @ViewBuilder content: () -> Content
-    ) -> some View {
+    @ViewBuilder
+    private func card<Content: View>(_ title: String, icon: String, tint: Color,
+                                     @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
+            HStack(spacing: 11) {
                 Image(systemName: icon)
-                    .font(.body)
-                    .foregroundColor(iconColor)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 32, height: 32)
+                    .background(Circle().fill(tint.opacity(0.16)))
                 Text(title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.primary)
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.white)
+                Spacer()
             }
             content()
         }
-        .padding(16)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .premiumCard(cornerRadius: Radius.lg, padding: 18)
     }
 
-    private func settingsToggle(label: String, value: Binding<Bool>, tint: Color) -> some View {
-        Toggle(isOn: value) {
-            Text(label)
-                .font(.subheadline)
-                .foregroundColor(.primary)
+    /// A labelled row with an optional leading icon, optional subtitle, and a trailing control.
+    @ViewBuilder
+    private func settingRow<Trailing: View>(_ label: String, subtitle: String? = nil,
+                                            icon: String? = nil, tint: Color = .somaGray,
+                                            @ViewBuilder trailing: () -> Trailing) -> some View {
+        HStack(spacing: 12) {
+            if let icon {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(tint)
+                    .frame(width: 26, height: 26)
+                    .background(Circle().fill(tint.opacity(0.16)))
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label).font(.system(size: 15, weight: .medium)).foregroundStyle(.white)
+                if let subtitle {
+                    Text(subtitle).font(.system(size: 12)).foregroundStyle(Color.somaTextTertiary)
+                }
+            }
+            Spacer(minLength: 8)
+            trailing()
+        }
+        .padding(.vertical, 11)
+    }
+
+    private func toggleRow(_ label: String, isOn: Binding<Bool>, tint: Color) -> some View {
+        Toggle(isOn: isOn) {
+            Text(label).font(.system(size: 15, weight: .medium)).foregroundStyle(.white)
         }
         .tint(tint)
-        .padding(.vertical, 2)
+        .padding(.vertical, 9)
+    }
+
+    private func stepperButton(_ icon: String, enabled: Bool, action: @escaping () -> Void) -> some View {
+        Button { if enabled { Haptics.tap(); action() } } label: {
+            Image(systemName: "\(icon).circle.fill")
+                .font(.system(size: 24))
+                .foregroundStyle(enabled ? Color.somaBlue : Color.somaTextTertiary.opacity(0.5))
+        }
+    }
+
+    private var hairline: some View {
+        Rectangle().fill(Color.somaHairline).frame(height: 1)
     }
 
     // MARK: - Helpers

@@ -87,7 +87,7 @@ struct MetricInsightGenerator {
             }
         }
 
-        if let n = metrics.sleepInterruptions, n > 3 {
+        if let n = metrics.sleepInterruptions, n > 4 {
             obs.append("Sleep was interrupted \(n) times during the night")
             acts.append("Limit fluids 2 hours before bed to reduce interruptions")
         }
@@ -269,6 +269,7 @@ struct MetricDetailView: View {
     @State private var selectedRange: TrendsViewModel.TimeRange = .week
     @State private var selectedDate: Date?
     @State private var intradayHRData: [(Date, Double)] = []
+    @State private var intradayWorkouts: [(start: Date, end: Date)] = []
     @State private var intradayDate: Date = Date()
     @State private var selectedStressDate: Date?
     @State private var selectedStrainDate: Date?
@@ -295,10 +296,10 @@ struct MetricDetailView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.somaBackground.ignoresSafeArea()
+                SomaGradient.canvas(tint: metric.accentColor)
 
                 ScrollView {
-                    VStack(spacing: 20) {
+                    VStack(spacing: 18) {
                         rangePicker
                         scoreChart
                         if metric == .stress {
@@ -341,6 +342,7 @@ struct MetricDetailView: View {
                 if metric == .stress || metric == .strain {
                     intradayDate = Date()
                     intradayHRData = await viewModel.fetchIntradayHR(for: Date())
+                    intradayWorkouts = await viewModel.fetchWorkoutIntervals(for: Date())
                 }
             }
             .onChange(of: selectedDate) { _, newDate in
@@ -348,6 +350,7 @@ struct MetricDetailView: View {
                     Task {
                         intradayDate = date
                         intradayHRData = await viewModel.fetchIntradayHR(for: date)
+                        intradayWorkouts = await viewModel.fetchWorkoutIntervals(for: date)
                     }
                 }
             }
@@ -357,15 +360,29 @@ struct MetricDetailView: View {
     // MARK: - Range Picker
 
     private var rangePicker: some View {
-        Picker("Range", selection: $selectedRange) {
-            ForEach(TrendsViewModel.TimeRange.allCases, id: \.self) {
-                Text($0.rawValue).tag($0)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(TrendsViewModel.TimeRange.allCases, id: \.self) { range in
+                    let on = range == selectedRange
+                    Button {
+                        Haptics.select()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                            selectedRange = range
+                        }
+                        selectedDate = history.max { $0.date < $1.date }?.date
+                    } label: {
+                        Text(range.rawValue)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(on ? .black : Color.somaTextSecondary)
+                            .padding(.horizontal, 14).padding(.vertical, 9)
+                            .background(
+                                Capsule().fill(on ? AnyShapeStyle(metric.accentColor) : AnyShapeStyle(Color.white.opacity(0.06)))
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
             }
-        }
-        .pickerStyle(.segmented)
-        .padding(.horizontal)
-        .onChange(of: selectedRange) { _, _ in
-            selectedDate = history.max { $0.date < $1.date }?.date
+            .padding(.horizontal)
         }
     }
 
@@ -445,8 +462,10 @@ struct MetricDetailView: View {
             }
         }
         .padding(14)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(SomaGradient.card)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.somaHairline, lineWidth: 1))
+        .shadow(color: .black.opacity(0.4), radius: 14, x: 0, y: 8)
         .padding(.horizontal)
     }
 
@@ -454,6 +473,9 @@ struct MetricDetailView: View {
 
     /// Buckets daytime (8AM–8PM) HR samples into 30-minute bins and derives a relative stress level.
     /// Filtered to the same 8AM–8PM window as the daily stress score so the two are consistent.
+    /// Exercise is excluded the same way the daily score excludes it — workout windows (plus a
+    /// cooldown tail) and any high-effort samples are dropped — so the chart no longer spikes to
+    /// 100 simply because the user worked out.
     /// Stress per bin = clamp((avgHR - rhrBaseline) / rhrBaseline, 0, 1) × 100
     private var intradayStressBuckets: [(Date, Double)] {
         guard !intradayHRData.isEmpty else { return [] }
@@ -462,9 +484,19 @@ struct MetricDetailView: View {
             / max(1, Double(history.compactMap { $0.restingHR }.suffix(7).count))
         let baseline = rhrBaseline > 0 ? rhrBaseline : 65.0
 
+        // Match the daily stress score: restrict to the daytime window, then strip
+        // exercise (workout windows + high-effort samples) so movement isn't read as stress.
+        let daytime = StressCalculator.filterDaytime(intradayHRData, on: intradayDate)
+        let sedentary = StressCalculator.filterSedentary(
+            daytime,
+            workoutIntervals: intradayWorkouts,
+            maxHR: viewModel.maxHR
+        )
+        guard !sedentary.isEmpty else { return [] }
+
         let cal = Calendar.current
         var buckets: [Date: [Double]] = [:]
-        for (date, hr) in intradayHRData {
+        for (date, hr) in sedentary {
             // Round down to nearest 30-min bucket
             var comps = cal.dateComponents([.year, .month, .day, .hour, .minute], from: date)
             comps.minute = (comps.minute ?? 0) < 30 ? 0 : 30
@@ -553,14 +585,16 @@ struct MetricDetailView: View {
                 .chartXSelection(value: $selectedStressDate)
                 .frame(height: 160)
 
-                Text("24-hour heart rate elevation above your resting baseline. The daily stress score reflects the daytime window.")
+                Text("Daytime (8AM–8PM) heart-rate elevation above your resting baseline, with exercise excluded — so workouts don't register as stress. Matches how the daily stress score is computed.")
                     .font(.caption)
                     .foregroundColor(Color.somaGray)
             }
         }
         .padding(14)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(SomaGradient.card)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.somaHairline, lineWidth: 1))
+        .shadow(color: .black.opacity(0.4), radius: 14, x: 0, y: 8)
         .padding(.horizontal)
     }
 
@@ -678,8 +712,10 @@ struct MetricDetailView: View {
             }
         }
         .padding(14)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(SomaGradient.card)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.somaHairline, lineWidth: 1))
+        .shadow(color: .black.opacity(0.4), radius: 14, x: 0, y: 8)
         .padding(.horizontal)
     }
 
@@ -758,8 +794,10 @@ struct MetricDetailView: View {
             }
         }
         .padding(14)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(SomaGradient.card)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.somaHairline, lineWidth: 1))
+        .shadow(color: .black.opacity(0.4), radius: 14, x: 0, y: 8)
         .padding(.horizontal)
     }
 
@@ -772,10 +810,14 @@ struct MetricDetailView: View {
         let acrNote = metric == .recovery ? MetricInsightGenerator.acrDescription(history: history) : nil
 
         return VStack(alignment: .leading, spacing: 14) {
-            // Header
-            HStack(spacing: 8) {
+            // Header — tinted to the metric's current state color so the insight card
+            // reads as part of the metric, not a generic yellow note.
+            HStack(spacing: 10) {
                 Image(systemName: "lightbulb.fill")
-                    .foregroundColor(Color.somaYellow)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(state.color)
+                    .frame(width: 30, height: 30)
+                    .background(Circle().fill(state.color.opacity(0.16)))
                 Text("\(metric.title) Score: \(score) — \(state.label)")
                     .font(.subheadline)
                     .fontWeight(.semibold)
@@ -842,14 +884,8 @@ struct MetricDetailView: View {
                 }
             }
         }
-        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.somaYellow.opacity(0.06))
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .strokeBorder(Color.somaYellow.opacity(0.2), lineWidth: 1)
-        )
+        .accentCard(state.color, cornerRadius: 20, padding: 16)
         .padding(.horizontal)
     }
 
@@ -876,8 +912,9 @@ struct MetricDetailView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(12)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(SomaGradient.card)
+        .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Color.somaHairline, lineWidth: 1))
     }
 
     // MARK: - Sleep Regularity Dashboard (3.2)
@@ -967,22 +1004,28 @@ struct MetricDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(14)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(SomaGradient.card)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.somaHairline, lineWidth: 1))
+        .shadow(color: .black.opacity(0.4), radius: 14, x: 0, y: 8)
         .padding(.horizontal)
     }
 
     private func sleepRegularityColor(_ sri: Double?) -> Color {
+        // Full red → orange → yellow → light green → green scale.
         guard let s = sri else { return Color.somaGray }
-        if s >= 80 { return Color.somaGreen }
-        if s >= 60 { return Color.somaYellow }
-        return Color.somaOrange
+        if s >= 85 { return Color.somaGreen }
+        if s >= 70 { return Color.somaLightGreen }
+        if s >= 55 { return Color.somaYellow }
+        if s >= 40 { return Color.somaOrange }
+        return Color.somaRed
     }
 
     private func sleepRegularityCaption(_ sri: Double?) -> String {
         guard let s = sri else { return "Need at least 5 nights of data to compute regularity." }
-        if s >= 80 { return "Excellent — consistent sleep timing strengthens your circadian rhythm and improves deep-sleep architecture." }
-        if s >= 60 { return "Good — minor variation in your sleep schedule. Keeping bedtime within 30 min on weekends has the biggest impact." }
+        if s >= 85 { return "Excellent — consistent sleep timing strengthens your circadian rhythm and improves deep-sleep architecture." }
+        if s >= 70 { return "Good — minor variation in your sleep schedule. Keeping bedtime within 30 min on weekends has the biggest impact." }
+        if s >= 55 { return "Moderate — your sleep timing drifts night to night. Aim for a fixed bedtime ± 30 min." }
         return "High variability in sleep timing can suppress melatonin and reduce sleep quality. Aim for a fixed bedtime ± 30 min."
     }
 
@@ -1065,15 +1108,20 @@ struct MetricDetailView: View {
             }
         }
         .padding(14)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(SomaGradient.card)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.somaHairline, lineWidth: 1))
+        .shadow(color: .black.opacity(0.4), radius: 14, x: 0, y: 8)
         .padding(.horizontal)
     }
 
     private func debtBarColor(_ debt: Double, max maxDebt: Double) -> Color {
+        // Full red → orange → yellow → light green → green scale.
         if debt <= 0.25 { return Color.somaGreen }
-        if debt <= 1.0  { return Color.somaYellow }
-        return Color.somaOrange
+        if debt <= 0.75 { return Color.somaLightGreen }
+        if debt <= 1.5  { return Color.somaYellow }
+        if debt <= 2.5  { return Color.somaOrange }
+        return Color.somaRed
     }
 
     private func formatHoursShort(_ h: Double) -> String {
@@ -1123,9 +1171,9 @@ struct MetricDetailView: View {
                     .font(.headline)
                     .foregroundColor(.primary)
                 Spacer()
-                // Legend
+                // Legend — Poor → Fair → Good → Great (red → yellow → light green → green)
                 HStack(spacing: 6) {
-                    ForEach(["None", "Low", "Mid", "High"], id: \.self) { label in
+                    ForEach(["Poor", "Fair", "Good", "Great"], id: \.self) { label in
                         HStack(spacing: 3) {
                             RoundedRectangle(cornerRadius: 2, style: .continuous)
                                 .fill(calendarLegendColor(label))
@@ -1196,25 +1244,30 @@ struct MetricDetailView: View {
                 .foregroundColor(Color.somaGray)
         }
         .padding(14)
-        .background(Color.somaCard)
-        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .background(SomaGradient.card)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Color.somaHairline, lineWidth: 1))
+        .shadow(color: .black.opacity(0.4), radius: 14, x: 0, y: 8)
         .padding(.horizontal)
     }
 
     private func calendarCellColor(_ score: Double?) -> Color {
-        guard let s = score else { return Color.secondary.opacity(0.12) }
-        if s >= 75 { return Color.somaGreen }
-        if s >= 50 { return Color.somaBlue }
-        if s >= 25 { return Color.somaOrange }
+        // Mirrors the sleep ColorState bands: red → orange → yellow → light green → green.
+        guard let s = score else { return Color.white.opacity(0.06) }
+        if s >= 90 { return Color.somaGreen }
+        if s >= 75 { return Color.somaLightGreen }
+        if s >= 60 { return Color.somaYellow }
+        if s >= 40 { return Color.somaOrange }
         return Color.somaRed
     }
 
     private func calendarLegendColor(_ label: String) -> Color {
         switch label {
-        case "High":    return Color.somaGreen
-        case "Mid":     return Color.somaBlue
-        case "Low":     return Color.somaOrange
-        default:        return Color.secondary.opacity(0.12)
+        case "Great": return Color.somaGreen
+        case "Good":  return Color.somaLightGreen
+        case "Fair":  return Color.somaYellow
+        case "Poor":  return Color.somaOrange
+        default:      return Color.white.opacity(0.06)
         }
     }
 

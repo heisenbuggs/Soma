@@ -129,8 +129,10 @@ final class DashboardViewModel: ObservableObject {
 
             InsightCache.shared.invalidatePhysio()
 
+            // Bedtime for *tonight* is derived from tomorrow's wake-up, so the
+            // sleep need is subtracted from the next morning — not today's.
             bedtimeTarget = SleepCalculator.bedtimeTarget(
-                wakeTime: settings.wakeTime,
+                wakeTime: settings.tomorrowWakeTime,
                 sleepNeed: metrics.sleepNeedHours ?? settings.sleepGoalHours
             )
 
@@ -454,6 +456,7 @@ final class DashboardViewModel: ObservableObject {
             restingHR: rhrValue,
             sleepDurationHours: sleepData.totalDurationHours + sleepData.napDurationSeconds / 3600.0,
             sleepNeedHours: sleepNeed,
+            sleepGoalHours: sleepGoal,
             activeCalories: activeCalories,
             stepCount: stepCount,
             vo2Max: vo2Max,
@@ -721,6 +724,13 @@ final class DashboardViewModel: ObservableObject {
     /// Returns raw heart-rate samples for a given date, used for the intraday stress chart.
     func fetchIntradayHR(for date: Date) async -> [(Date, Double)] {
         (try? await healthKit.fetchHeartRateSamples(for: date)) ?? []
+    }
+
+    /// Returns the workout time windows for a date so callers can exclude exercise
+    /// periods from autonomic-stress views (the daily stress score already does this).
+    func fetchWorkoutIntervals(for date: Date) async -> [(start: Date, end: Date)] {
+        let workouts = (try? await healthKit.fetchWorkouts(for: date)) ?? []
+        return workouts.map { (start: $0.startDate, end: $0.endDate) }
     }
 
     // MARK: - History
