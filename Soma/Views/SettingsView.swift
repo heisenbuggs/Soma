@@ -11,6 +11,15 @@ final class UserSettings: ObservableObject {
         set { _dobTimestamp = newValue.map { $0.timeIntervalSince1970 } ?? 0; objectWillChange.send() }
     }
 
+    /// Default DOB shown when none is set: 04/07/2000.
+    static let defaultDateOfBirth: Date = {
+        var comps = DateComponents()
+        comps.year = 2000
+        comps.month = 4
+        comps.day = 7
+        return Calendar.current.date(from: comps) ?? Date(timeIntervalSince1970: 954979200)
+    }()
+
     var age: Int {
         guard let dob = dateOfBirth else { return 30 }
         return Calendar.current.dateComponents([.year], from: dob, to: Date()).year ?? 30
@@ -198,7 +207,7 @@ struct SettingsView: View {
             VStack(spacing: 0) {
                 settingRow("Date of Birth", icon: "calendar", tint: .somaBlue) {
                     DatePicker("", selection: Binding(
-                        get: { settings.dateOfBirth ?? Calendar.current.date(byAdding: .year, value: -30, to: Date())! },
+                        get: { settings.dateOfBirth ?? UserSettings.defaultDateOfBirth },
                         set: { settings.dateOfBirth = $0 }),
                         in: ...Calendar.current.date(byAdding: .year, value: -13, to: Date())!,
                         displayedComponents: .date)
@@ -261,11 +270,10 @@ struct SettingsView: View {
             VStack(spacing: 0) {
                 ForEach(weekdays, id: \.0) { weekday, label in
                     settingRow(label) {
-                        DatePicker("", selection: Binding(
+                        IntervalTimePicker(selection: Binding(
                             get: { settings.wakeTimeDate(for: weekday) },
                             set: { settings.setWakeTimeDate($0, for: weekday) }),
-                            displayedComponents: .hourAndMinute)
-                        .labelsHidden()
+                            minuteInterval: 5)
                     }
                     if weekday < 7 { hairline }
                 }
@@ -508,4 +516,44 @@ struct SettingsView: View {
         }
     }
     #endif
+}
+
+// MARK: - Interval Time Picker
+
+/// A time picker that constrains the minute field to a fixed interval
+/// (e.g. 5-minute steps: 06:00, 06:05, …). SwiftUI's `DatePicker` does not
+/// expose `minuteInterval`, so we wrap `UIDatePicker` directly.
+struct IntervalTimePicker: UIViewRepresentable {
+    @Binding var selection: Date
+    var minuteInterval: Int = 5
+
+    func makeUIView(context: Context) -> UIDatePicker {
+        let picker = UIDatePicker()
+        picker.datePickerMode = .time
+        picker.preferredDatePickerStyle = .compact
+        picker.minuteInterval = minuteInterval
+        picker.date = selection
+        picker.setContentHuggingPriority(.required, for: .horizontal)
+        picker.setContentCompressionResistancePriority(.required, for: .horizontal)
+        picker.addTarget(context.coordinator,
+                         action: #selector(Coordinator.valueChanged(_:)),
+                         for: .valueChanged)
+        return picker
+    }
+
+    func updateUIView(_ picker: UIDatePicker, context: Context) {
+        picker.minuteInterval = minuteInterval
+        if picker.date != selection { picker.date = selection }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject {
+        private let parent: IntervalTimePicker
+        init(_ parent: IntervalTimePicker) { self.parent = parent }
+
+        @objc func valueChanged(_ sender: UIDatePicker) {
+            parent.selection = sender.date
+        }
+    }
 }

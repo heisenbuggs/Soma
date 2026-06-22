@@ -291,9 +291,16 @@ final class DashboardViewModel: ObservableObject {
         // fall back to the in-app baseline setting if not configured.
         let sleepGoal = (try? await healthKit.fetchSleepGoal()) ?? settings.sleepGoalHours
 
-        // Sleep need: 3-day rolling debt window only — debt resets after 3 days.
-        let last3 = store.loadLast(3)
-        let recentActuals: [(Double, Double)] = last3.compactMap { m in
+        // Sleep need: debt comes ONLY from nights BEFORE last night. Last night's
+        // sleep lives in TODAY's record and must raise the goal starting TOMORROW —
+        // not today, whose card shows last night against the plain goal that applied
+        // to it (last night's goal was just the baseline). Rolling 3-night window;
+        // older debt is forgiven. Excluding `date` also stops a same-day re-refresh
+        // from folding last night into today's goal.
+        let priorNights = store.loadLast(4).filter {
+            !Calendar.current.isDate($0.date, inSameDayAs: date)
+        }
+        let recentActuals: [(Double, Double)] = priorNights.suffix(3).compactMap { m in
             // Exclude days with no sleep recorded (0.0 means missing data, not actual 0h sleep)
             guard let a = m.sleepDurationHours, a > 0 else { return nil }
             return (sleepGoal, a)

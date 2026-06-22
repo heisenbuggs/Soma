@@ -192,10 +192,15 @@ struct TodayView: View {
     @ViewBuilder
     private var sleepBalanceCard: some View {
         if let slept = metrics.sleepDurationHours, slept > 0 {
-            // Last night's card is retrospective: judge it against the plain nightly
-            // goal that applied THAT night — not tonight's debt-adjusted need
-            // (sleepNeedHours), which is forward-looking and drives the bedtime row below.
-            let goal = metrics.sleepGoalHours ?? metrics.sleepNeedHours ?? 8.0
+            // Goal shown = the HIGHER of your set goal and the debt-adjusted need.
+            // `sleepNeedHours` folds in the rolling 3-night debt + strain (see
+            // SleepCalculator.calculateSleepNeed). When you're carrying debt from the
+            // last 3 nights the goal rises to pay it down; once those nights age out
+            // the need drops back to the set goal and the cycle repeats.
+            let setGoal = metrics.sleepGoalHours ?? metrics.sleepNeedHours ?? 8.0
+            let need = metrics.sleepNeedHours ?? setGoal
+            let goal = max(setGoal, need)
+            let isDebtAdjusted = goal > setGoal + 0.01   // raised by 3-night debt
             let fraction = min(1.0, slept / max(goal, 0.1))
             let gap = goal - slept                 // > 0 → still short of goal
             let isShort = gap > 0.05
@@ -214,6 +219,15 @@ struct TodayView: View {
                                 Text("/ \(formatHours(goal)) goal")
                                     .font(.system(size: 13, weight: .medium))
                                     .foregroundStyle(Color.somaTextSecondary)
+                                if isDebtAdjusted {
+                                    Text("3-NIGHT DEBT")
+                                        .font(.system(size: 9, weight: .heavy))
+                                        .tracking(0.5)
+                                        .foregroundStyle(Color.somaOrange)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 2)
+                                        .background(Capsule().fill(Color.somaOrange.opacity(0.16)))
+                                }
                             }
                         }
                         Spacer()
@@ -266,7 +280,7 @@ struct TodayView: View {
                                         .foregroundStyle(Color.somaTextSecondary)
                                 }
                                 Text(isShort
-                                     ? "Clears debt from your last 3 nights by wake-up"
+                                     ? "Clears debt from your last 3 nights"
                                      : "Keeps you rested through your next wake-up")
                                     .font(.system(size: 11))
                                     .foregroundStyle(Color.somaTextTertiary)
